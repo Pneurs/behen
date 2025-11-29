@@ -58,6 +58,7 @@ const AvailabilityFilter = ({ dateRange, onDateRangeChange }: AvailabilityFilter
           numberOfMonths={2}
           disabled={(date) => date < new Date()}
           initialFocus
+          className="pointer-events-auto"
         />
         <div className="p-3 border-t">
           <Button className="w-full" onClick={() => setOpen(false)}>

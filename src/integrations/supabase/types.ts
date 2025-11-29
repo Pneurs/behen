@@ -37,12 +37,14 @@ export type Database = {
           listing_type: string
           longitude: number | null
           owner_id: string
+          product_type: string | null
           real_images: string[] | null
           rental_price_per_day: number | null
           sale_price: number | null
           security_deposit: number | null
           size: string | null
           status: string
+          style_tips: string | null
           subcategory: string | null
           times_rented: number | null
           title: string
@@ -73,12 +75,14 @@ export type Database = {
           listing_type: string
           longitude?: number | null
           owner_id: string
+          product_type?: string | null
           real_images?: string[] | null
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null
           size?: string | null
           status?: string
+          style_tips?: string | null
           subcategory?: string | null
           times_rented?: number | null
           title: string
@@ -109,12 +113,14 @@ export type Database = {
           listing_type?: string
           longitude?: number | null
           owner_id?: string
+          product_type?: string | null
           real_images?: string[] | null
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null
           size?: string | null
           status?: string
+          style_tips?: string | null
           subcategory?: string | null
           times_rented?: number | null
           title?: string

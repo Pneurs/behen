@@ -11,10 +11,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Loader2, X } from "lucide-react";
 import { z } from "zod";
+import AvailabilityCalendarManager from "@/components/AvailabilityCalendarManager";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
-  category: z.enum(["bridal", "barat", "walima", "formal", "party_wear"]),
+  category: z.enum(["bridal", "barat", "walima", "formal", "party_wear", "footwear", "accessories", "jewelry", "bags", "fashion_tips"]),
   condition: z.enum(["new", "like_new", "used_twice", "used_often"]),
   listing_type: z.enum(["rent", "sale", "both"]),
   description: z.string().min(20, "Description must be at least 20 characters").max(1000),
@@ -27,17 +28,20 @@ const ListDress = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [blackoutDates, setBlackoutDates] = useState<Date[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
     category: "",
     subcategory: "",
+    product_type: "dress",
     condition: "",
     listing_type: "",
     rental_price_per_day: "",
     sale_price: "",
     security_deposit: "",
     description: "",
+    style_tips: "",
     fabric: "",
     color: "",
     work_type: "",
@@ -153,18 +157,20 @@ const ListDress = () => {
         return;
       }
 
-      // Create product
+      // Create product with availability data
       const { error } = await supabase.from("products").insert({
         owner_id: user.id,
         title: formData.title,
         category: formData.category,
         subcategory: formData.subcategory || null,
+        product_type: formData.product_type,
         condition: formData.condition,
         listing_type: formData.listing_type,
         rental_price_per_day: formData.rental_price_per_day ? parseFloat(formData.rental_price_per_day) : null,
         sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
         security_deposit: formData.security_deposit ? parseFloat(formData.security_deposit) : null,
         description: formData.description,
+        style_tips: formData.style_tips || null,
         fabric: formData.fabric || null,
         color: formData.color || null,
         work_type: formData.work_type || null,
@@ -179,12 +185,16 @@ const ListDress = () => {
         city: formData.city || null,
         area: formData.area || null,
         real_images: imageUrls,
+        availability_data: {
+          blackout_dates: blackoutDates.map(d => d.toISOString()),
+          available_dates: [],
+        },
         status: "published",
       });
 
       if (error) throw error;
 
-      toast.success("Dress listed successfully!");
+      toast.success("Item listed successfully!");
       navigate("/browse");
     } catch (error: any) {
       if (error instanceof z.ZodError) {
@@ -212,10 +222,10 @@ const ListDress = () => {
         <Card>
           <CardHeader>
             <CardTitle className="text-3xl" style={{ fontFamily: "'Playfair Display', serif" }}>
-              List Your Dress
+              List Your Item
             </CardTitle>
             <CardDescription>
-              Share your beautiful outfit with other Behens. Fill in the details below.
+              Share your beautiful dresses, footwear, accessories, or fashion tips with other Behens
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -269,6 +279,26 @@ const ListDress = () => {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="product_type">Product Type *</Label>
+                  <Select 
+                    value={formData.product_type} 
+                    onValueChange={(v) => setFormData({ ...formData, product_type: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dress">Dress/Outfit</SelectItem>
+                      <SelectItem value="footwear">Footwear</SelectItem>
+                      <SelectItem value="accessories">Accessories</SelectItem>
+                      <SelectItem value="jewelry">Jewelry</SelectItem>
+                      <SelectItem value="bags">Bags/Clutches</SelectItem>
+                      <SelectItem value="tips">Fashion/Style Tips</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category *</Label>
@@ -282,6 +312,11 @@ const ListDress = () => {
                         <SelectItem value="walima">Walima</SelectItem>
                         <SelectItem value="formal">Formal</SelectItem>
                         <SelectItem value="party_wear">Party Wear</SelectItem>
+                        <SelectItem value="footwear">Footwear</SelectItem>
+                        <SelectItem value="accessories">Accessories</SelectItem>
+                        <SelectItem value="jewelry">Jewelry</SelectItem>
+                        <SelectItem value="bags">Bags/Clutches</SelectItem>
+                        <SelectItem value="fashion_tips">Fashion/Style Tips</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -367,12 +402,31 @@ const ListDress = () => {
                   <Label htmlFor="description">Description *</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your dress in detail..."
+                    placeholder={
+                      formData.product_type === "tips" 
+                        ? "Share your fashion advice, styling tips, or beauty recommendations..."
+                        : "Describe your item in detail..."
+                    }
                     rows={5}
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     required
                   />
+                </div>
+
+                {/* Style Tips - Optional for all items */}
+                <div className="space-y-2">
+                  <Label htmlFor="style_tips">Style Tips (Optional)</Label>
+                  <Textarea
+                    id="style_tips"
+                    placeholder="Share styling suggestions, what to pair with, makeup tips, etc..."
+                    rows={3}
+                    value={formData.style_tips}
+                    onChange={(e) => setFormData({ ...formData, style_tips: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Help Choti Behens style this item perfectly!
+                  </p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">
@@ -415,9 +469,10 @@ const ListDress = () => {
                 </div>
               </div>
 
-              {/* Size & Fit */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Size & Fit</h3>
+              {/* Size & Fit - Only for dresses and footwear */}
+              {(formData.product_type === "dress" || formData.product_type === "footwear") && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Size & Fit</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="size">Size</Label>
@@ -464,11 +519,12 @@ const ListDress = () => {
                       setFormData({ ...formData, alteration_possible: checked as boolean })
                     }
                   />
-                  <Label htmlFor="alteration" className="cursor-pointer">
-                    Alteration possible
-                  </Label>
+                    <Label htmlFor="alteration" className="cursor-pointer">
+                      Alteration possible
+                    </Label>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Location */}
               <div className="space-y-4">
@@ -498,10 +554,18 @@ const ListDress = () => {
                 </p>
               </div>
 
+              {/* Availability Calendar - Only for rentals */}
+              {(formData.listing_type === "rent" || formData.listing_type === "both") && (
+                <AvailabilityCalendarManager
+                  blackoutDates={blackoutDates}
+                  onBlackoutDatesChange={setBlackoutDates}
+                />
+              )}
+
               {/* Submit */}
               <Button type="submit" className="w-full" size="lg" disabled={loading || uploadingImages}>
                 {(loading || uploadingImages) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {uploadingImages ? "Uploading Images..." : loading ? "Creating Listing..." : "List My Dress"}
+                {uploadingImages ? "Uploading Images..." : loading ? "Creating Listing..." : "Publish Listing"}
               </Button>
             </form>
           </CardContent>
