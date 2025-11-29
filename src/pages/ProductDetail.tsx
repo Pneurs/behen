@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
+import ReviewsList from "@/components/ReviewsList";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -408,6 +409,12 @@ const ProductDetail = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* Reviews Section */}
+            <div>
+              <h3 className="text-2xl font-semibold mb-4">Reviews & Ratings</h3>
+              <ReviewsList productId={product.id} />
+            </div>
           </div>
 
           {/* Availability Calendar */}

@@ -324,6 +324,63 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          owner_id: string
+          owner_rating: number
+          owner_review: string | null
+          product_id: string
+          product_rating: number
+          product_review: string | null
+          reviewer_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          owner_rating: number
+          owner_review?: string | null
+          product_id: string
+          product_rating: number
+          product_review?: string | null
+          reviewer_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          owner_rating?: number
+          owner_review?: string | null
+          product_id?: string
+          product_rating?: number
+          product_review?: string | null
+          reviewer_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -350,6 +407,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_owner_average_rating: {
+        Args: { owner_uuid: string }
+        Returns: number
+      }
+      get_product_average_rating: {
+        Args: { product_uuid: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

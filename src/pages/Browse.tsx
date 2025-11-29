@@ -220,6 +220,9 @@ const Browse = () => {
             Behen.pk
           </h1>
           <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={() => navigate("/my-bookings")}>
+              My Bookings
+            </Button>
             {isAdmin && (
               <Button variant="secondary" onClick={() => navigate("/admin")}>
                 Admin
