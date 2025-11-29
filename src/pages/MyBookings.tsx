@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ArrowLeft, Star } from "lucide-react";
 import { format } from "date-fns";
 import ReviewForm from "@/components/ReviewForm";
+import { Header } from "@/components/Header";
 
 export default function MyBookings() {
   const navigate = useNavigate();
@@ -106,13 +107,11 @@ export default function MyBookings() {
   if (loading) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/browse")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
           <h1 className="text-4xl font-bold">My Bookings</h1>
         </div>
 
@@ -160,6 +159,7 @@ export default function MyBookings() {
             />
           </TabsContent>
         </Tabs>
+        </div>
       </div>
 
       <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>

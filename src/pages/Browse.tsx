@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Header } from "@/components/Header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogOut, Plus, Search, Filter, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -209,16 +210,13 @@ const Browse = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 
-            className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent cursor-pointer" 
-            style={{ fontFamily: "'Playfair Display', serif" }}
-            onClick={() => navigate("/browse")}
-          >
-            Behen.pk
-          </h1>
+      <Header />
+      <div className="border-b bg-card sticky top-16 z-10">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Browse Collection
+            </h1>
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => navigate("/my-bookings")}>
               My Bookings
@@ -240,10 +238,11 @@ const Browse = () => {
             </Button>
           </div>
         </div>
-      </header>
+      </div>
+      </div>
 
       {/* Filters */}
-      <div className="border-b bg-card/50 sticky top-[73px] z-10">
+      <div className="border-b bg-card/50 sticky top-32 z-10">
         <div className="container mx-auto px-4 py-4 space-y-4">
           {/* Search Bar */}
           <div className="relative">

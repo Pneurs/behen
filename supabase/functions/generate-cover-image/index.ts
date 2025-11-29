@@ -20,26 +20,33 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Create a detailed prompt for image generation
+    // Create a strict, detailed prompt for exact image reproduction
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
     const categoryLabel = category.replace("_", " ");
     
-    // Use the specific prompt for faceless mannequin with exact dress details
-    let prompt = `A faceless mannequin wearing a ${categoryLabel} ${productTypeLabel}. `;
-    prompt += `Keep the ${productTypeLabel} EXACTLY the same in color, embroidery, shape, and details from the provided reference. `;
+    // Ultra-strict prompt for 100% accuracy
+    let prompt = `Use the uploaded image as the ONLY reference. `;
+    prompt += `Generate a faceless mannequin wearing the exact same ${productTypeLabel} from the referenced image. `;
+    prompt += `Reproduce the ${productTypeLabel} with 100% accuracy, including: `;
+    prompt += `exact colors, exact embroidery and patterns, exact borders, exact fabric shine and texture, exact shape, pleats, and silhouette, `;
+    prompt += `exact neckline, sleeves, dupatta shape, exact hem and details. `;
     
     if (color) {
-      prompt += `Exact ${color} color match. `;
+      prompt += `Color must be EXACTLY ${color} as shown in reference. `;
     }
     
     if (fabric) {
-      prompt += `${fabric} fabric with exact texture. `;
+      prompt += `Fabric texture must match ${fabric} exactly as shown. `;
     }
     
-    prompt += `${description.substring(0, 150)}. `;
-    prompt += `Clear studio lighting, clean white background, full-length front view. `;
-    prompt += `Professional fashion photography, ultra high resolution, product display quality. `;
-    prompt += `Focus on preserving ALL original dress details including embroidery patterns, embellishments, and design elements.`;
+    prompt += `DO NOT redesign anything. DO NOT modify, simplify, or reinterpret any part of the ${productTypeLabel}. `;
+    prompt += `ONLY replace the human model with a neutral faceless mannequin. `;
+    prompt += `Rules: background: clean white studio. lighting: soft, even, shadow-free. framing: full-length front view. `;
+    prompt += `mannequin: smooth, faceless, emotionless. keep ${productTypeLabel} proportions EXACTLY same as the original image. `;
+    prompt += `copy all folds, drapes, borders, and highlights precisely. `;
+    prompt += `DO NOT add extra accessories, jewellery, hands, or props. `;
+    prompt += `DO NOT alter the ${productTypeLabel} length, color, or pattern in any way. `;
+    prompt += `This is a strict reconstruction. The output MUST look like the original ${productTypeLabel} placed on a mannequin, nothing else.`;
 
     console.log("Generating image with prompt:", prompt);
 

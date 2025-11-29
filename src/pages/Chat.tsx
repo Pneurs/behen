@@ -3,11 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { Header } from "@/components/Header";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
@@ -223,7 +224,9 @@ export default function Chat() {
   if (!conversation || !product) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="p-6">
       <div className="max-w-4xl mx-auto">
         <Card className="h-[600px] flex flex-col">
           <div className="p-4 border-b">
@@ -325,6 +328,7 @@ export default function Chat() {
             </Button>
           </div>
         </Card>
+      </div>
       </div>
     </div>
   );
