@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import ProductCard from "@/components/ProductCard";
 import LocationFilter from "@/components/LocationFilter";
 import AvailabilityFilter from "@/components/AvailabilityFilter";
+import MapView from "@/components/MapView";
 import { DateRange } from "react-day-picker";
 import { format, isWithinInterval } from "date-fns";
 
@@ -24,6 +25,27 @@ const Browse = () => {
   const [isNearMe, setIsNearMe] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      checkAdminRole();
+    }
+  }, [user]);
+
+  const checkAdminRole = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "super_admin")
+      .single();
+    
+    setIsAdmin(!!data);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -198,6 +220,11 @@ const Browse = () => {
             Behen.pk
           </h1>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button variant="secondary" onClick={() => navigate("/admin")}>
+                Admin
+              </Button>
+            )}
             {userRole === "bari" && (
               <Button onClick={() => navigate("/list-dress")}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -270,6 +297,14 @@ const Browse = () => {
               onDateRangeChange={setDateRange}
             />
 
+            <Button
+              variant={showMap ? "default" : "outline"}
+              onClick={() => setShowMap(!showMap)}
+              className="w-full md:w-auto"
+            >
+              {showMap ? "Hide Map" : "Show Map"}
+            </Button>
+
             {hasActiveFilters && (
               <Button variant="ghost" onClick={clearAllFilters} className="w-full md:w-auto">
                 <X className="mr-2 h-4 w-4" />
@@ -307,6 +342,15 @@ const Browse = () => {
           </div>
         ) : (
           <>
+            {showMap && (
+              <div className="mb-8">
+                <MapView 
+                  products={filteredProducts}
+                  onProductClick={(id) => navigate(`/product/${id}`)}
+                />
+              </div>
+            )}
+
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">
                 {filteredProducts.length} {filteredProducts.length === 1 ? "dress" : "dresses"} available
