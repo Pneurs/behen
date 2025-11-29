@@ -21,6 +21,8 @@ export default function Chat() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showCustomOffer, setShowCustomOffer] = useState(false);
+  const [customOffer, setCustomOffer] = useState({ price: "", security: "", message: "" });
 
   useEffect(() => {
     initChat();
@@ -185,6 +187,39 @@ export default function Chat() {
     setLoading(false);
   };
 
+  const handleSendCustomOffer = async () => {
+    if (!customOffer.price && !customOffer.security) {
+      toast({
+        title: "Error",
+        description: "Please enter at least one value to update",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const isOwner = user.id === product.owner_id;
+    if (!isOwner) {
+      toast({
+        title: "Error",
+        description: "Only the owner can make custom offers",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let offerMessage = "📋 Custom Offer:\n";
+    if (customOffer.price) offerMessage += `💰 Price: PKR ${customOffer.price}\n`;
+    if (customOffer.security) offerMessage += `🔒 Security Deposit: PKR ${customOffer.security}\n`;
+    if (customOffer.message) offerMessage += `\n${customOffer.message}`;
+
+    setNewMessage(offerMessage);
+    setShowCustomOffer(false);
+    setCustomOffer({ price: "", security: "", message: "" });
+    
+    // Send immediately
+    setTimeout(() => handleSendMessage(), 100);
+  };
+
   if (!conversation || !product) return <div>Loading...</div>;
 
   return (
@@ -194,9 +229,16 @@ export default function Chat() {
           <div className="p-4 border-b">
             <h2 className="text-xl font-bold">{product.title}</h2>
             {!conversation.is_booking_confirmed && (
-              <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                <span>Contact info blocked until booking confirmed</span>
+              <div className="flex flex-col gap-2 mt-2 text-sm">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>Contact info blocked until booking confirmed</span>
+                </div>
+                <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+                  <strong>Warning:</strong> Sharing contact information outside our platform before booking confirmation 
+                  may result in your name being publicly shared on our channels. We will not be responsible 
+                  for any issues that occur with your product if you bypass our secure booking system.
+                </div>
               </div>
             )}
           </div>
@@ -231,15 +273,54 @@ export default function Chat() {
             </div>
           </ScrollArea>
 
+          {showCustomOffer && user?.id === product?.owner_id && (
+            <div className="p-4 border-t bg-muted/50 space-y-3">
+              <h3 className="font-semibold text-sm">Create Custom Offer</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="New Price"
+                  type="number"
+                  value={customOffer.price}
+                  onChange={(e) => setCustomOffer({ ...customOffer, price: e.target.value })}
+                />
+                <Input
+                  placeholder="Security Deposit"
+                  type="number"
+                  value={customOffer.security}
+                  onChange={(e) => setCustomOffer({ ...customOffer, security: e.target.value })}
+                />
+              </div>
+              <Input
+                placeholder="Additional message (optional)"
+                value={customOffer.message}
+                onChange={(e) => setCustomOffer({ ...customOffer, message: e.target.value })}
+              />
+              <div className="flex gap-2">
+                <Button onClick={handleSendCustomOffer} size="sm" className="flex-1">Send Offer</Button>
+                <Button onClick={() => setShowCustomOffer(false)} variant="outline" size="sm">Cancel</Button>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 border-t flex gap-2">
+            {user?.id === product?.owner_id && !showCustomOffer && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setShowCustomOffer(true)}
+                title="Create Custom Offer"
+              >
+                💰
+              </Button>
+            )}
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              onKeyPress={(e) => e.key === "Enter" && !showCustomOffer && handleSendMessage()}
               placeholder="Type a message..."
-              disabled={loading}
+              disabled={loading || showCustomOffer}
             />
-            <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
+            <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim() || showCustomOffer}>
               <Send className="h-4 w-4" />
             </Button>
           </div>

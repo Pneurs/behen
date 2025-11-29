@@ -39,6 +39,9 @@ const ListDress = () => {
     condition: "",
     listing_type: "",
     rental_price_per_day: "",
+    rental_price_4days: "",
+    extra_day_rate: "",
+    original_price: "",
     sale_price: "",
     security_deposit: "",
     description: "",
@@ -220,8 +223,11 @@ const ListDress = () => {
         product_type: formData.product_type,
         condition: formData.condition,
         listing_type: formData.listing_type,
-        rental_price_per_day: formData.rental_price_per_day ? parseFloat(formData.rental_price_per_day) : null,
+        rental_price_per_day: formData.extra_day_rate ? parseFloat(formData.extra_day_rate) : null,
+        rental_price_4days: formData.rental_price_4days ? parseFloat(formData.rental_price_4days) : null,
+        extra_day_rate: formData.extra_day_rate ? parseFloat(formData.extra_day_rate) : null,
         sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
         security_deposit: formData.security_deposit ? parseFloat(formData.security_deposit) : null,
         description: formData.description,
         style_tips: formData.style_tips || null,
@@ -410,44 +416,78 @@ const ListDress = () => {
               {/* Pricing */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Pricing</h3>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {(formData.listing_type === "rent" || formData.listing_type === "both") && (
-                    <div className="space-y-2">
-                      <Label htmlFor="rental_price">Rental (per day)</Label>
-                      <Input
-                        id="rental_price"
-                        type="number"
-                        placeholder="5000"
-                        value={formData.rental_price_per_day}
-                        onChange={(e) => setFormData({ ...formData, rental_price_per_day: e.target.value })}
-                      />
+                
+                {(formData.listing_type === "sale" || formData.listing_type === "both") && (
+                  <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-medium">Sale Pricing</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="original_price">Original Price (Optional)</Label>
+                        <Input
+                          id="original_price"
+                          type="number"
+                          placeholder="80000"
+                          value={formData.original_price}
+                          onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">For showing discount %</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="sale_price">Sale Price *</Label>
+                        <Input
+                          id="sale_price"
+                          type="number"
+                          placeholder="50000"
+                          value={formData.sale_price}
+                          onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                          required={formData.listing_type === "sale" || formData.listing_type === "both"}
+                        />
+                      </div>
                     </div>
-                  )}
-                  {(formData.listing_type === "sale" || formData.listing_type === "both") && (
-                    <div className="space-y-2">
-                      <Label htmlFor="sale_price">Sale Price</Label>
-                      <Input
-                        id="sale_price"
-                        type="number"
-                        placeholder="50000"
-                        value={formData.sale_price}
-                        onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                      />
+                  </div>
+                )}
+
+                {(formData.listing_type === "rent" || formData.listing_type === "both") && (
+                  <div className="space-y-4 p-4 border rounded-lg">
+                    <h4 className="font-medium">Rental Pricing</h4>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="rental_price_4days">4-Day Rental Price *</Label>
+                        <Input
+                          id="rental_price_4days"
+                          type="number"
+                          placeholder="15000"
+                          value={formData.rental_price_4days}
+                          onChange={(e) => setFormData({ ...formData, rental_price_4days: e.target.value })}
+                          required={formData.listing_type === "rent" || formData.listing_type === "both"}
+                        />
+                        <p className="text-xs text-muted-foreground">Minimum 4-day rental</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="extra_day_rate">Extra Per Day Rate *</Label>
+                        <Input
+                          id="extra_day_rate"
+                          type="number"
+                          placeholder="4000"
+                          value={formData.extra_day_rate}
+                          onChange={(e) => setFormData({ ...formData, extra_day_rate: e.target.value })}
+                          required={formData.listing_type === "rent" || formData.listing_type === "both"}
+                        />
+                        <p className="text-xs text-muted-foreground">Per day after 4 days</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="security_deposit">Security Deposit</Label>
+                        <Input
+                          id="security_deposit"
+                          type="number"
+                          placeholder="10000"
+                          value={formData.security_deposit}
+                          onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
+                        />
+                      </div>
                     </div>
-                  )}
-                  {formData.listing_type === "rent" || formData.listing_type === "both" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="security_deposit">Security Deposit</Label>
-                      <Input
-                        id="security_deposit"
-                        type="number"
-                        placeholder="10000"
-                        value={formData.security_deposit}
-                        onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
-                      />
-                    </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

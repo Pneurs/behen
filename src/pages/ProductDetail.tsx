@@ -30,6 +30,7 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showRealImages, setShowRealImages] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -123,15 +124,24 @@ const ProductDetail = () => {
 
   if (!product) return null;
 
-  // Show AI cover first if available, then real images
-  const images = product.ai_cover_image 
-    ? [product.ai_cover_image, ...(product.real_images || [])]
-    : (product.real_images || []);
+  // Show AI cover first if available, determine which images to show
+  const displayImages = showRealImages 
+    ? (product.real_images || [])
+    : product.ai_cover_image 
+      ? [product.ai_cover_image]
+      : (product.real_images || []);
+  
+  const hasRealImages = product.real_images && product.real_images.length > 0;
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Meta tags for SEO - prevent indexing of real images */}
+      <head>
+        <meta name="robots" content="noindex, nofollow" data-image-protection="true" />
+      </head>
+      
       {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -155,10 +165,10 @@ const ProductDetail = () => {
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Image Gallery */}
           <div className="space-y-4">
-            <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted">
-              {images.length > 0 ? (
+            <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted relative">
+              {displayImages.length > 0 ? (
                 <img
-                  src={images[selectedImage]}
+                  src={displayImages[selectedImage]}
                   alt={product.title}
                   className="w-full h-full object-cover"
                 />
@@ -167,11 +177,30 @@ const ProductDetail = () => {
                   <Tag className="h-24 w-24 text-muted-foreground" />
                 </div>
               )}
+              
+              {/* Discount Badge */}
+              {product.original_price && product.sale_price && product.original_price > product.sale_price && (
+                <div className="absolute top-4 left-4">
+                  <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
+                    {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+                  </Badge>
+                </div>
+              )}
             </div>
             
-            {images.length > 1 && (
+            {currentUser && hasRealImages && !showRealImages && (
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowRealImages(true)}
+              >
+                View Real Images (Sign-in Required)
+              </Button>
+            )}
+            
+            {displayImages.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {images.map((img: string, idx: number) => (
+                {displayImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -216,8 +245,11 @@ const ProductDetail = () => {
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Rental Price</p>
                       <p className="text-3xl font-bold text-primary">
-                        PKR {product.rental_price_per_day?.toLocaleString()}
-                        <span className="text-lg font-normal text-muted-foreground">/day</span>
+                        PKR {product.rental_price_4days?.toLocaleString() || (product.rental_price_per_day * 4)?.toLocaleString()}
+                        <span className="text-lg font-normal text-muted-foreground"> / 4 days</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        + PKR {product.extra_day_rate?.toLocaleString() || product.rental_price_per_day?.toLocaleString()} per extra day
                       </p>
                       {product.security_deposit && (
                         <p className="text-sm text-muted-foreground mt-1">
@@ -229,9 +261,21 @@ const ProductDetail = () => {
                   {(product.listing_type === "sale" || product.listing_type === "both") && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Sale Price</p>
-                      <p className="text-3xl font-bold text-primary">
-                        PKR {product.sale_price?.toLocaleString()}
-                      </p>
+                      <div className="flex items-baseline gap-3">
+                        <p className="text-3xl font-bold text-primary">
+                          PKR {product.sale_price?.toLocaleString()}
+                        </p>
+                        {product.original_price && product.original_price > product.sale_price && (
+                          <>
+                            <p className="text-xl text-muted-foreground line-through">
+                              PKR {product.original_price.toLocaleString()}
+                            </p>
+                            <Badge variant="destructive" className="text-sm font-bold">
+                              {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+                            </Badge>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
