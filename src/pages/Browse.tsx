@@ -247,6 +247,10 @@ const Browse = () => {
                 <SelectItem value="walima">Walima</SelectItem>
                 <SelectItem value="formal">Formal</SelectItem>
                 <SelectItem value="party_wear">Party Wear</SelectItem>
+                <SelectItem value="footwear">Footwear</SelectItem>
+                <SelectItem value="accessories">Accessories</SelectItem>
+                <SelectItem value="jewelry">Jewelry</SelectItem>
+                <SelectItem value="bags">Bags</SelectItem>
               </SelectContent>
             </Select>
 
