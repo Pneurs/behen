@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      products: {
+        Row: {
+          ai_cover_image: string | null
+          alteration_possible: boolean | null
+          area: string | null
+          availability_data: Json | null
+          category: string
+          chest_size: string | null
+          city: string | null
+          color: string | null
+          condition: string
+          created_at: string
+          description: string | null
+          designer: string | null
+          fabric: string | null
+          height_range: string | null
+          hips_size: string | null
+          id: string
+          last_rented_on: string | null
+          latitude: number | null
+          listing_type: string
+          longitude: number | null
+          owner_id: string
+          real_images: string[] | null
+          rental_price_per_day: number | null
+          sale_price: number | null
+          security_deposit: number | null
+          size: string | null
+          status: string
+          subcategory: string | null
+          times_rented: number | null
+          title: string
+          updated_at: string
+          waist_size: string | null
+          weight_range: string | null
+          work_type: string | null
+        }
+        Insert: {
+          ai_cover_image?: string | null
+          alteration_possible?: boolean | null
+          area?: string | null
+          availability_data?: Json | null
+          category: string
+          chest_size?: string | null
+          city?: string | null
+          color?: string | null
+          condition: string
+          created_at?: string
+          description?: string | null
+          designer?: string | null
+          fabric?: string | null
+          height_range?: string | null
+          hips_size?: string | null
+          id?: string
+          last_rented_on?: string | null
+          latitude?: number | null
+          listing_type: string
+          longitude?: number | null
+          owner_id: string
+          real_images?: string[] | null
+          rental_price_per_day?: number | null
+          sale_price?: number | null
+          security_deposit?: number | null
+          size?: string | null
+          status?: string
+          subcategory?: string | null
+          times_rented?: number | null
+          title: string
+          updated_at?: string
+          waist_size?: string | null
+          weight_range?: string | null
+          work_type?: string | null
+        }
+        Update: {
+          ai_cover_image?: string | null
+          alteration_possible?: boolean | null
+          area?: string | null
+          availability_data?: Json | null
+          category?: string
+          chest_size?: string | null
+          city?: string | null
+          color?: string | null
+          condition?: string
+          created_at?: string
+          description?: string | null
+          designer?: string | null
+          fabric?: string | null
+          height_range?: string | null
+          hips_size?: string | null
+          id?: string
+          last_rented_on?: string | null
+          latitude?: number | null
+          listing_type?: string
+          longitude?: number | null
+          owner_id?: string
+          real_images?: string[] | null
+          rental_price_per_day?: number | null
+          sale_price?: number | null
+          security_deposit?: number | null
+          size?: string | null
+          status?: string
+          subcategory?: string | null
+          times_rented?: number | null
+          title?: string
+          updated_at?: string
+          waist_size?: string | null
+          weight_range?: string | null
+          work_type?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           area: string | null
