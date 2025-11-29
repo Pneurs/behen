@@ -1,1 +1,4 @@
 project_id = "xtoeehqcdfhxpdiasijc"
+
+[functions.generate-cover-image]
+verify_jwt = true
