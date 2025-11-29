@@ -29,6 +29,7 @@ const ListDress = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [user, setUser] = useState<any>(null);
   const [blackoutDates, setBlackoutDates] = useState<Date[]>([]);
+  const [generatingCover, setGeneratingCover] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -130,6 +131,52 @@ const ListDress = () => {
     }
   };
 
+  const generateAICover = async () => {
+    if (!formData.title || !formData.description || !formData.category) {
+      toast.error("Please fill in title, description, and category first");
+      return null;
+    }
+
+    setGeneratingCover(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-cover-image", {
+        body: {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          product_type: formData.product_type,
+          fabric: formData.fabric,
+          color: formData.color,
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data?.code === "RATE_LIMIT") {
+        toast.error("AI rate limit reached. Please try again in a moment.");
+        return null;
+      }
+      
+      if (data?.code === "NO_CREDITS") {
+        toast.error("AI credits exhausted. Please add credits or upload your own cover image.");
+        return null;
+      }
+
+      if (!data?.imageUrl) {
+        throw new Error("No image URL in response");
+      }
+
+      toast.success("AI cover image generated!");
+      return data.imageUrl;
+    } catch (error: any) {
+      console.error("AI generation error:", error);
+      toast.error("Failed to generate AI cover. You can still upload your own images.");
+      return null;
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -150,7 +197,14 @@ const ListDress = () => {
         return;
       }
 
-      // Upload images
+      // Generate AI cover image
+      let aiCoverUrl: string | null = null;
+      if (formData.title && formData.description) {
+        toast.info("Generating AI cover image...");
+        aiCoverUrl = await generateAICover();
+      }
+
+      // Upload real images
       const imageUrls = await uploadImages();
       if (imageUrls.length === 0) {
         setLoading(false);
@@ -184,6 +238,7 @@ const ListDress = () => {
         alteration_possible: formData.alteration_possible,
         city: formData.city || null,
         area: formData.area || null,
+        ai_cover_image: aiCoverUrl,
         real_images: imageUrls,
         availability_data: {
           blackout_dates: blackoutDates.map(d => d.toISOString()),
@@ -563,10 +618,19 @@ const ListDress = () => {
               )}
 
               {/* Submit */}
-              <Button type="submit" className="w-full" size="lg" disabled={loading || uploadingImages}>
-                {(loading || uploadingImages) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {uploadingImages ? "Uploading Images..." : loading ? "Creating Listing..." : "Publish Listing"}
-              </Button>
+              <div className="space-y-3">
+                <div className="bg-accent/50 border border-accent rounded-lg p-4">
+                  <p className="text-sm font-medium mb-1">✨ AI Cover Image</p>
+                  <p className="text-xs text-muted-foreground">
+                    We'll automatically generate a beautiful cover image to protect your privacy. 
+                    Your real photos will only be visible after booking confirmation.
+                  </p>
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={loading || uploadingImages || generatingCover}>
+                  {(loading || uploadingImages || generatingCover) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {generatingCover ? "Generating AI Cover..." : uploadingImages ? "Uploading Images..." : loading ? "Creating Listing..." : "Publish Listing"}
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>

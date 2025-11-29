@@ -11,6 +11,7 @@ interface ProductCardProps {
     listing_type: string;
     rental_price_per_day?: number;
     sale_price?: number;
+    ai_cover_image?: string;
     real_images?: string[];
     city?: string;
     area?: string;
@@ -39,8 +40,21 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
       className="overflow-hidden hover:shadow-lg transition-all cursor-pointer group"
       onClick={onClick}
     >
-      <div className="aspect-[3/4] overflow-hidden bg-muted">
-        {product.real_images && product.real_images.length > 0 ? (
+      <div className="aspect-[3/4] overflow-hidden bg-muted relative">
+        {product.ai_cover_image ? (
+          <>
+            <img
+              src={product.ai_cover_image}
+              alt={product.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute top-2 right-2">
+              <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
+                AI Generated
+              </Badge>
+            </div>
+          </>
+        ) : product.real_images && product.real_images.length > 0 ? (
           <img
             src={product.real_images[0]}
             alt={product.title}
