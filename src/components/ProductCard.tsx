@@ -12,7 +12,9 @@ interface ProductCardProps {
     condition: string;
     listing_type: string;
     rental_price_per_day?: number;
+    rental_price_4days?: number;
     sale_price?: number;
+    original_price?: number;
     ai_cover_image?: string;
     real_images?: string[];
     city?: string;
@@ -87,6 +89,15 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
             <Tag className="h-16 w-16 text-muted-foreground" />
           </div>
         )}
+        
+        {/* Discount Badge */}
+        {product.original_price && product.sale_price && product.original_price > product.sale_price && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="destructive" className="text-xs font-bold">
+              {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+            </Badge>
+          </div>
+        )}
       </div>
       
       <CardContent className="p-4">
@@ -123,17 +134,24 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
         <div>
           {product.listing_type === "rent" || product.listing_type === "both" ? (
             <div>
-              <p className="text-sm text-muted-foreground">Rent</p>
+              <p className="text-sm text-muted-foreground">4-Day Rental</p>
               <p className="text-lg font-bold text-primary">
-                PKR {product.rental_price_per_day?.toLocaleString()}/day
+                PKR {product.rental_price_4days?.toLocaleString() || product.rental_price_per_day?.toLocaleString()}
               </p>
             </div>
           ) : (
             <div>
               <p className="text-sm text-muted-foreground">Sale</p>
-              <p className="text-lg font-bold text-primary">
-                PKR {product.sale_price?.toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-bold text-primary">
+                  PKR {product.sale_price?.toLocaleString()}
+                </p>
+                {product.original_price && product.original_price > product.sale_price && (
+                  <p className="text-sm text-muted-foreground line-through">
+                    PKR {product.original_price.toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

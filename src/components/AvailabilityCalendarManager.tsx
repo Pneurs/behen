@@ -106,16 +106,12 @@ const AvailabilityCalendarManager = ({
             selected={undefined}
             onSelect={handleDateSelect}
             disabled={(date) => date < new Date()}
-            className={cn("rounded-md border pointer-events-auto")}
+            className={cn("rounded-md border")}
             modifiers={{
               blocked: selectedDates,
             }}
-            modifiersStyles={{
-              blocked: {
-                backgroundColor: "hsl(var(--destructive))",
-                color: "hsl(var(--destructive-foreground))",
-                fontWeight: "bold",
-              },
+            modifiersClassNames={{
+              blocked: "bg-destructive text-destructive-foreground font-bold line-through",
             }}
           />
         </div>

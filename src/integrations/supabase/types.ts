@@ -185,6 +185,7 @@ export type Database = {
           created_at: string
           description: string | null
           designer: string | null
+          extra_day_rate: number | null
           fabric: string | null
           height_range: string | null
           hips_size: string | null
@@ -193,9 +194,11 @@ export type Database = {
           latitude: number | null
           listing_type: string
           longitude: number | null
+          original_price: number | null
           owner_id: string
           product_type: string | null
           real_images: string[] | null
+          rental_price_4days: number | null
           rental_price_per_day: number | null
           sale_price: number | null
           security_deposit: number | null
@@ -223,6 +226,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           designer?: string | null
+          extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
           hips_size?: string | null
@@ -231,9 +235,11 @@ export type Database = {
           latitude?: number | null
           listing_type: string
           longitude?: number | null
+          original_price?: number | null
           owner_id: string
           product_type?: string | null
           real_images?: string[] | null
+          rental_price_4days?: number | null
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null
@@ -261,6 +267,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           designer?: string | null
+          extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
           hips_size?: string | null
@@ -269,9 +276,11 @@ export type Database = {
           latitude?: number | null
           listing_type?: string
           longitude?: number | null
+          original_price?: number | null
           owner_id?: string
           product_type?: string | null
           real_images?: string[] | null
+          rental_price_4days?: number | null
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null

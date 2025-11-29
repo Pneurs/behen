@@ -24,18 +24,22 @@ serve(async (req) => {
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
     const categoryLabel = category.replace("_", " ");
     
-    let prompt = `Create a beautiful, professional product photograph of a ${categoryLabel} ${productTypeLabel}`;
+    // Use the specific prompt for faceless mannequin with exact dress details
+    let prompt = `A faceless mannequin wearing a ${categoryLabel} ${productTypeLabel}. `;
+    prompt += `Keep the ${productTypeLabel} EXACTLY the same in color, embroidery, shape, and details from the provided reference. `;
     
     if (color) {
-      prompt += ` in ${color} color`;
+      prompt += `Exact ${color} color match. `;
     }
     
     if (fabric) {
-      prompt += ` made of ${fabric} fabric`;
+      prompt += `${fabric} fabric with exact texture. `;
     }
     
-    prompt += `. ${description.substring(0, 200)}`;
-    prompt += `. Ultra high resolution, studio lighting, fashion photography, elegant presentation, product shot, white or neutral background, professional retail quality.`;
+    prompt += `${description.substring(0, 150)}. `;
+    prompt += `Clear studio lighting, clean white background, full-length front view. `;
+    prompt += `Professional fashion photography, ultra high resolution, product display quality. `;
+    prompt += `Focus on preserving ALL original dress details including embroidery patterns, embellishments, and design elements.`;
 
     console.log("Generating image with prompt:", prompt);
 
