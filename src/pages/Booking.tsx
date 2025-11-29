@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateRange } from "react-day-picker";
 import { differenceInDays, format } from "date-fns";
 import { Upload } from "lucide-react";
+import { Header } from "@/components/Header";
 
 export default function Booking() {
   const { productId } = useParams();
@@ -150,7 +151,9 @@ export default function Booking() {
   if (!product) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="p-6">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-4xl font-bold mb-8">Book: {product.title}</h1>
         
@@ -250,10 +253,11 @@ export default function Booking() {
                   {loading ? "Submitting..." : "Submit Booking"}
                 </Button>
               </CardContent>
-            </Card>
-          </div>
+          </Card>
         </div>
       </div>
+      </div>
+    </div>
     </div>
   );
 }

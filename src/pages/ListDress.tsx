@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Upload, Loader2, X } from "lucide-react";
+import { Upload, Loader2, X } from "lucide-react";
 import { z } from "zod";
 import AvailabilityCalendarManager from "@/components/AvailabilityCalendarManager";
+import { Header } from "@/components/Header";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -270,14 +271,7 @@ const ListDress = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <Button variant="ghost" onClick={() => navigate("/browse")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Browse
-          </Button>
-        </div>
-      </header>
+      <Header />
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <Card>
@@ -288,6 +282,14 @@ const ListDress = () => {
             <CardDescription>
               Share your beautiful dresses, footwear, accessories, or fashion tips with other Behens
             </CardDescription>
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
+              <p className="text-sm font-medium text-foreground">
+                💡 Add details as much as you can - it helps you sell your product fast!
+              </p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Note: Your real images will only be shown to signed-in users. Full product details will be visible only after booking confirmation.
+              </p>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -422,15 +424,16 @@ const ListDress = () => {
                     <h4 className="font-medium">Sale Pricing</h4>
                     <div className="grid md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="original_price">Original Price (Optional)</Label>
+                        <Label htmlFor="original_price">Original Price *</Label>
                         <Input
                           id="original_price"
                           type="number"
                           placeholder="80000"
                           value={formData.original_price}
                           onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                          required
                         />
-                        <p className="text-xs text-muted-foreground">For showing discount %</p>
+                        <p className="text-xs text-muted-foreground">Full retail price (required for discount display)</p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="sale_price">Sale Price *</Label>

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
+import { Header } from "@/components/Header";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -142,23 +143,7 @@ const ProductDetail = () => {
         <meta name="robots" content="noindex, nofollow" data-image-protection="true" />
       </head>
       
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button variant="ghost" onClick={() => navigate("/browse")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon">
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Share2 className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
