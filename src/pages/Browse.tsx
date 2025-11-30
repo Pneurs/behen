@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,14 @@ import { format, isWithinInterval } from "date-fns";
 
 const Browse = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
   const [listingTypeFilter, setListingTypeFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState("");
+  const [cityFilter, setCityFilter] = useState(searchParams.get("city") || "");
   const [isNearMe, setIsNearMe] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);

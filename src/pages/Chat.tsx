@@ -143,16 +143,45 @@ export default function Chat() {
 
   const moderateMessage = (message: string): { isBlocked: boolean; reason: string } => {
     const patterns = [
-      // Phone numbers
-      { regex: /(\+91|0)?[6-9]\d{9}/g, reason: "phone number" },
-      { regex: /\b(zero|one|two|three|four|five|six|seven|eight|nine)\s*(zero|one|two|three|four|five|six|seven|eight|nine)\s*(zero|one|two|three|four|five|six|seven|eight|nine)/gi, reason: "phone number in words" },
-      // Email
+      // Pakistani phone numbers - all formats
+      { regex: /03[0-9]{2}[\s-]?[0-9]{7}/g, reason: "phone number" },
+      { regex: /(\+92|0092)?[\s]?3[0-9]{2}[\s-]?[0-9]{7}/g, reason: "phone number" },
+      { regex: /\b0\s*3\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]\s*[0-9]/g, reason: "phone number" },
+      { regex: /\b[0-9]{11}\b/g, reason: "phone number" },
+      
+      // Phone number in words/letters (English & Roman Urdu)
+      { regex: /\b(zero|one|two|three|four|five|six|seven|eight|nine|tin|char|panch|chay|saat|aath|nau)\s+(zero|one|two|three|four|five|six|seven|eight|nine|tin|char|panch|chay|saat|aath|nau)/gi, reason: "phone number" },
+      { regex: /\b(number|num|mobile|call|whatsapp|wp|wtsapp|contact|phone|fone)\b/gi, reason: "phone number" },
+      
+      // Urdu terms for contact
+      { regex: /نمبر|میرا نمبر|کال|وٹس ایپ|رابطہ|فون/g, reason: "phone number" },
+      
+      // Email addresses
       { regex: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, reason: "email address" },
-      // Addresses
-      { regex: /\b(address|location|house|flat|building|street|road|area|pin|pincode|landmark)\b/gi, reason: "address information" },
-      // Social media
-      { regex: /\b(whatsapp|instagram|facebook|insta|fb|twitter|snapchat|telegram)\b/gi, reason: "social media handle" },
+      
+      // Exact location keywords (English & Urdu)
+      { regex: /\b(house|H#|H\s?no|flat|apartment|building|street|gali|lane|phase|block)\s*[#]?\s*[0-9]/gi, reason: "exact location" },
+      { regex: /\b(near|opposite|behind|ke pass|pass aajana|milte hain|aajao|aa jao)\b/gi, reason: "meetup location" },
+      { regex: /گھر آ جانا|گھر کے پاس|یہاں آجاؤ|گلی نمبر|فیز|بلوک|یہاں ملتے|میرا گھر|ایڈریس|لوکیشن بھیجو/g, reason: "exact location" },
+      
+      // Society names
+      { regex: /\b(DHA|Bahria|Model Town|Wapda Town|Johar Town|Samanabad|Tariq Road|North Nazimabad|Clifton|Gulberg|Cantt|Defence)\s+(phase|town|society)?/gi, reason: "exact location" },
+      
+      // Google Maps & coordinates
+      { regex: /(google\s?maps?|coordinates?|lat|long|location\s?share|pin\s?location)/gi, reason: "location sharing" },
+      { regex: /[0-9]+\.[0-9]+°/g, reason: "coordinates" },
+      
+      // Social media (English & Roman Urdu)
+      { regex: /\b(whatsapp|instagram|facebook|insta|fb|twitter|snapchat|telegram|tiktok|snap)\b/gi, reason: "social media" },
       { regex: /@[a-zA-Z0-9._]+/g, reason: "social media handle" },
+      
+      // External contact attempts
+      { regex: /\b(contact me on|call me|whatsapp me|send number|msg karo|message karo|fone karo)\b/gi, reason: "external contact" },
+      { regex: /فون کرو|میسج کردو|رابطہ کرو/g, reason: "external contact" },
+      
+      // Hidden/spaced patterns
+      { regex: /\b[0-9\s]{15,}\b/g, reason: "hidden number" },
+      { regex: /\b[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]/gi, reason: "hidden text" },
     ];
 
     for (const pattern of patterns) {
@@ -171,8 +200,8 @@ export default function Chat() {
     
     if (moderation.isBlocked && !conversation.is_booking_confirmed) {
       toast({
-        title: "Message Blocked",
-        description: `Cannot share ${moderation.reason} before booking is confirmed`,
+        title: "⚠️ Message Blocked",
+        description: "Sharing phone numbers, exact locations, addresses, or arranging meetups is not allowed before order confirmation.",
         variant: "destructive",
       });
       return;
