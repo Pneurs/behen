@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 interface Product {
   id: string;
@@ -19,6 +27,7 @@ interface Product {
 }
 
 export const HomeProducts = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,9 +55,9 @@ export const HomeProducts = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="space-y-3">
+      <div className="flex gap-6 overflow-hidden">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="space-y-3 min-w-[280px]">
             <Skeleton className="h-[300px] w-full rounded-xl" />
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
@@ -62,24 +71,26 @@ export const HomeProducts = () => {
     return null;
   }
 
-  // Split products into two rows
-  const firstRow = products.slice(0, 4);
-  const secondRow = products.slice(4, 8);
-
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {firstRow.map((product) => (
-          <ProductCard key={product.id} product={product} />
+    <Carousel
+      opts={{
+        align: "start",
+        loop: false,
+      }}
+      className="w-full"
+    >
+      <CarouselContent className="-ml-4">
+        {products.map((product) => (
+          <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+            <ProductCard 
+              product={product} 
+              onClick={() => navigate(`/product/${product.id}`)}
+            />
+          </CarouselItem>
         ))}
-      </div>
-      {secondRow.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {secondRow.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
-    </div>
+      </CarouselContent>
+      <CarouselPrevious className="hidden md:flex" />
+      <CarouselNext className="hidden md:flex" />
+    </Carousel>
   );
 };
