@@ -19,65 +19,32 @@ const AvailabilityCalendarManager = ({
   const [selectedDates, setSelectedDates] = useState<Date[]>(blackoutDates);
   const [mode, setMode] = useState<"available" | "blocked">("blocked");
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
+  const handleDateSelect = (
+    selected: Date[] | Date | { from?: Date; to?: Date } | undefined,
+  ) => {
+    const updatedDates = Array.isArray(selected)
+      ? selected
+      : selected
+        ? [selected as Date]
+        : [];
 
-    // Normalize date to midnight UTC
-    const normalizedDate = new Date(
-      Date.UTC(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-        0,
-        0,
-        0,
-        0,
-      ),
-    );
-
-    const existingIndex = selectedDates.findIndex(
-      (d) => d.getTime() === normalizedDate.getTime()
-    );
-
-    let newDates: Date[];
-    if (mode === "blocked") {
-      // Add to blackout dates if not already present
-      if (existingIndex === -1) {
-        newDates = [...selectedDates, normalizedDate];
-      } else {
-        newDates = selectedDates;
-      }
-    } else {
-      // Remove from blackout dates (mark as available)
-      if (existingIndex !== -1) {
-        newDates = selectedDates.filter((_, i) => i !== existingIndex);
-      } else {
-        newDates = selectedDates;
-      }
-    }
-
-    setSelectedDates(newDates);
-    onBlackoutDatesChange(newDates);
+    setSelectedDates(updatedDates);
+    onBlackoutDatesChange(updatedDates);
   };
 
+  const isSameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
   const removeDate = (dateToRemove: Date) => {
-    const newDates = selectedDates.filter(
-      (d) => d.getTime() !== dateToRemove.getTime()
-    );
+    const newDates = selectedDates.filter((d) => !isSameDay(d, dateToRemove));
     setSelectedDates(newDates);
     onBlackoutDatesChange(newDates);
   };
 
   const isDateBlocked = (date: Date) => {
-    const checkDate = new Date(Date.UTC(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      0, 0, 0, 0
-    ));
-    return selectedDates.some(
-      (d) => d.getTime() === checkDate.getTime()
-    );
+    return selectedDates.some((d) => isSameDay(d, date));
   };
 
   return (
@@ -139,7 +106,7 @@ const AvailabilityCalendarManager = ({
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Click dates to mark them as available or unavailable based on the selected mode above.
+          Click a date to block it. Click again to unblock. You can select multiple dates.
         </p>
 
         {/* Blocked Dates List */}
