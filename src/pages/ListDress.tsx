@@ -303,11 +303,11 @@ const ListDress = () => {
       setConfirmImageLoading(true);
       setConfirmImageError(false);
       setCurrentStep("confirm");
-      toast.success("Mannequin image generated successfully!");
+      toast.success("AI Image generated successfully!");
 
     } catch (error: any) {
       console.error("AI generation error:", error);
-      toast.error(error.message || "Failed to generate mannequin image");
+      toast.error(error.message || "Failed to generate AI Image");
       setCurrentStep("upload");
     } finally {
       setGeneratingCover(false);
@@ -359,7 +359,7 @@ const ListDress = () => {
     e.preventDefault();
 
     if (!aiCoverImage && !isEditMode) {
-      toast.error("Please generate and confirm the mannequin image first");
+      toast.error("Please generate and confirm the AI Image first");
       return;
     }
 
@@ -476,7 +476,7 @@ const ListDress = () => {
       <CardHeader>
         <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
         <CardDescription>
-          Upload 1-3 clear photos of your dress. Front view is mandatory. We'll use AI to create a professional mannequin display.
+          Upload 1-3 clear photos of your dress. Front view is mandatory. We'll use AI to create a professional AI Image display.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -565,7 +565,7 @@ const ListDress = () => {
       <CardContent className="flex flex-col items-center justify-center py-16 space-y-6">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
         <div className="text-center space-y-2">
-          <h3 className="text-2xl font-semibold">Creating Your Mannequin Preview</h3>
+          <h3 className="text-2xl font-semibold">Creating Your AI Image Preview</h3>
           <p className="text-muted-foreground">
             Please wait 10-15 seconds while AI generates a professional display...
           </p>
@@ -578,7 +578,7 @@ const ListDress = () => {
   const renderConfirmStep = () => (
     <Card className="max-w-3xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl">Review Your Mannequin Image</CardTitle>
+        <CardTitle className="text-2xl">Review Your AI Image</CardTitle>
         <CardDescription>
           This is how your dress will appear publicly. Real photos stay private until booking confirmation.
         </CardDescription>
@@ -594,7 +594,7 @@ const ListDress = () => {
         
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <Label className="mb-2 block">AI Generated Mannequin (Public)</Label>
+            <Label className="mb-2 block">AI Generated Image (Public)</Label>
             <div className="relative">
               {confirmImageLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg border">
@@ -603,7 +603,7 @@ const ListDress = () => {
               )}
               <img
                 src={aiCoverImage}
-                alt="AI Generated Mannequin"
+                alt="AI Generated Image"
                 className="w-full rounded-lg border"
                 onLoad={() => setConfirmImageLoading(false)}
                 onError={() => {
@@ -628,7 +628,7 @@ const ListDress = () => {
         <Alert>
           <Check className="h-4 w-4" />
           <AlertDescription>
-            The mannequin image will be the main product image. Real photos are only shared with confirmed bookings.
+            The AI Image will be the main product image. Real photos are only shared with confirmed bookings.
           </AlertDescription>
         </Alert>
 
@@ -663,6 +663,61 @@ const ListDress = () => {
           <CardDescription>Fill in all required information about your product</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Additional Real Images */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Product Images (Optional)</h3>
+            <p className="text-sm text-muted-foreground">
+              Add more real images of your product. These will only be visible to confirmed bookings.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                  id="additional-image-upload"
+                  disabled={imageFiles.length >= 5}
+                />
+                <label
+                  htmlFor="additional-image-upload"
+                  className="cursor-pointer flex flex-col items-center space-y-2"
+                >
+                  <Upload className="h-10 w-10 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {imageFiles.length > 0 ? `${imageFiles.length} image(s) selected` : 'Click to add more images'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    JPG or PNG (max 5 images total)
+                  </span>
+                </label>
+              </div>
+
+              {imagePreviews.length > 0 && (
+                <div className="grid grid-cols-5 gap-3">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Basic Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Basic Details</h3>
