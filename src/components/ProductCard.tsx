@@ -117,13 +117,30 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
           </div>
         )}
 
-        {/* Discount Badge */}
-        {product.original_price && product.sale_price && product.original_price > product.sale_price && (
-          <div className="absolute top-2 left-2">
-            <Badge variant="destructive" className="text-xs font-bold">
-              {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
-            </Badge>
-          </div>
+        {/* Discount Badge - Show for both rental and sale */}
+        {product.original_price && (
+          <>
+            {/* For sale or both: show sale discount if available */}
+            {(product.listing_type === "sale" || product.listing_type === "both") && 
+             product.sale_price && 
+             product.original_price > product.sale_price && (
+              <div className="absolute top-2 left-2">
+                <Badge variant="destructive" className="text-xs font-bold">
+                  {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+                </Badge>
+              </div>
+            )}
+            {/* For rent only: show rental discount if available and no sale price */}
+            {product.listing_type === "rent" && 
+             product.rental_price_4days && 
+             product.original_price > product.rental_price_4days && (
+              <div className="absolute top-2 left-2">
+                <Badge variant="destructive" className="text-xs font-bold">
+                  {Math.round(((product.original_price - product.rental_price_4days) / product.original_price) * 100)}% OFF
+                </Badge>
+              </div>
+            )}
+          </>
         )}
       </div>
 
