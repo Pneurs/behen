@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -12,61 +13,71 @@ serve(async (req) => {
   }
 
   try {
-    const { title, description, category, product_type, fabric, color } = await req.json();
+    const { imageUrl, title, description, category, product_type, fabric, color } = await req.json();
 
-    // Get Lovable API key
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Get OpenAI API key
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    // Create a strict, detailed prompt for exact image reproduction
+    // Validate image quality before processing
+    if (!imageUrl || imageUrl.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Please upload at least one clear image of your dress",
+          code: "INVALID_IMAGE"
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Create ultra-strict prompt for 100% accuracy mannequin reconstruction
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
-    const categoryLabel = category.replace("_", " ");
     
-    // Ultra-strict prompt for 100% accuracy
     let prompt = `Use the uploaded image as the ONLY reference. `;
-    prompt += `Generate a faceless mannequin wearing the exact same ${productTypeLabel} from the referenced image. `;
-    prompt += `Reproduce the ${productTypeLabel} with 100% accuracy, including: `;
-    prompt += `exact colors, exact embroidery and patterns, exact borders, exact fabric shine and texture, exact shape, pleats, and silhouette, `;
-    prompt += `exact neckline, sleeves, dupatta shape, exact hem and details. `;
-    
-    if (color) {
-      prompt += `Color must be EXACTLY ${color} as shown in reference. `;
-    }
-    
+    prompt += `Recreate the ${productTypeLabel} on a clean, faceless mannequin. `;
+    prompt += `The ${productTypeLabel} must match the reference image with 100% accuracy:\n`;
+    prompt += `- exact colors (${color || 'as shown'})\n`;
+    prompt += `- exact embroidery and patterns\n`;
+    prompt += `- exact borders and edging\n`;
+    prompt += `- exact mirror-work, sequins, or beadwork\n`;
+    prompt += `- exact pleats and silhouette\n`;
+    prompt += `- exact neckline and sleeve design\n`;
+    prompt += `- exact dupatta shape and draping\n`;
+    prompt += `- exact hem and fall\n`;
     if (fabric) {
-      prompt += `Fabric texture must match ${fabric} exactly as shown. `;
+      prompt += `- exact fabric texture (${fabric})\n`;
     }
-    
-    prompt += `DO NOT redesign anything. DO NOT modify, simplify, or reinterpret any part of the ${productTypeLabel}. `;
-    prompt += `ONLY replace the human model with a neutral faceless mannequin. `;
-    prompt += `Rules: background: clean white studio. lighting: soft, even, shadow-free. framing: full-length front view. `;
-    prompt += `mannequin: smooth, faceless, emotionless. keep ${productTypeLabel} proportions EXACTLY same as the original image. `;
-    prompt += `copy all folds, drapes, borders, and highlights precisely. `;
-    prompt += `DO NOT add extra accessories, jewellery, hands, or props. `;
-    prompt += `DO NOT alter the ${productTypeLabel} length, color, or pattern in any way. `;
-    prompt += `This is a strict reconstruction. The output MUST look like the original ${productTypeLabel} placed on a mannequin, nothing else.`;
+    prompt += `\nDo NOT redesign anything. `;
+    prompt += `Do NOT alter patterns, textures, colors, or borders. `;
+    prompt += `Do NOT simplify or modify any details. `;
+    prompt += `ONLY remove the human model and place the dress on a faceless mannequin.\n\n`;
+    prompt += `Style requirements:\n`;
+    prompt += `- Full-length front view\n`;
+    prompt += `- White studio background\n`;
+    prompt += `- Soft, even lighting with subtle shadow\n`;
+    prompt += `- Photorealistic rendering\n`;
+    prompt += `- High detail preservation\n`;
+    prompt += `- No accessories, no jewelry, no props\n`;
+    prompt += `- No hands, no face features\n`;
+    prompt += `- Keep proportions EXACTLY identical to reference image\n`;
+    prompt += `- The mannequin should be smooth, featureless, and neutral\n\n`;
+    prompt += `This is a strict reconstruction task. The output MUST look like the original ${productTypeLabel} placed on a professional display mannequin, with zero creative interpretation.`;
 
-    console.log("Generating image with prompt:", prompt);
+    console.log("Generating mannequin image with OpenAI gpt-image-1");
+    console.log("Prompt:", prompt);
 
-    // Call Lovable AI for image generation
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call OpenAI gpt-image-1 for high-fidelity image generation
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
+      body: await createFormData(imageUrl, prompt),
     });
 
     if (!response.ok) {
@@ -85,7 +96,7 @@ serve(async (req) => {
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ 
-            error: "AI credits exhausted. Please add credits to continue.",
+            error: "Payment required. Please check your OpenAI credits.",
             code: "NO_CREDITS"
           }),
           {
@@ -96,23 +107,25 @@ serve(async (req) => {
       }
       
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      console.error("OpenAI API error:", response.status, errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("AI response received");
+    console.log("OpenAI response received");
 
-    // Extract the generated image
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Extract the generated image URL
+    const generatedImageUrl = data.data?.[0]?.url;
     
-    if (!imageUrl) {
+    if (!generatedImageUrl) {
       throw new Error("No image generated in response");
     }
 
-    // Convert base64 to blob and upload to Supabase storage
-    const base64Data = imageUrl.split(",")[1];
-    const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+    // Download the image from OpenAI
+    const imageResponse = await fetch(generatedImageUrl);
+    const imageBlob = await imageResponse.blob();
+    const imageBuffer = await imageBlob.arrayBuffer();
+    const imageBytes = new Uint8Array(imageBuffer);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -124,7 +137,7 @@ serve(async (req) => {
     // Upload to storage
     const { error: uploadError } = await supabase.storage
       .from("product-images")
-      .upload(fileName, binaryData, {
+      .upload(fileName, imageBytes, {
         contentType: "image/png",
         upsert: false,
       });
@@ -139,7 +152,7 @@ serve(async (req) => {
       .from("product-images")
       .getPublicUrl(fileName);
 
-    console.log("Image uploaded successfully:", publicUrl);
+    console.log("Mannequin image uploaded successfully:", publicUrl);
 
     return new Response(
       JSON.stringify({ 
@@ -154,7 +167,7 @@ serve(async (req) => {
     console.error("Error in generate-cover-image function:", error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "Failed to generate cover image",
+        error: error instanceof Error ? error.message : "Failed to generate mannequin image",
         details: error instanceof Error ? error.stack : undefined
       }),
       {
@@ -164,3 +177,19 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to create FormData for OpenAI API
+async function createFormData(imageUrl: string, prompt: string): Promise<FormData> {
+  const formData = new FormData();
+  
+  // Download the image from the URL
+  const imageResponse = await fetch(imageUrl);
+  const imageBlob = await imageResponse.blob();
+  
+  formData.append("image", imageBlob, "dress.png");
+  formData.append("prompt", prompt);
+  formData.append("n", "1");
+  formData.append("size", "1024x1024");
+  
+  return formData;
+}

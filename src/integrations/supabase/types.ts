@@ -174,22 +174,26 @@ export type Database = {
       products: {
         Row: {
           ai_cover_image: string | null
+          ai_generation_attempts: number | null
           alteration_possible: boolean | null
-          area: string | null
+          area: string
           availability_data: Json | null
           category: string
           chest_size: string | null
-          city: string | null
+          city: string
           color: string | null
           condition: string
           created_at: string
           description: string | null
           designer: string | null
+          dry_clean_only: boolean | null
           extra_day_rate: number | null
           fabric: string | null
           height_range: string | null
           hips_size: string | null
           id: string
+          image_quality_validated: boolean | null
+          included_accessories: Json | null
           last_rented_on: string | null
           latitude: number | null
           listing_type: string
@@ -202,7 +206,7 @@ export type Database = {
           rental_price_per_day: number | null
           sale_price: number | null
           security_deposit: number | null
-          size: string | null
+          size: string
           status: string
           style_tips: string | null
           subcategory: string | null
@@ -215,22 +219,26 @@ export type Database = {
         }
         Insert: {
           ai_cover_image?: string | null
+          ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
-          area?: string | null
+          area?: string
           availability_data?: Json | null
           category: string
           chest_size?: string | null
-          city?: string | null
+          city?: string
           color?: string | null
           condition: string
           created_at?: string
           description?: string | null
           designer?: string | null
+          dry_clean_only?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
           hips_size?: string | null
           id?: string
+          image_quality_validated?: boolean | null
+          included_accessories?: Json | null
           last_rented_on?: string | null
           latitude?: number | null
           listing_type: string
@@ -243,7 +251,7 @@ export type Database = {
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null
-          size?: string | null
+          size?: string
           status?: string
           style_tips?: string | null
           subcategory?: string | null
@@ -256,22 +264,26 @@ export type Database = {
         }
         Update: {
           ai_cover_image?: string | null
+          ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
-          area?: string | null
+          area?: string
           availability_data?: Json | null
           category?: string
           chest_size?: string | null
-          city?: string | null
+          city?: string
           color?: string | null
           condition?: string
           created_at?: string
           description?: string | null
           designer?: string | null
+          dry_clean_only?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
           hips_size?: string | null
           id?: string
+          image_quality_validated?: boolean | null
+          included_accessories?: Json | null
           last_rented_on?: string | null
           latitude?: number | null
           listing_type?: string
@@ -284,7 +296,7 @@ export type Database = {
           rental_price_per_day?: number | null
           sale_price?: number | null
           security_deposit?: number | null
-          size?: string | null
+          size?: string
           status?: string
           style_tips?: string | null
           subcategory?: string | null
