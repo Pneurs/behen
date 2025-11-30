@@ -34,10 +34,10 @@ serve(async (req) => {
       );
     }
 
-    // Simple and direct prompt for mannequin generation
+    // Create product photoshoot prompt
     const productTypeLabel = product_type === "dress" ? "lehnga" : product_type;
     
-    const prompt = `A faceless mannequin wearing your ${productTypeLabel}. This one but ${productTypeLabel} should be exactly the same.`;
+    const prompt = `Transform this into a professional product photoshoot: A faceless mannequin wearing the ${productTypeLabel} standing straight. Pure white background, studio lighting. The ${productTypeLabel} must be exactly the same - same colors, embroidery, patterns, and details. Only replace the person with a mannequin, keep everything else identical.`;
 
     console.log("Generating mannequin image with Lovable AI");
     console.log("Prompt:", prompt);
