@@ -61,10 +61,11 @@ export const EnhancedHeader = () => {
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
-        <Link to="/" className="flex items-center space-x-2">
+        <Link to="/" className="flex flex-col items-start">
           <span className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
             Behen.pk
           </span>
+          <span className="text-xs text-muted-foreground" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>بہنیں تو سب شیئر کرتی ہیں</span>
         </Link>
 
         {/* Desktop Navigation */}
