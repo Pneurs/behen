@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        'urdu': ["'Noto Nastaliq Urdu'", 'serif'],
+        'playfair': ["'Playfair Display'", 'serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

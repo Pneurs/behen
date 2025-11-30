@@ -1,10 +1,15 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Shield, Sparkles } from "lucide-react";
+import { EnhancedHeader } from "@/components/EnhancedHeader";
+import { HomeSearch } from "@/components/HomeSearch";
+import { HomeProducts } from "@/components/HomeProducts";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background">
+      <EnhancedHeader />
+      
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
@@ -21,11 +26,15 @@ const Index = () => {
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-              Rent or buy stunning bridal and formal wear. Share your designer pieces with other Behens and make every celebration unforgettable.
+              Rent or buy stunning bridal and formal wear. Share your designer pieces with your Behen and make every celebration unforgettable.
             </p>
             
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto animate-in fade-in slide-in-from-bottom-7 duration-700 delay-300">
-              <Link to="/auth?mode=signup&role=choti" className="w-full sm:w-auto">
+            <div className="w-full mb-8 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-300">
+              <HomeSearch />
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto animate-in fade-in slide-in-from-bottom-8 duration-700 delay-400">
+              <Link to="/browse" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all">
                   <Search className="mr-2 h-5 w-5" />
                   Browse Collection
@@ -38,6 +47,16 @@ const Index = () => {
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Featured Products Section */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Featured Collection
+          </h2>
+          <HomeProducts />
         </div>
       </section>
 

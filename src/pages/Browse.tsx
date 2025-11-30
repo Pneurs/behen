@@ -51,18 +51,16 @@ const Browse = () => {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
+      if (session) {
         setUser(session.user);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
+      if (session) {
         setUser(session.user);
+      } else {
+        setUser(null);
       }
     });
 
@@ -70,11 +68,9 @@ const Browse = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (user) {
-      loadProducts();
-      loadBookings();
-    }
-  }, [user, categoryFilter, listingTypeFilter, cityFilter]);
+    loadProducts();
+    loadBookings();
+  }, [categoryFilter, listingTypeFilter, cityFilter]);
 
   const loadBookings = async () => {
     try {
