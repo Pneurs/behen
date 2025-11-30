@@ -19,36 +19,27 @@ const AvailabilityCalendarManager = ({
   const [selectedDates, setSelectedDates] = useState<Date[]>(blackoutDates);
   const [mode, setMode] = useState<"available" | "blocked">("blocked");
 
-  const handleDateSelect = (date: Date | undefined) => {
-    if (!date) return;
+  const handleDateSelect = (dates: Date[] | undefined) => {
+    if (!dates || dates.length === 0) return;
 
-    // Normalize date to midnight UTC
-    const normalizedDate = new Date(Date.UTC(
+    // Normalize dates to midnight UTC
+    const normalizedDates = dates.map(date => new Date(Date.UTC(
       date.getFullYear(),
       date.getMonth(),
       date.getDate(),
       0, 0, 0, 0
-    ));
-
-    const existingIndex = selectedDates.findIndex(
-      (d) => d.getTime() === normalizedDate.getTime()
-    );
+    )));
 
     let newDates: Date[];
     if (mode === "blocked") {
       // Add to blackout dates
-      if (existingIndex === -1) {
-        newDates = [...selectedDates, normalizedDate];
-      } else {
-        newDates = selectedDates;
-      }
+      const existingDatesSet = new Set(selectedDates.map(d => d.getTime()));
+      const datesToAdd = normalizedDates.filter(d => !existingDatesSet.has(d.getTime()));
+      newDates = [...selectedDates, ...datesToAdd];
     } else {
       // Remove from blackout dates (mark as available)
-      if (existingIndex !== -1) {
-        newDates = selectedDates.filter((_, i) => i !== existingIndex);
-      } else {
-        newDates = selectedDates;
-      }
+      const datesToRemoveSet = new Set(normalizedDates.map(d => d.getTime()));
+      newDates = selectedDates.filter(d => !datesToRemoveSet.has(d.getTime()));
     }
 
     setSelectedDates(newDates);
@@ -112,8 +103,8 @@ const AvailabilityCalendarManager = ({
         {/* Calendar */}
         <div className="flex justify-center">
           <Calendar
-            mode="single"
-            selected={undefined}
+            mode="multiple"
+            selected={[]}
             onSelect={handleDateSelect}
             numberOfMonths={1}
             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
@@ -132,6 +123,10 @@ const AvailabilityCalendarManager = ({
             }}
           />
         </div>
+
+        <p className="text-sm text-muted-foreground">
+          💡 Tip: Hold Shift and click to select date ranges quickly
+        </p>
 
         {/* Blocked Dates List */}
         {selectedDates.length > 0 && (
