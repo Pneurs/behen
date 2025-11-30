@@ -22,9 +22,13 @@ const AvailabilityCalendarManager = ({
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
 
-    // Normalize date to midnight
-    const normalizedDate = new Date(date);
-    normalizedDate.setHours(0, 0, 0, 0);
+    // Normalize date to midnight UTC
+    const normalizedDate = new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      0, 0, 0, 0
+    ));
 
     const existingIndex = selectedDates.findIndex(
       (d) => d.getTime() === normalizedDate.getTime()
@@ -60,8 +64,14 @@ const AvailabilityCalendarManager = ({
   };
 
   const isDateBlocked = (date: Date) => {
+    const checkDate = new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      0, 0, 0, 0
+    ));
     return selectedDates.some(
-      (d) => d.getTime() === new Date(date).setHours(0, 0, 0, 0)
+      (d) => d.getTime() === checkDate.getTime()
     );
   };
 
@@ -105,13 +115,13 @@ const AvailabilityCalendarManager = ({
             mode="single"
             selected={undefined}
             onSelect={handleDateSelect}
-            disabled={(date) => date < new Date()}
-            className={cn("rounded-md border")}
+            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+            className={cn("rounded-md border pointer-events-auto")}
             modifiers={{
               blocked: selectedDates,
             }}
             modifiersClassNames={{
-              blocked: "bg-destructive text-destructive-foreground font-bold line-through",
+              blocked: "bg-destructive text-destructive-foreground font-bold line-through hover:bg-destructive hover:text-destructive-foreground",
             }}
           />
         </div>

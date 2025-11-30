@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
 import { Header } from "@/components/Header";
+import ProductAvailabilityCalendar from "@/components/ProductAvailabilityCalendar";
 import { 
   ArrowLeft, 
   MapPin, 
@@ -32,6 +33,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRealImages, setShowRealImages] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -65,6 +67,17 @@ const ProductDetail = () => {
 
       if (ownerError) throw ownerError;
       setOwner(ownerData);
+
+      // Load bookings for this product
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("start_date, end_date, booking_status")
+        .eq("product_id", id)
+        .in("booking_status", ["confirmed", "payment_submitted", "pending_payment"]);
+
+      if (!bookingsError && bookingsData) {
+        setBookings(bookingsData);
+      }
     } catch (error: any) {
       toast.error("Failed to load product");
       console.error(error);
@@ -79,8 +92,41 @@ const ProductDetail = () => {
   };
 
   const getBlackoutDates = () => {
-    if (!product?.availability_data?.blackout_dates) return [];
-    return product.availability_data.blackout_dates.map((d: string) => new Date(d));
+    const dates: Date[] = [];
+    
+    // Add blackout dates from product
+    if (product?.availability_data?.blackout_dates) {
+      dates.push(...product.availability_data.blackout_dates.map((d: string) => new Date(d)));
+    }
+    
+    // Add booked dates
+    bookings.forEach(booking => {
+      const start = new Date(booking.start_date);
+      const end = new Date(booking.end_date);
+      
+      // Add all dates in the booking range
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
+    });
+    
+    return dates;
+  };
+
+  const getNextAvailableDate = () => {
+    if (bookings.length === 0) return null;
+    
+    // Find the latest booking end date
+    const latestBooking = bookings.reduce((latest, booking) => {
+      const endDate = new Date(booking.end_date);
+      return endDate > latest ? endDate : latest;
+    }, new Date(bookings[0].end_date));
+    
+    // Next available is the day after
+    const nextAvailable = new Date(latestBooking);
+    nextAvailable.setDate(nextAvailable.getDate() + 1);
+    
+    return nextAvailable;
   };
 
   const handleContactSeller = () => {
@@ -449,46 +495,10 @@ const ProductDetail = () => {
           {/* Availability Calendar */}
           {(product.listing_type === "rent" || product.listing_type === "both") && (
             <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Availability</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-center">
-                    <Calendar
-                      mode="single"
-                      selected={undefined}
-                      disabled={(date) => {
-                        if (date < new Date()) return true;
-                        return blackoutDates.some(
-                          (blocked) => blocked.toDateString() === date.toDateString()
-                        );
-                      }}
-                      className="pointer-events-auto rounded-md border"
-                      modifiers={{
-                        blocked: blackoutDates,
-                      }}
-                      modifiersStyles={{
-                        blocked: {
-                          backgroundColor: "hsl(var(--destructive))",
-                          color: "hsl(var(--destructive-foreground))",
-                          textDecoration: "line-through",
-                        },
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded bg-background border"></div>
-                      <span className="text-sm">Available</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded bg-destructive"></div>
-                      <span className="text-sm">Not Available</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ProductAvailabilityCalendar 
+                blackoutDates={blackoutDates}
+                nextAvailableDate={getNextAvailableDate()}
+              />
             </div>
           )}
         </div>

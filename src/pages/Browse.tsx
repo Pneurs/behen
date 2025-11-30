@@ -28,6 +28,7 @@ const Browse = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -71,8 +72,23 @@ const Browse = () => {
   useEffect(() => {
     if (user) {
       loadProducts();
+      loadBookings();
     }
   }, [user, categoryFilter, listingTypeFilter, cityFilter]);
+
+  const loadBookings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("product_id, start_date, end_date, booking_status")
+        .in("booking_status", ["confirmed", "payment_submitted", "pending_payment"]);
+
+      if (error) throw error;
+      setAllBookings(data || []);
+    } catch (error: any) {
+      console.error("Failed to load bookings:", error);
+    }
+  };
 
   const loadProducts = async () => {
     setLoading(true);
@@ -154,16 +170,31 @@ const Browse = () => {
   const isProductAvailableForDates = (product: any, dateRange: DateRange | undefined) => {
     if (!dateRange?.from || !dateRange?.to) return true;
 
-    // If no availability data, assume available
-    if (!product.availability_data) return true;
+    const selectedStart = dateRange.from;
+    const selectedEnd = dateRange.to;
 
-    const blackoutDates = product.availability_data.blackout_dates || [];
+    // Check blackout dates from product availability_data
+    if (product.availability_data?.blackout_dates) {
+      const blackoutDates = product.availability_data.blackout_dates;
+      
+      for (const blackoutDate of blackoutDates) {
+        const blackout = new Date(blackoutDate);
+        if (isWithinInterval(blackout, { start: selectedStart, end: selectedEnd })) {
+          return false;
+        }
+      }
+    }
+
+    // Check for overlapping bookings
+    const productBookings = allBookings.filter(b => b.product_id === product.id);
     
-    // Check if any blackout date falls within the selected range
-    for (const blackoutDate of blackoutDates) {
-      const blackout = new Date(blackoutDate);
-      if (isWithinInterval(blackout, { start: dateRange.from, end: dateRange.to })) {
-        return false;
+    for (const booking of productBookings) {
+      const bookingStart = new Date(booking.start_date);
+      const bookingEnd = new Date(booking.end_date);
+      
+      // Check for overlap: (booking_start <= selected_end) AND (booking_end >= selected_start)
+      if (bookingStart <= selectedEnd && bookingEnd >= selectedStart) {
+        return false; // Booking overlaps with selected dates
       }
     }
 
