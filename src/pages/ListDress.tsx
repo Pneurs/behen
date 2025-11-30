@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,10 @@ const listingSchema = z.object({
 
 const ListDress = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editProductId = searchParams.get("edit");
   const [user, setUser] = useState<any>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   
   // Multi-step wizard state
   const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details">("upload");
@@ -97,6 +100,80 @@ const ListDress = () => {
       }
     });
   }, [navigate]);
+
+  // Load product data when in edit mode
+  useEffect(() => {
+    if (editProductId && user) {
+      const loadProductData = async () => {
+        try {
+          const { data: product, error } = await supabase
+            .from("products")
+            .select("*")
+            .eq("id", editProductId)
+            .eq("owner_id", user.id)
+            .single();
+
+          if (error) throw error;
+
+          if (product) {
+            setIsEditMode(true);
+            setAiCoverImage(product.ai_cover_image || "");
+            
+            // Load form data
+            setFormData({
+              title: product.title || "",
+              category: product.category || "",
+              subcategory: product.subcategory || "",
+              product_type: product.product_type || "dress",
+              condition: product.condition || "",
+              listing_type: product.listing_type || "",
+              rental_price_per_day: product.rental_price_per_day?.toString() || "",
+              rental_price_4days: product.rental_price_4days?.toString() || "",
+              extra_day_rate: product.extra_day_rate?.toString() || "",
+              original_price: product.original_price?.toString() || "",
+              sale_price: product.sale_price?.toString() || "",
+              security_deposit: product.security_deposit?.toString() || "",
+              description: product.description || "",
+              style_tips: product.style_tips || "",
+              fabric: product.fabric || "",
+              color: product.color || "",
+              work_type: product.work_type || "",
+              designer: product.designer || "",
+              size: product.size || "",
+              height_range: product.height_range || "",
+              weight_range: product.weight_range || "",
+              chest_size: product.chest_size || "",
+              waist_size: product.waist_size || "",
+              hips_size: product.hips_size || "",
+              alteration_possible: product.alteration_possible || false,
+              city: product.city || "",
+              area: product.area || "",
+              dry_clean_only: product.dry_clean_only || false,
+            });
+
+            setIncludedAccessories(Array.isArray(product.included_accessories) ? product.included_accessories as string[] : []);
+            
+            // Load blackout dates
+            if (product.availability_data && typeof product.availability_data === 'object') {
+              const availData = product.availability_data as any;
+              if (availData.blackout_dates) {
+                setBlackoutDates(availData.blackout_dates.map((d: string) => new Date(d)));
+              }
+            }
+
+            // Skip to details step when editing
+            setCurrentStep("details");
+          }
+        } catch (error: any) {
+          console.error("Error loading product:", error);
+          toast.error("Failed to load product data");
+          navigate("/list-dress");
+        }
+      };
+
+      loadProductData();
+    }
+  }, [editProductId, user, navigate]);
 
   // STEP 1: Image Upload Handler
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,7 +358,7 @@ const ListDress = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!aiCoverImage) {
+    if (!aiCoverImage && !isEditMode) {
       toast.error("Please generate and confirm the mannequin image first");
       return;
     }
@@ -294,12 +371,14 @@ const ListDress = () => {
       });
 
       setLoading(true);
-      setUploadingImages(true);
 
-      // Upload real images
-      const realImageUrls = await uploadImages();
-
-      setUploadingImages(false);
+      // Only upload new images if provided (for create mode or if user uploads new ones in edit mode)
+      let realImageUrls: string[] = [];
+      if (imageFiles.length > 0) {
+        setUploadingImages(true);
+        realImageUrls = await uploadImages();
+        setUploadingImages(false);
+      }
 
       // Prepare availability data
       const availabilityData = {
@@ -307,53 +386,75 @@ const ListDress = () => {
         available_dates: []
       };
 
-      // Insert product into database
-      const { data: product, error: insertError } = await supabase
-        .from("products")
-        .insert({
-          owner_id: user.id,
-          title: formData.title,
-          category: formData.category,
-          subcategory: formData.subcategory,
-          product_type: formData.product_type,
-          condition: formData.condition,
-          listing_type: formData.listing_type,
-          rental_price_per_day: formData.rental_price_per_day ? parseFloat(formData.rental_price_per_day) : null,
-          rental_price_4days: formData.rental_price_4days ? parseFloat(formData.rental_price_4days) : null,
-          extra_day_rate: formData.extra_day_rate ? parseFloat(formData.extra_day_rate) : null,
-          original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-          sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
-          security_deposit: formData.security_deposit ? parseFloat(formData.security_deposit) : null,
-          description: formData.description,
-          style_tips: formData.style_tips,
-          fabric: formData.fabric,
-          color: formData.color,
-          work_type: formData.work_type,
-          designer: formData.designer,
-          size: formData.size,
-          height_range: formData.height_range,
-          weight_range: formData.weight_range,
-          chest_size: formData.chest_size,
-          waist_size: formData.waist_size,
-          hips_size: formData.hips_size,
-          alteration_possible: formData.alteration_possible,
-          city: formData.city,
-          area: formData.area,
-          ai_cover_image: aiCoverImage,
-          real_images: realImageUrls,
-          availability_data: availabilityData,
-          dry_clean_only: formData.dry_clean_only,
-          included_accessories: includedAccessories,
-          ai_generation_attempts: 1,
-          image_quality_validated: imageQualityChecked,
-          status: "published",
-        })
-        .select()
-        .single();
+      const productData = {
+        title: formData.title,
+        category: formData.category,
+        subcategory: formData.subcategory,
+        product_type: formData.product_type,
+        condition: formData.condition,
+        listing_type: formData.listing_type,
+        rental_price_per_day: formData.rental_price_per_day ? parseFloat(formData.rental_price_per_day) : null,
+        rental_price_4days: formData.rental_price_4days ? parseFloat(formData.rental_price_4days) : null,
+        extra_day_rate: formData.extra_day_rate ? parseFloat(formData.extra_day_rate) : null,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+        sale_price: formData.sale_price ? parseFloat(formData.sale_price) : null,
+        security_deposit: formData.security_deposit ? parseFloat(formData.security_deposit) : null,
+        description: formData.description,
+        style_tips: formData.style_tips,
+        fabric: formData.fabric,
+        color: formData.color,
+        work_type: formData.work_type,
+        designer: formData.designer,
+        size: formData.size,
+        height_range: formData.height_range,
+        weight_range: formData.weight_range,
+        chest_size: formData.chest_size,
+        waist_size: formData.waist_size,
+        hips_size: formData.hips_size,
+        alteration_possible: formData.alteration_possible,
+        city: formData.city,
+        area: formData.area,
+        availability_data: availabilityData,
+        dry_clean_only: formData.dry_clean_only,
+        included_accessories: includedAccessories,
+        updated_at: new Date().toISOString(),
+      };
 
-      if (insertError) throw insertError;
+      if (isEditMode && editProductId) {
+        // Update existing product
+        const updateData = {
+          ...productData,
+          ...(realImageUrls.length > 0 && { real_images: realImageUrls }),
+        };
 
-      toast.success("Product listed successfully!");
+        const { error: updateError } = await supabase
+          .from("products")
+          .update(updateData)
+          .eq("id", editProductId)
+          .eq("owner_id", user.id);
+
+        if (updateError) throw updateError;
+
+        toast.success("Product updated successfully!");
+      } else {
+        // Create new product
+        const { error: insertError } = await supabase
+          .from("products")
+          .insert({
+            ...productData,
+            owner_id: user.id,
+            ai_cover_image: aiCoverImage,
+            real_images: realImageUrls,
+            ai_generation_attempts: 1,
+            image_quality_validated: imageQualityChecked,
+            status: "published",
+          });
+
+        if (insertError) throw insertError;
+
+        toast.success("Product listed successfully!");
+      }
+
       navigate("/browse");
 
     } catch (error: any) {
@@ -361,7 +462,7 @@ const ListDress = () => {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
       } else {
-        toast.error(error.message || "Failed to create listing");
+        toast.error(error.message || (isEditMode ? "Failed to update listing" : "Failed to create listing"));
       }
     } finally {
       setLoading(false);
