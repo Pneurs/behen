@@ -36,30 +36,10 @@ serve(async (req) => {
     }
 
     // Create ultra-strict prompt for 100% accuracy mannequin reconstruction
+    // Note: OpenAI image edits API has 1000 char limit
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
     
-    let prompt = `Use the uploaded images as the ONLY reference.\n\n`;
-    prompt += `Generate a full-length, faceless mannequin wearing the ${productTypeLabel} exactly as in the reference images.\n\n`;
-    prompt += `Dress reproduction rules (strict 100% accuracy):\n`;
-    prompt += `- Match all colors exactly${color ? ' (' + color + ')' : ''}.\n`;
-    prompt += `- Preserve all embroidery, sequins, mirror-work, or prints.\n`;
-    prompt += `- Preserve borders, pleats, and folds.\n`;
-    if (fabric) {
-      prompt += `- Maintain fabric texture, shine, and flow (${fabric}).\n`;
-    } else {
-      prompt += `- Maintain fabric texture, shine, and flow.\n`;
-    }
-    prompt += `- Keep neckline, sleeves, hemline, dupatta, and overall silhouette identical.\n`;
-    prompt += `- Do NOT redesign, alter, or simplify any part of the ${productTypeLabel}.\n`;
-    prompt += `- Only replace the human with a neutral, faceless mannequin.\n`;
-    prompt += `- No props, jewelry, hands, accessories, or background objects.\n\n`;
-    prompt += `Style & Composition:\n`;
-    prompt += `- Background: clean white studio\n`;
-    prompt += `- Lighting: soft, even, no harsh shadows\n`;
-    prompt += `- Framing: centered, full-length front view\n`;
-    prompt += `- Photorealistic quality\n`;
-    prompt += `- Keep proportions exactly like reference\n\n`;
-    prompt += `This is a strict reconstruction task. The output MUST look like the original ${productTypeLabel} placed on a professional display mannequin, with zero creative interpretation.`;
+    let prompt = `Recreate ${productTypeLabel} on faceless mannequin. Match 100%: colors${color ? ' (' + color + ')' : ''}, embroidery, sequins, borders, pleats, texture${fabric ? ' (' + fabric + ')' : ''}, neckline, sleeves, hem, dupatta, silhouette. NO redesign, alteration, or simplification. Replace human only. White studio background, soft lighting, centered full-length front view, photorealistic. No props, jewelry, accessories. Exact reconstruction from reference images, zero creative interpretation.`;
 
     console.log("Generating mannequin image with OpenAI gpt-image-1");
     console.log("Prompt:", prompt);
