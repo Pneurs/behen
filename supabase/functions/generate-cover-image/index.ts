@@ -38,34 +38,27 @@ serve(async (req) => {
     // Create ultra-strict prompt for 100% accuracy mannequin reconstruction
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
     
-    let prompt = `Use the uploaded image as the ONLY reference. `;
-    prompt += `Recreate the ${productTypeLabel} on a clean, faceless mannequin. `;
-    prompt += `The ${productTypeLabel} must match the reference image with 100% accuracy:\n`;
-    prompt += `- exact colors (${color || 'as shown'})\n`;
-    prompt += `- exact embroidery and patterns\n`;
-    prompt += `- exact borders and edging\n`;
-    prompt += `- exact mirror-work, sequins, or beadwork\n`;
-    prompt += `- exact pleats and silhouette\n`;
-    prompt += `- exact neckline and sleeve design\n`;
-    prompt += `- exact dupatta shape and draping\n`;
-    prompt += `- exact hem and fall\n`;
+    let prompt = `Use the uploaded images as the ONLY reference.\n\n`;
+    prompt += `Generate a full-length, faceless mannequin wearing the ${productTypeLabel} exactly as in the reference images.\n\n`;
+    prompt += `Dress reproduction rules (strict 100% accuracy):\n`;
+    prompt += `- Match all colors exactly${color ? ' (' + color + ')' : ''}.\n`;
+    prompt += `- Preserve all embroidery, sequins, mirror-work, or prints.\n`;
+    prompt += `- Preserve borders, pleats, and folds.\n`;
     if (fabric) {
-      prompt += `- exact fabric texture (${fabric})\n`;
+      prompt += `- Maintain fabric texture, shine, and flow (${fabric}).\n`;
+    } else {
+      prompt += `- Maintain fabric texture, shine, and flow.\n`;
     }
-    prompt += `\nDo NOT redesign anything. `;
-    prompt += `Do NOT alter patterns, textures, colors, or borders. `;
-    prompt += `Do NOT simplify or modify any details. `;
-    prompt += `ONLY remove the human model and place the dress on a faceless mannequin.\n\n`;
-    prompt += `Style requirements:\n`;
-    prompt += `- Full-length front view\n`;
-    prompt += `- White studio background\n`;
-    prompt += `- Soft, even lighting with subtle shadow\n`;
-    prompt += `- Photorealistic rendering\n`;
-    prompt += `- High detail preservation\n`;
-    prompt += `- No accessories, no jewelry, no props\n`;
-    prompt += `- No hands, no face features\n`;
-    prompt += `- Keep proportions EXACTLY identical to reference image\n`;
-    prompt += `- The mannequin should be smooth, featureless, and neutral\n\n`;
+    prompt += `- Keep neckline, sleeves, hemline, dupatta, and overall silhouette identical.\n`;
+    prompt += `- Do NOT redesign, alter, or simplify any part of the ${productTypeLabel}.\n`;
+    prompt += `- Only replace the human with a neutral, faceless mannequin.\n`;
+    prompt += `- No props, jewelry, hands, accessories, or background objects.\n\n`;
+    prompt += `Style & Composition:\n`;
+    prompt += `- Background: clean white studio\n`;
+    prompt += `- Lighting: soft, even, no harsh shadows\n`;
+    prompt += `- Framing: centered, full-length front view\n`;
+    prompt += `- Photorealistic quality\n`;
+    prompt += `- Keep proportions exactly like reference\n\n`;
     prompt += `This is a strict reconstruction task. The output MUST look like the original ${productTypeLabel} placed on a professional display mannequin, with zero creative interpretation.`;
 
     console.log("Generating mannequin image with OpenAI gpt-image-1");
@@ -189,7 +182,7 @@ async function createFormData(imageUrl: string, prompt: string): Promise<FormDat
   formData.append("image", imageBlob, "dress.png");
   formData.append("prompt", prompt);
   formData.append("n", "1");
-  formData.append("size", "1024x1024");
+  formData.append("size", "512x512");
   
   return formData;
 }
