@@ -72,25 +72,27 @@ export const HomeProducts = () => {
   }
 
   return (
-    <Carousel
-      opts={{
-        align: "start",
-        loop: false,
-      }}
-      className="w-full"
-    >
-      <CarouselContent className="-ml-4">
-        {products.map((product) => (
-          <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-            <ProductCard 
-              product={product} 
-              onClick={() => navigate(`/product/${product.id}`)}
-            />
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="hidden md:flex" />
-      <CarouselNext className="hidden md:flex" />
-    </Carousel>
+    <div className="relative px-12">
+      <Carousel
+        opts={{
+          align: "start",
+          loop: false,
+        }}
+        className="w-full"
+      >
+        <CarouselContent className="-ml-4">
+          {products.map((product) => (
+            <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+              <ProductCard 
+                product={product} 
+                onClick={() => navigate(`/product/${product.id}`)}
+              />
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="-left-4 md:-left-6" />
+        <CarouselNext className="-right-4 md:-right-6" />
+      </Carousel>
+    </div>
   );
 };
