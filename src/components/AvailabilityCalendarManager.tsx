@@ -120,9 +120,15 @@ const AvailabilityCalendarManager = ({
             className={cn("rounded-md border pointer-events-auto")}
             modifiers={{
               blocked: selectedDates,
+              available: (date) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return date >= today && !isDateBlocked(date);
+              },
             }}
             modifiersClassNames={{
               blocked: "bg-destructive text-destructive-foreground font-bold line-through hover:bg-destructive hover:text-destructive-foreground",
+              available: "bg-green-100 text-green-900 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-100 dark:hover:bg-green-900/50",
             }}
           />
         </div>
