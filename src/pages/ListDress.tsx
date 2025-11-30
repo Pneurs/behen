@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, RefreshCw } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import AvailabilityCalendarManager from "@/components/AvailabilityCalendarManager";
 import { Header } from "@/components/Header";
@@ -43,8 +43,6 @@ const ListDress = () => {
   // Step 2 & 3: AI generation
   const [generatingCover, setGeneratingCover] = useState(false);
   const [aiCoverImage, setAiCoverImage] = useState<string>("");
-  const [generationAttempts, setGenerationAttempts] = useState(0);
-  const MAX_ATTEMPTS = 3;
   const [confirmImageLoading, setConfirmImageLoading] = useState(false);
   const [confirmImageError, setConfirmImageError] = useState(false);
   
@@ -174,13 +172,7 @@ const ListDress = () => {
       return;
     }
 
-    if (generationAttempts >= MAX_ATTEMPTS) {
-      toast.error(`Maximum ${MAX_ATTEMPTS} generation attempts reached`);
-      return;
-    }
-
     setGeneratingCover(true);
-    setGenerationAttempts(prev => prev + 1);
 
     try {
       // First upload the image to get a URL
@@ -245,28 +237,15 @@ const ListDress = () => {
     }
   };
 
-  // STEP 3: Confirm or Regenerate
+  // STEP 3: Confirm
   const handleAcceptAI = () => {
     setCurrentStep("details");
     toast.success("Great! Now let's add product details.");
   };
 
-  const handleRegenerateAI = () => {
-    if (generationAttempts >= MAX_ATTEMPTS) {
-      toast.error(`Maximum ${MAX_ATTEMPTS} attempts reached. Please try with different images.`);
-      return;
-    }
-    
-    setConfirmImageError(false);
-    setConfirmImageLoading(true);
-    setCurrentStep("generating");
-    generateAICover();
-  };
-
   const handleBackToUpload = () => {
     setCurrentStep("upload");
     setAiCoverImage("");
-    setGenerationAttempts(0);
     setConfirmImageLoading(false);
     setConfirmImageError(false);
   };
@@ -365,7 +344,7 @@ const ListDress = () => {
           availability_data: availabilityData,
           dry_clean_only: formData.dry_clean_only,
           included_accessories: includedAccessories,
-          ai_generation_attempts: generationAttempts,
+          ai_generation_attempts: 1,
           image_quality_validated: imageQualityChecked,
           status: "published",
         })
@@ -489,9 +468,6 @@ const ListDress = () => {
           <p className="text-muted-foreground">
             Please wait 10-15 seconds while AI generates a professional display...
           </p>
-          <p className="text-sm text-muted-foreground">
-            Attempt {generationAttempts} of {MAX_ATTEMPTS}
-          </p>
         </div>
       </CardContent>
     </Card>
@@ -555,33 +531,24 @@ const ListDress = () => {
           </AlertDescription>
         </Alert>
 
-        <div className="flex gap-4">
+        <div className="space-y-3">
           <Button
             onClick={handleAcceptAI}
             size="lg"
-            className="flex-1"
+            className="w-full"
           >
             <Check className="mr-2 h-4 w-4" />
             Accept & Continue
           </Button>
+
           <Button
-            onClick={handleRegenerateAI}
-            variant="outline"
-            size="lg"
-            disabled={generationAttempts >= MAX_ATTEMPTS || generatingCover}
+            onClick={handleBackToUpload}
+            variant="ghost"
+            className="w-full"
           >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Regenerate ({MAX_ATTEMPTS - generationAttempts} left)
+            Back to Upload Different Images
           </Button>
         </div>
-
-        <Button
-          onClick={handleBackToUpload}
-          variant="ghost"
-          className="w-full"
-        >
-          Back to Upload Different Images
-        </Button>
       </CardContent>
     </Card>
   );
