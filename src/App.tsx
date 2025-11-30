@@ -14,6 +14,7 @@ import AllChats from "./pages/AllChats";
 import Admin from "./pages/Admin";
 import MyBookings from "./pages/MyBookings";
 import BariBehenDashboard from "./pages/BariBehenDashboard";
+import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/booking/:productId" element={<Booking />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/chats" element={<AllChats />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/my-bookings" element={<MyBookings />} />
           <Route path="/dashboard" element={<BariBehenDashboard />} />

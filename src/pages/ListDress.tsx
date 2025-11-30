@@ -101,12 +101,12 @@ const ListDress = () => {
   // STEP 1: Image Upload Handler
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length + imageFiles.length > 3) {
-      toast.error("Maximum 3 images allowed");
+    if (files.length + imageFiles.length > 5) {
+      toast.error("Maximum 5 images allowed");
       return;
     }
 
-    const newFiles = files.slice(0, 3 - imageFiles.length);
+    const newFiles = files.slice(0, 5 - imageFiles.length);
     
     // Basic quality check
     const validFiles: File[] = [];

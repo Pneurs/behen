@@ -194,6 +194,7 @@ export type Database = {
           id: string
           image_quality_validated: boolean | null
           included_accessories: Json | null
+          inventory_status: string
           last_rented_on: string | null
           latitude: number | null
           listing_type: string
@@ -239,6 +240,7 @@ export type Database = {
           id?: string
           image_quality_validated?: boolean | null
           included_accessories?: Json | null
+          inventory_status?: string
           last_rented_on?: string | null
           latitude?: number | null
           listing_type: string
@@ -284,6 +286,7 @@ export type Database = {
           id?: string
           image_quality_validated?: boolean | null
           included_accessories?: Json | null
+          inventory_status?: string
           last_rented_on?: string | null
           latitude?: number | null
           listing_type?: string
@@ -422,6 +425,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wishlists: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlists_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
