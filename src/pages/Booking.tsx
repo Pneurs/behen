@@ -210,17 +210,19 @@ export default function Booking() {
                 mode="range"
                 selected={dateRange}
                 onSelect={setDateRange}
-                numberOfMonths={2}
+                numberOfMonths={1}
                 disabled={(date) => {
                   // Disable past dates
-                  if (date < new Date()) return true;
+                  if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
 
                   // Disable blackout dates
                   if (product?.availability_data?.blackout_dates) {
                     const blackoutDates = product.availability_data.blackout_dates.map((d: string) => new Date(d));
-                    if (blackoutDates.some(bd => 
-                      bd.toDateString() === date.toDateString()
-                    )) {
+                    if (
+                      blackoutDates.some(
+                        (bd) => bd.toDateString() === date.toDateString(),
+                      )
+                    ) {
                       return true;
                     }
                   }

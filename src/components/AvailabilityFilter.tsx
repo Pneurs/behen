@@ -55,8 +55,8 @@ const AvailabilityFilter = ({ dateRange, onDateRangeChange }: AvailabilityFilter
           mode="range"
           selected={dateRange}
           onSelect={onDateRangeChange}
-          numberOfMonths={2}
-          disabled={(date) => date < new Date()}
+          numberOfMonths={1}
+          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
           initialFocus
           className="pointer-events-auto"
         />
