@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
-import { Header } from "@/components/Header";
+import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
@@ -89,6 +89,21 @@ export default function Chat() {
         return;
       }
       existingConv = newConv;
+      
+      // Automatically send product info to owner when Choti Behen starts chat
+      if (user.id !== productData?.owner_id && productData) {
+        const productMessage = `👗 Interested in: ${productData.title}\n💰 Price: PKR ${
+          productData.rental_price_4days?.toLocaleString() || 
+          (productData.rental_price_per_day * 4)?.toLocaleString()
+        } / 4 days\n📍 Location: ${productData.area ? `${productData.area}, ` : ""}${productData.city}`;
+        
+        // Send the product info message
+        await supabase.from("chat_messages").insert({
+          conversation_id: newConv.id,
+          sender_id: user.id,
+          message: productMessage,
+        });
+      }
     }
 
     setConversation(existingConv);
@@ -279,6 +294,9 @@ export default function Chat() {
           {showCustomOffer && user?.id === product?.owner_id && (
             <div className="p-4 border-t bg-muted/50 space-y-3">
               <h3 className="font-semibold text-sm">Create Custom Offer</h3>
+              <p className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950 p-2 rounded">
+                💡 Tip: You can negotiate - lower the rent and increase security, or increase the rent slightly and lower security.
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   placeholder="New Price"
@@ -316,13 +334,18 @@ export default function Chat() {
                 💰
               </Button>
             )}
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && !showCustomOffer && handleSendMessage()}
-              placeholder="Type a message..."
-              disabled={loading || showCustomOffer}
-            />
+            <div className="flex-1 space-y-1">
+              <Input
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && !showCustomOffer && handleSendMessage()}
+                placeholder="Type a message..."
+                disabled={loading || showCustomOffer}
+              />
+              <p className="text-xs text-muted-foreground px-1">
+                ⚠️ Our AI monitors messages. Sharing contact info may expose you publicly.
+              </p>
+            </div>
             <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim() || showCustomOffer}>
               <Send className="h-4 w-4" />
             </Button>

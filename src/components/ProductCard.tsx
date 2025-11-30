@@ -181,12 +181,6 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
         )}
       </CardFooter>
 
-      {blackoutDates && blackoutDates.length > 0 && (
-        <div className="px-4 pb-4 pt-0">
-          <ProductMiniAvailabilityCalendar blackoutDates={blackoutDates} />
-        </div>
-      )}
-
       <LocationDistancePopup
         open={showLocationPopup}
         onOpenChange={setShowLocationPopup}
