@@ -176,7 +176,7 @@ const Browse = () => {
     // Check blackout dates from product availability_data
     if (product.availability_data?.blackout_dates) {
       const blackoutDates = product.availability_data.blackout_dates;
-      
+
       for (const blackoutDate of blackoutDates) {
         const blackout = new Date(blackoutDate);
         if (isWithinInterval(blackout, { start: selectedStart, end: selectedEnd })) {
@@ -186,12 +186,12 @@ const Browse = () => {
     }
 
     // Check for overlapping bookings
-    const productBookings = allBookings.filter(b => b.product_id === product.id);
-    
+    const productBookings = allBookings.filter((b) => b.product_id === product.id);
+
     for (const booking of productBookings) {
       const bookingStart = new Date(booking.start_date);
       const bookingEnd = new Date(booking.end_date);
-      
+
       // Check for overlap: (booking_start <= selected_end) AND (booking_end >= selected_start)
       if (bookingStart <= selectedEnd && bookingEnd >= selectedStart) {
         return false; // Booking overlaps with selected dates
@@ -199,6 +199,31 @@ const Browse = () => {
     }
 
     return true;
+  };
+
+  const getProductBlackoutDates = (product: any): Date[] => {
+    const dates: Date[] = [];
+
+    if (product.availability_data?.blackout_dates) {
+      for (const blackoutDate of product.availability_data.blackout_dates) {
+        const parsed = new Date(blackoutDate);
+        if (!isNaN(parsed.getTime())) {
+          dates.push(parsed);
+        }
+      }
+    }
+
+    const productBookings = allBookings.filter((b) => b.product_id === product.id);
+    productBookings.forEach((booking) => {
+      const start = new Date(booking.start_date);
+      const end = new Date(booking.end_date);
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
+    });
+
+    return dates;
   };
 
   const userRole = user?.user_metadata?.role || "choti";
@@ -400,6 +425,7 @@ const Browse = () => {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  blackoutDates={getProductBlackoutDates(product)}
                   onClick={() => navigate(`/product/${product.id}`)}
                 />
               ))}

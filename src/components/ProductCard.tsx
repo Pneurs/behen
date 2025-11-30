@@ -4,6 +4,7 @@ import { MapPin, Tag, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import LocationDistancePopup from "./LocationDistancePopup";
+import ProductMiniAvailabilityCalendar from "./ProductMiniAvailabilityCalendar";
 
 interface ProductCardProps {
   product: {
@@ -23,10 +24,11 @@ interface ProductCardProps {
     latitude?: number;
     longitude?: number;
   };
+  blackoutDates?: Date[];
   onClick?: () => void;
 }
 
-const ProductCard = ({ product, onClick }: ProductCardProps) => {
+const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [showLocationPopup, setShowLocationPopup] = useState(false);
@@ -36,7 +38,7 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
   }, [product.id]);
 
   const fetchRating = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("reviews")
       .select("product_rating")
       .eq("product_id", product.id);
@@ -93,7 +95,7 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
             <Tag className="h-16 w-16 text-muted-foreground" />
           </div>
         )}
-        
+
         {/* Discount Badge */}
         {product.original_price && product.sale_price && product.original_price > product.sale_price && (
           <div className="absolute top-2 left-2">
@@ -103,7 +105,7 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
           </div>
         )}
       </div>
-      
+
       <CardContent className="p-4">
         <div className="flex gap-2 mb-2">
           <Badge variant="outline" className="text-xs">
@@ -113,13 +115,13 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
             {product.condition.replace("_", " ")}
           </Badge>
         </div>
-        
+
         <h3 className="font-semibold text-lg mb-2 line-clamp-2 min-h-[3.5rem]">
           {product.title}
         </h3>
-        
+
         {(product.city || product.area) && (
-          <div 
+          <div
             className="flex items-center gap-1 text-sm text-muted-foreground mb-2 cursor-pointer hover:text-primary transition-colors"
             onClick={(e) => {
               e.stopPropagation();
@@ -127,7 +129,10 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
             }}
           >
             <MapPin className="h-3 w-3" />
-            <span className="underline">{product.area ? `${product.area}, ` : ""}{product.city}</span>
+            <span className="underline">
+              {product.area ? `${product.area}, ` : ""}
+              {product.city}
+            </span>
           </div>
         )}
 
@@ -139,14 +144,17 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
           </div>
         )}
       </CardContent>
-      
+
       <CardFooter className="p-4 pt-0 flex justify-between items-center">
         <div>
           {product.listing_type === "rent" || product.listing_type === "both" ? (
             <div>
               <p className="text-sm text-muted-foreground">4-Day Rental</p>
               <p className="text-lg font-bold text-primary">
-                PKR {product.rental_price_4days?.toLocaleString() || product.rental_price_per_day?.toLocaleString()}
+                PKR
+                {" "}
+                {product.rental_price_4days?.toLocaleString() ||
+                  product.rental_price_per_day?.toLocaleString()}
               </p>
             </div>
           ) : (
@@ -165,13 +173,19 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
             </div>
           )}
         </div>
-        
+
         {product.listing_type === "both" && (
           <Badge variant="secondary" className="text-xs">
             Also for {product.listing_type === "both" && product.rental_price_per_day ? "Sale" : "Rent"}
           </Badge>
         )}
       </CardFooter>
+
+      {blackoutDates && blackoutDates.length > 0 && (
+        <div className="px-4 pb-4 pt-0">
+          <ProductMiniAvailabilityCalendar blackoutDates={blackoutDates} />
+        </div>
+      )}
 
       <LocationDistancePopup
         open={showLocationPopup}
