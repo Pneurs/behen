@@ -1,4 +1,3 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -15,10 +14,10 @@ serve(async (req) => {
   try {
     const { imageUrl, title, description, category, product_type, fabric, color } = await req.json();
 
-    // Get OpenAI API key
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    // Get Lovable API key
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     // Validate image quality before processing
@@ -36,21 +35,61 @@ serve(async (req) => {
     }
 
     // Create ultra-strict prompt for 100% accuracy mannequin reconstruction
-    // Note: OpenAI image edits API has 1000 char limit
     const productTypeLabel = product_type === "dress" ? "dress" : product_type;
     
-    let prompt = `Recreate ${productTypeLabel} on faceless mannequin. Match 100%: colors${color ? ' (' + color + ')' : ''}, embroidery, sequins, borders, pleats, texture${fabric ? ' (' + fabric + ')' : ''}, neckline, sleeves, hem, dupatta, silhouette. NO redesign, alteration, or simplification. Replace human only. White studio background, soft lighting, centered full-length front view, photorealistic. No props, jewelry, accessories. Exact reconstruction from reference images, zero creative interpretation.`;
+    const prompt = `Use the uploaded image as the ONLY reference.
 
-    console.log("Generating mannequin image with OpenAI gpt-image-1");
+Generate a full-length, faceless mannequin wearing the ${productTypeLabel} exactly as in the reference image.
+
+Dress reproduction rules (strict 100% accuracy):
+- Match all colors exactly${color ? ' (' + color + ')' : ''}
+- Preserve all embroidery, sequins, mirror-work, or prints
+- Preserve borders, pleats, and folds
+- Maintain fabric texture${fabric ? ' (' + fabric + ')' : ''}, shine, and flow
+- Keep neckline, sleeves, hemline, dupatta, and overall silhouette identical
+- Do NOT redesign, alter, or simplify any part of the dress
+- Only replace the human with a neutral, faceless mannequin
+
+Style & Composition:
+- Background: clean white studio
+- Lighting: soft, even, no harsh shadows
+- Framing: centered, full-length front view
+- Photorealistic quality
+- Keep proportions exactly like reference
+
+No props, jewelry, hands, accessories, or background objects.`;
+
+    console.log("Generating mannequin image with Lovable AI");
     console.log("Prompt:", prompt);
 
-    // Call OpenAI gpt-image-1 for high-fidelity image generation
-    const response = await fetch("https://api.openai.com/v1/images/edits", {
+    // Call Lovable AI for high-fidelity image generation
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: await createFormData(imageUrl, prompt),
+      body: JSON.stringify({
+        model: "google/gemini-3-pro-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        modalities: ["image", "text"]
+      }),
     });
 
     if (!response.ok) {
@@ -80,25 +119,23 @@ serve(async (req) => {
       }
       
       const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error("Lovable AI API error:", response.status, errorText);
+      throw new Error(`Lovable AI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("OpenAI response received");
+    console.log("Lovable AI response received");
 
-    // Extract the generated image URL
-    const generatedImageUrl = data.data?.[0]?.url;
+    // Extract the generated image from base64
+    const generatedImageBase64 = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
-    if (!generatedImageUrl) {
+    if (!generatedImageBase64) {
       throw new Error("No image generated in response");
     }
 
-    // Download the image from OpenAI
-    const imageResponse = await fetch(generatedImageUrl);
-    const imageBlob = await imageResponse.blob();
-    const imageBuffer = await imageBlob.arrayBuffer();
-    const imageBytes = new Uint8Array(imageBuffer);
+    // Convert base64 to bytes
+    const base64Data = generatedImageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -150,19 +187,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper function to create FormData for OpenAI API
-async function createFormData(imageUrl: string, prompt: string): Promise<FormData> {
-  const formData = new FormData();
-  
-  // Download the image from the URL
-  const imageResponse = await fetch(imageUrl);
-  const imageBlob = await imageResponse.blob();
-  
-  formData.append("image", imageBlob, "dress.png");
-  formData.append("prompt", prompt);
-  formData.append("n", "1");
-  formData.append("size", "512x512");
-  
-  return formData;
-}
