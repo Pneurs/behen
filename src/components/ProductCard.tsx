@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { MapPin, Tag, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import LocationDistancePopup from "./LocationDistancePopup";
 
 interface ProductCardProps {
   product: {
@@ -19,6 +20,8 @@ interface ProductCardProps {
     real_images?: string[];
     city?: string;
     area?: string;
+    latitude?: number;
+    longitude?: number;
   };
   onClick?: () => void;
 }
@@ -26,6 +29,7 @@ interface ProductCardProps {
 const ProductCard = ({ product, onClick }: ProductCardProps) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
+  const [showLocationPopup, setShowLocationPopup] = useState(false);
 
   useEffect(() => {
     fetchRating();
@@ -115,9 +119,15 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
         </h3>
         
         {(product.city || product.area) && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+          <div 
+            className="flex items-center gap-1 text-sm text-muted-foreground mb-2 cursor-pointer hover:text-primary transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowLocationPopup(true);
+            }}
+          >
             <MapPin className="h-3 w-3" />
-            <span>{product.area ? `${product.area}, ` : ""}{product.city}</span>
+            <span className="underline">{product.area ? `${product.area}, ` : ""}{product.city}</span>
           </div>
         )}
 
@@ -162,6 +172,18 @@ const ProductCard = ({ product, onClick }: ProductCardProps) => {
           </Badge>
         )}
       </CardFooter>
+
+      <LocationDistancePopup
+        open={showLocationPopup}
+        onOpenChange={setShowLocationPopup}
+        productLocation={{
+          city: product.city,
+          area: product.area,
+          latitude: product.latitude,
+          longitude: product.longitude,
+        }}
+        productTitle={product.title}
+      />
     </Card>
   );
 };

@@ -23,10 +23,12 @@ export default function Booking() {
   const [paymentNotes, setPaymentNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [existingBookings, setExistingBookings] = useState<any[]>([]);
 
   useEffect(() => {
     fetchProduct();
     checkAuth();
+    fetchExistingBookings();
   }, [productId]);
 
   const checkAuth = async () => {
@@ -56,6 +58,18 @@ export default function Booking() {
     setProduct(data);
   };
 
+  const fetchExistingBookings = async () => {
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("start_date, end_date")
+      .eq("product_id", productId)
+      .in("booking_status", ["confirmed", "payment_submitted", "pending_payment"]);
+
+    if (!error && data) {
+      setExistingBookings(data);
+    }
+  };
+
   const calculateTotals = () => {
     if (!dateRange?.from || !dateRange?.to || !product) return { days: 0, total: 0, deposit: 0 };
     
@@ -72,11 +86,40 @@ export default function Booking() {
     }
   };
 
+  const checkDateOverlap = () => {
+    if (!dateRange?.from || !dateRange?.to) return false;
+
+    const selectedStart = dateRange.from;
+    const selectedEnd = dateRange.to;
+
+    for (const booking of existingBookings) {
+      const bookingStart = new Date(booking.start_date);
+      const bookingEnd = new Date(booking.end_date);
+      
+      // Check for overlap
+      if (bookingStart <= selectedEnd && bookingEnd >= selectedStart) {
+        return true; // Overlap found
+      }
+    }
+
+    return false;
+  };
+
   const handleSubmitBooking = async () => {
     if (!dateRange?.from || !dateRange?.to) {
       toast({
         title: "Error",
         description: "Please select booking dates",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for date overlap
+    if (checkDateOverlap()) {
+      toast({
+        title: "Error",
+        description: "Selected dates overlap with an existing booking. Please choose different dates.",
         variant: "destructive",
       });
       return;
@@ -167,8 +210,33 @@ export default function Booking() {
                 mode="range"
                 selected={dateRange}
                 onSelect={setDateRange}
-                numberOfMonths={1}
-                disabled={(date) => date < new Date()}
+                numberOfMonths={2}
+                disabled={(date) => {
+                  // Disable past dates
+                  if (date < new Date()) return true;
+
+                  // Disable blackout dates
+                  if (product?.availability_data?.blackout_dates) {
+                    const blackoutDates = product.availability_data.blackout_dates.map((d: string) => new Date(d));
+                    if (blackoutDates.some(bd => 
+                      bd.toDateString() === date.toDateString()
+                    )) {
+                      return true;
+                    }
+                  }
+
+                  // Disable booked dates
+                  for (const booking of existingBookings) {
+                    const start = new Date(booking.start_date);
+                    const end = new Date(booking.end_date);
+                    if (date >= start && date <= end) {
+                      return true;
+                    }
+                  }
+
+                  return false;
+                }}
+                className="pointer-events-auto"
               />
             </CardContent>
           </Card>
