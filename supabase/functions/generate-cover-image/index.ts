@@ -34,30 +34,10 @@ serve(async (req) => {
       );
     }
 
-    // Create ultra-strict prompt for 100% accuracy mannequin reconstruction
-    const productTypeLabel = product_type === "dress" ? "dress" : product_type;
+    // Simple and direct prompt for mannequin generation
+    const productTypeLabel = product_type === "dress" ? "lehnga" : product_type;
     
-    const prompt = `Use the uploaded image as the ONLY reference.
-
-Generate a full-length, faceless mannequin wearing the ${productTypeLabel} exactly as in the reference image.
-
-Dress reproduction rules (strict 100% accuracy):
-- Match all colors exactly${color ? ' (' + color + ')' : ''}
-- Preserve all embroidery, sequins, mirror-work, or prints
-- Preserve borders, pleats, and folds
-- Maintain fabric texture${fabric ? ' (' + fabric + ')' : ''}, shine, and flow
-- Keep neckline, sleeves, hemline, dupatta, and overall silhouette identical
-- Do NOT redesign, alter, or simplify any part of the dress
-- Only replace the human with a neutral, faceless mannequin
-
-Style & Composition:
-- Background: clean white studio
-- Lighting: soft, even, no harsh shadows
-- Framing: centered, full-length front view
-- Photorealistic quality
-- Keep proportions exactly like reference
-
-No props, jewelry, hands, accessories, or background objects.`;
+    const prompt = `A faceless mannequin wearing your ${productTypeLabel}. This one but ${productTypeLabel} should be exactly the same.`;
 
     console.log("Generating mannequin image with Lovable AI");
     console.log("Prompt:", prompt);
