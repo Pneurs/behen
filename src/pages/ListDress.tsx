@@ -45,6 +45,8 @@ const ListDress = () => {
   const [aiCoverImage, setAiCoverImage] = useState<string>("");
   const [generationAttempts, setGenerationAttempts] = useState(0);
   const MAX_ATTEMPTS = 3;
+  const [confirmImageLoading, setConfirmImageLoading] = useState(false);
+  const [confirmImageError, setConfirmImageError] = useState(false);
   
   // Step 4: Product details
   const [loading, setLoading] = useState(false);
@@ -229,6 +231,8 @@ const ListDress = () => {
       }
 
       setAiCoverImage(data.imageUrl);
+      setConfirmImageLoading(true);
+      setConfirmImageError(false);
       setCurrentStep("confirm");
       toast.success("Mannequin image generated successfully!");
 
@@ -253,6 +257,8 @@ const ListDress = () => {
       return;
     }
     
+    setConfirmImageError(false);
+    setConfirmImageLoading(true);
     setCurrentStep("generating");
     generateAICover();
   };
@@ -261,6 +267,8 @@ const ListDress = () => {
     setCurrentStep("upload");
     setAiCoverImage("");
     setGenerationAttempts(0);
+    setConfirmImageLoading(false);
+    setConfirmImageError(false);
   };
 
   // STEP 4: Upload real images to storage
@@ -490,59 +498,55 @@ const ListDress = () => {
   );
 
   // Render Step 3: Confirm
-  const renderConfirmStep = () => {
-    const [imageLoading, setImageLoading] = useState(true);
-    const [imageError, setImageError] = useState(false);
-
-    return (
-      <Card className="max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl">Review Your Mannequin Image</CardTitle>
-          <CardDescription>
-            This is how your dress will appear publicly. Real photos stay private until booking confirmation.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {imageError && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                Failed to load AI-generated image. Please try regenerating.
-              </AlertDescription>
-            </Alert>
-          )}
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <Label className="mb-2 block">AI Generated Mannequin (Public)</Label>
-              <div className="relative">
-                {imageLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg border">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                )}
-                <img
-                  src={aiCoverImage}
-                  alt="AI Generated Mannequin"
-                  className="w-full rounded-lg border"
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    setImageLoading(false);
-                    setImageError(true);
-                    console.error("Failed to load AI image:", aiCoverImage);
-                  }}
-                  style={{ display: imageLoading ? 'none' : 'block' }}
-                />
-              </div>
-            </div>
-            <div>
-              <Label className="mb-2 block">Your Original Photo (Private)</Label>
+  const renderConfirmStep = () => (
+    <Card className="max-w-3xl mx-auto">
+      <CardHeader>
+        <CardTitle className="text-2xl">Review Your Mannequin Image</CardTitle>
+        <CardDescription>
+          This is how your dress will appear publicly. Real photos stay private until booking confirmation.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {confirmImageError && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              Failed to load AI-generated image. Please try regenerating.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <Label className="mb-2 block">AI Generated Mannequin (Public)</Label>
+            <div className="relative">
+              {confirmImageLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded-lg border">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
               <img
-                src={imagePreviews[0]}
-                alt="Original"
+                src={aiCoverImage}
+                alt="AI Generated Mannequin"
                 className="w-full rounded-lg border"
+                onLoad={() => setConfirmImageLoading(false)}
+                onError={() => {
+                  setConfirmImageLoading(false);
+                  setConfirmImageError(true);
+                  console.error("Failed to load AI image:", aiCoverImage);
+                }}
+                style={{ display: confirmImageLoading ? 'none' : 'block' }}
               />
             </div>
           </div>
+          <div>
+            <Label className="mb-2 block">Your Original Photo (Private)</Label>
+            <img
+              src={imagePreviews[0]}
+              alt="Original"
+              className="w-full rounded-lg border"
+            />
+          </div>
+        </div>
 
         <Alert>
           <Check className="h-4 w-4" />
@@ -580,8 +584,7 @@ const ListDress = () => {
         </Button>
       </CardContent>
     </Card>
-    );
-  };
+  );
 
   // Render Step 4: Product Details Form
   const renderDetailsStep = () => (
