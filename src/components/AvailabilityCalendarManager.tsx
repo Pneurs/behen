@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
-import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,60 +18,46 @@ const AvailabilityCalendarManager = ({
 }: AvailabilityCalendarManagerProps) => {
   const [selectedDates, setSelectedDates] = useState<Date[]>(blackoutDates);
   const [mode, setMode] = useState<"available" | "blocked">("blocked");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const handleDateSelect = (dates: Date[] | undefined) => {
-    if (!dates || dates.length === 0) return;
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
 
-    // Normalize dates to midnight UTC
-    const normalizedDates = dates.map((date) =>
-      new Date(
-        Date.UTC(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          0,
-          0,
-          0,
-          0,
-        ),
+    // Normalize date to midnight UTC
+    const normalizedDate = new Date(
+      Date.UTC(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        0,
+        0,
+        0,
+        0,
       ),
+    );
+
+    const existingIndex = selectedDates.findIndex(
+      (d) => d.getTime() === normalizedDate.getTime()
     );
 
     let newDates: Date[];
     if (mode === "blocked") {
-      // Add to blackout dates
-      const existingDatesSet = new Set(selectedDates.map((d) => d.getTime()));
-      const datesToAdd = normalizedDates.filter((d) => !existingDatesSet.has(d.getTime()));
-      newDates = [...selectedDates, ...datesToAdd];
+      // Add to blackout dates if not already present
+      if (existingIndex === -1) {
+        newDates = [...selectedDates, normalizedDate];
+      } else {
+        newDates = selectedDates;
+      }
     } else {
       // Remove from blackout dates (mark as available)
-      const datesToRemoveSet = new Set(normalizedDates.map((d) => d.getTime()));
-      newDates = selectedDates.filter((d) => !datesToRemoveSet.has(d.getTime()));
+      if (existingIndex !== -1) {
+        newDates = selectedDates.filter((_, i) => i !== existingIndex);
+      } else {
+        newDates = selectedDates;
+      }
     }
 
     setSelectedDates(newDates);
     onBlackoutDatesChange(newDates);
-  };
-
-  const handleRangeSelect = (range: DateRange | undefined) => {
-    setDateRange(range);
-
-    if (!range?.from || !range?.to) return;
-
-    const start = new Date(range.from);
-    const end = new Date(range.to);
-
-    // Normalize to midnight to match blackout storage
-    start.setHours(0, 0, 0, 0);
-    end.setHours(0, 0, 0, 0);
-
-    const rangeDates: Date[] = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      rangeDates.push(new Date(d));
-    }
-
-    handleDateSelect(rangeDates);
   };
 
   const removeDate = (dateToRemove: Date) => {
@@ -132,9 +117,9 @@ const AvailabilityCalendarManager = ({
         {/* Calendar */}
         <div className="flex justify-center">
           <Calendar
-            mode="range"
-            selected={dateRange}
-            onSelect={handleRangeSelect}
+            mode="single"
+            selected={undefined}
+            onSelect={handleDateSelect}
             numberOfMonths={1}
             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             className={cn("rounded-md border pointer-events-auto")}
@@ -154,7 +139,7 @@ const AvailabilityCalendarManager = ({
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Select a start date and an end date to block or unblock a date range.
+          Click dates to mark them as available or unavailable based on the selected mode above.
         </p>
 
         {/* Blocked Dates List */}
