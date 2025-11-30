@@ -13,8 +13,15 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, Package } from "lucide-react";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function BariBehenDashboard() {
   const navigate = useNavigate();
@@ -119,6 +126,43 @@ export default function BariBehenDashboard() {
     }
   };
 
+  const getInventoryColor = (status: string) => {
+    switch (status) {
+      case "available":
+        return "default";
+      case "rented":
+        return "secondary";
+      case "unavailable":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const handleInventoryStatusChange = async (productId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("products")
+        .update({ inventory_status: newStatus })
+        .eq("id", productId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Inventory status updated to ${newStatus}`,
+      });
+
+      fetchProducts(user.id);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update inventory status",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
@@ -185,10 +229,28 @@ export default function BariBehenDashboard() {
                             <Badge variant={getStatusColor(product.status)}>
                               {product.status}
                             </Badge>
+                            <Badge variant={getInventoryColor(product.inventory_status || 'available')}>
+                              <Package className="mr-1 h-3 w-3" />
+                              {product.inventory_status || 'available'}
+                            </Badge>
                           </div>
                         </div>
 
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2 mt-4 items-center">
+                          <Select
+                            value={product.inventory_status || "available"}
+                            onValueChange={(value) => handleInventoryStatusChange(product.id, value)}
+                          >
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Inventory Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Available</SelectItem>
+                              <SelectItem value="rented">Rented</SelectItem>
+                              <SelectItem value="unavailable">Unavailable</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
                           <Button
                             size="sm"
                             variant="outline"

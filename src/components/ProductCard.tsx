@@ -1,10 +1,12 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Tag, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Tag, Star, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import LocationDistancePopup from "./LocationDistancePopup";
 import ProductMiniAvailabilityCalendar from "./ProductMiniAvailabilityCalendar";
+import { useWishlist } from "@/hooks/useWishlist";
 
 interface ProductCardProps {
   product: {
@@ -32,6 +34,7 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [showLocationPopup, setShowLocationPopup] = useState(false);
+  const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(product.id);
 
   useEffect(() => {
     fetchRating();
@@ -78,10 +81,28 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
               alt={product.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            <div className="absolute top-2 right-2">
+            <div className="absolute top-2 right-2 flex gap-2">
               <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
                 AI Generated
               </Badge>
+            </div>
+            <div className="absolute top-2 left-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 bg-background/80 backdrop-blur-sm hover:bg-background"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleWishlist();
+                }}
+                disabled={wishlistLoading}
+              >
+                <Heart
+                  className={`h-4 w-4 transition-colors ${
+                    isInWishlist ? "fill-red-500 text-red-500" : "text-foreground"
+                  }`}
+                />
+              </Button>
             </div>
           </>
         ) : product.real_images && product.real_images.length > 0 ? (

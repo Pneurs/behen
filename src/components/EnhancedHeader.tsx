@@ -10,7 +10,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -109,6 +109,10 @@ export const EnhancedHeader = () => {
                     </Button>
                   </>
                 )}
+                <Button onClick={() => navigate("/wishlist")} variant="ghost" size="sm">
+                  <Heart className="mr-2 h-4 w-4" />
+                  Wishlist
+                </Button>
                 <Button onClick={() => navigate("/chats")} variant="ghost" size="sm">
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Chats
@@ -173,6 +177,17 @@ export const EnhancedHeader = () => {
                         </Button>
                       </>
                     )}
+                    <Button
+                      onClick={() => {
+                        navigate("/wishlist");
+                        setMobileOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Heart className="mr-2 h-4 w-4" />
+                      Wishlist
+                    </Button>
                     <Button
                       onClick={() => {
                         navigate("/chats");
