@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Header } from "@/components/Header";
+import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LogOut, Plus, Search, Filter, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -354,14 +354,6 @@ const Browse = () => {
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
             />
-
-            <Button
-              variant={showMap ? "default" : "outline"}
-              onClick={() => setShowMap(!showMap)}
-              className="w-full md:w-auto"
-            >
-              {showMap ? "Hide Map" : "Show Map"}
-            </Button>
 
             {hasActiveFilters && (
               <Button variant="ghost" onClick={clearAllFilters} className="w-full md:w-auto">

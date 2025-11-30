@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
-import { Header } from "@/components/Header";
+import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendar from "@/components/ProductAvailabilityCalendar";
 import { 
   ArrowLeft, 

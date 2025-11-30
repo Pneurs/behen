@@ -14,6 +14,25 @@ const ProductAvailabilityCalendar = ({
   nextAvailableDate 
 }: ProductAvailabilityCalendarProps) => {
   
+  // Get all dates from today to 3 months ahead
+  const getAvailableDates = () => {
+    const dates: Date[] = [];
+    const today = new Date();
+    const threeMonthsLater = new Date();
+    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+    
+    for (let d = new Date(today); d <= threeMonthsLater; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toDateString();
+      const isBlackedOut = blackoutDates.some(bd => bd.toDateString() === dateStr);
+      if (!isBlackedOut) {
+        dates.push(new Date(d));
+      }
+    }
+    return dates;
+  };
+
+  const availableDates = getAvailableDates();
+  
   return (
     <Card>
       <CardHeader>
@@ -26,7 +45,7 @@ const ProductAvailabilityCalendar = ({
         {/* Legend */}
         <div className="flex flex-wrap gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded bg-green-100 border border-green-300" />
+            <div className="h-4 w-4 rounded bg-green-500" />
             <span className="text-muted-foreground">Available</span>
           </div>
           <div className="flex items-center gap-2">
@@ -61,9 +80,11 @@ const ProductAvailabilityCalendar = ({
             className={cn("rounded-md border pointer-events-auto")}
             modifiers={{
               booked: blackoutDates,
+              available: availableDates,
             }}
             modifiersClassNames={{
               booked: "bg-destructive text-destructive-foreground font-bold line-through opacity-50",
+              available: "bg-green-500 text-white font-semibold hover:bg-green-600",
             }}
           />
         </div>

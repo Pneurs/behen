@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { Header } from "@/components/Header";
+import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -234,7 +234,7 @@ const Auth = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>I want to</Label>
+                  <Label>I want to be a</Label>
                   <div className="grid grid-cols-2 gap-3">
                     <Button
                       type="button"
@@ -242,7 +242,7 @@ const Auth = () => {
                       onClick={() => setRole("choti")}
                       className="w-full"
                     >
-                      Browse & Rent
+                      Choti Behen<br/><span className="text-xs font-normal">(Browse products)</span>
                     </Button>
                     <Button
                       type="button"
@@ -250,7 +250,7 @@ const Auth = () => {
                       onClick={() => setRole("bari")}
                       className="w-full"
                     >
-                      List My Dress
+                      Bari Behen<br/><span className="text-xs font-normal">(List my products)</span>
                     </Button>
                   </div>
                 </div>
