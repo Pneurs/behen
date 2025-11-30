@@ -115,6 +115,7 @@ const AvailabilityCalendarManager = ({
             mode="single"
             selected={undefined}
             onSelect={handleDateSelect}
+            numberOfMonths={1}
             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
             className={cn("rounded-md border pointer-events-auto")}
             modifiers={{

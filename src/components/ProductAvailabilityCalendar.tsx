@@ -56,9 +56,9 @@ const ProductAvailabilityCalendar = ({
           <Calendar
             mode="single"
             selected={undefined}
-            numberOfMonths={2}
+            numberOfMonths={1}
             disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0, 0, 0, 0))}
-            className={cn("rounded-md border")}
+            className={cn("rounded-md border pointer-events-auto")}
             modifiers={{
               booked: blackoutDates,
             }}
