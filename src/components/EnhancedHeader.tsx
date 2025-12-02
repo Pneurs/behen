@@ -10,14 +10,16 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -25,6 +27,7 @@ export const EnhancedHeader = () => {
       if (session) {
         setUser(session.user);
         setUserRole(session.user.user_metadata?.role || "choti");
+        checkAdminRole(session.user.id);
       }
     });
 
@@ -32,14 +35,34 @@ export const EnhancedHeader = () => {
       if (session) {
         setUser(session.user);
         setUserRole(session.user.user_metadata?.role || "choti");
+        checkAdminRole(session.user.id);
       } else {
         setUser(null);
         setUserRole("");
+        setIsAdmin(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdminRole = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "super_admin")
+      .single();
+    
+    setIsAdmin(!!data);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+    setMobileOpen(false);
+  };
 
   const categories = [
     { name: "Bridal", value: "bridal" },
@@ -110,6 +133,10 @@ export const EnhancedHeader = () => {
                     </Button>
                   </>
                 )}
+                <Button onClick={() => navigate("/my-bookings")} variant="ghost" size="sm">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  My Bookings
+                </Button>
                 <Button onClick={() => navigate("/wishlist")} variant="ghost" size="sm">
                   <Heart className="mr-2 h-4 w-4" />
                   Wishlist
@@ -117,6 +144,16 @@ export const EnhancedHeader = () => {
                 <Button onClick={() => navigate("/chats")} variant="ghost" size="sm">
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Chats
+                </Button>
+                {isAdmin && (
+                  <Button onClick={() => navigate("/admin")} variant="secondary" size="sm">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Admin
+                  </Button>
+                )}
+                <Button onClick={handleSignOut} variant="outline" size="sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
                 </Button>
               </>
             ) : (
@@ -180,6 +217,17 @@ export const EnhancedHeader = () => {
                     )}
                     <Button
                       onClick={() => {
+                        navigate("/my-bookings");
+                        setMobileOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      My Bookings
+                    </Button>
+                    <Button
+                      onClick={() => {
                         navigate("/wishlist");
                         setMobileOpen(false);
                       }}
@@ -199,6 +247,27 @@ export const EnhancedHeader = () => {
                     >
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Chats
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        onClick={() => {
+                          navigate("/admin");
+                          setMobileOpen(false);
+                        }}
+                        variant="secondary"
+                        className="w-full"
+                      >
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin
+                      </Button>
+                    )}
+                    <Button
+                      onClick={handleSignOut}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
                     </Button>
                   </>
                 ) : (

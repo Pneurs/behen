@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, AlertCircle } from "lucide-react";
+import { Send, AlertCircle, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 
@@ -47,6 +47,9 @@ export default function Chat() {
   const initChat = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      // Store redirect info for after login
+      localStorage.setItem("auth_redirect", "/chat");
+      localStorage.setItem("auth_redirect_product", productId || "");
       navigate("/auth");
       return;
     }
@@ -92,7 +95,8 @@ export default function Chat() {
       
       // Automatically send product info to owner when Choti Behen starts chat
       if (user.id !== productData?.owner_id && productData) {
-        const productMessage = `👗 Interested in: ${productData.title}\n💰 Price: PKR ${
+        const productUrl = `${window.location.origin}/product/${productData.id}`;
+        const productMessage = `👗 Interested in: ${productData.title}\n🔗 View Product: ${productUrl}\n💰 Price: PKR ${
           productData.rental_price_4days?.toLocaleString() || 
           (productData.rental_price_per_day * 4)?.toLocaleString()
         } / 4 days\n📍 Location: ${productData.area ? `${productData.area}, ` : ""}${productData.city}`;
@@ -265,6 +269,31 @@ export default function Chat() {
     setTimeout(() => handleSendMessage(), 100);
   };
 
+  // Render message with clickable links
+  const renderMessageWithLinks = (message: string) => {
+    // URL regex pattern
+    const urlPattern = /(https?:\/\/[^\s]+)/g;
+    const parts = message.split(urlPattern);
+    
+    return parts.map((part, index) => {
+      if (urlPattern.test(part)) {
+        return (
+          <a 
+            key={index} 
+            href={part} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-blue-400 hover:underline inline-flex items-center gap-1"
+          >
+            {part.length > 40 ? part.substring(0, 40) + "..." : part}
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
   if (!conversation || !product) return <div>Loading...</div>;
 
   return (
@@ -274,7 +303,14 @@ export default function Chat() {
       <div className="max-w-4xl mx-auto">
         <Card className="h-[600px] flex flex-col">
           <div className="p-4 border-b">
-            <h2 className="text-xl font-bold">{product.title}</h2>
+            <div className="flex items-center gap-3">
+              <Link to={`/product/${product.id}`} className="hover:underline">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  {product.title}
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </h2>
+              </Link>
+            </div>
             {!conversation.is_booking_confirmed && (
               <div className="flex flex-col gap-2 mt-2 text-sm">
                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
@@ -304,7 +340,7 @@ export default function Chat() {
                         : "bg-muted"
                     }`}
                   >
-                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-sm whitespace-pre-wrap">{renderMessageWithLinks(msg.message)}</p>
                     {msg.is_moderated && (
                       <p className="text-xs mt-1 opacity-70">
                         (Moderated: {msg.moderation_reason})

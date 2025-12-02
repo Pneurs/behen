@@ -4,25 +4,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendar from "@/components/ProductAvailabilityCalendar";
+import RealImagesViewer from "@/components/RealImagesViewer";
 import { 
-  ArrowLeft, 
   MapPin, 
   Calendar as CalendarIcon, 
   Tag, 
   Ruler, 
   Sparkles,
-  Heart,
-  Share2,
   MessageCircle,
-  Loader2
+  Loader2,
+  Eye,
+  Check,
+  X,
+  Shirt,
+  Gem,
+  Droplets
 } from "lucide-react";
-import { format } from "date-fns";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -34,6 +35,7 @@ const ProductDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRealImages, setShowRealImages] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -131,7 +133,10 @@ const ProductDetail = () => {
 
   const handleContactSeller = () => {
     if (!currentUser) {
-      toast.error("Please sign in to contact seller");
+      // Store redirect info for after login
+      localStorage.setItem("auth_redirect", "/chat");
+      localStorage.setItem("auth_redirect_product", product.id);
+      toast.info("Please sign in to contact seller");
       navigate("/auth");
       return;
     }
@@ -141,24 +146,17 @@ const ProductDetail = () => {
       return;
     }
 
-    // TODO: Implement chat system
-    toast.success("Chat feature coming soon!");
+    navigate(`/chat?product=${product.id}`);
   };
 
-  const handleBookNow = () => {
+  const handleViewRealImages = () => {
     if (!currentUser) {
-      toast.error("Please sign in to book");
+      localStorage.setItem("auth_redirect", `/product/${product.id}`);
+      toast.info("Please sign in to view real images");
       navigate("/auth");
       return;
     }
-    
-    if (currentUser.id === product.owner_id) {
-      toast.error("You cannot book your own listing");
-      return;
-    }
-
-    // TODO: Implement booking system
-    toast.success("Booking feature coming soon!");
+    setImageViewerOpen(true);
   };
 
   if (loading) {
@@ -172,15 +170,16 @@ const ProductDetail = () => {
   if (!product) return null;
 
   // Show AI cover first if available, determine which images to show
-  const displayImages = showRealImages 
-    ? (product.real_images || [])
-    : product.ai_cover_image 
-      ? [product.ai_cover_image]
-      : (product.real_images || []);
+  const displayImages = product.ai_cover_image 
+    ? [product.ai_cover_image]
+    : (product.real_images || []);
   
   const hasRealImages = product.real_images && product.real_images.length > 0;
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
+
+  // Parse included accessories
+  const includedAccessories = product.included_accessories || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -209,40 +208,50 @@ const ProductDetail = () => {
                 </div>
               )}
               
-              {/* Discount Badge */}
-              {product.original_price && product.sale_price && product.original_price > product.sale_price && (
-                <div className="absolute top-4 left-4">
-                  <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
-                    {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+              {/* AI Image Badge */}
+              {product.ai_cover_image && (
+                <div className="absolute top-4 right-4">
+                  <Badge variant="secondary" className="bg-white/90 text-xs">
+                    AI Image
                   </Badge>
                 </div>
               )}
+              
+              {/* Discount Badge */}
+              {product.original_price && (
+                <>
+                  {(product.listing_type === "sale" || product.listing_type === "both") && 
+                   product.sale_price && 
+                   product.original_price > product.sale_price && (
+                    <div className="absolute top-4 left-4">
+                      <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
+                        {Math.round(((product.original_price - product.sale_price) / product.original_price) * 100)}% OFF
+                      </Badge>
+                    </div>
+                  )}
+                  {product.listing_type === "rent" && 
+                   product.rental_price_4days && 
+                   product.original_price > product.rental_price_4days && (
+                    <div className="absolute top-4 left-4">
+                      <Badge variant="destructive" className="text-lg font-bold px-4 py-2">
+                        {Math.round(((product.original_price - product.rental_price_4days) / product.original_price) * 100)}% OFF
+                      </Badge>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             
-            {currentUser && hasRealImages && !showRealImages && (
+            {/* View Real Images Button */}
+            {hasRealImages && (
               <Button 
                 variant="outline" 
                 className="w-full"
-                onClick={() => setShowRealImages(true)}
+                onClick={handleViewRealImages}
               >
-                View Real Images (Sign-in Required)
+                <Eye className="mr-2 h-4 w-4" />
+                View Real Images ({product.real_images.length})
               </Button>
-            )}
-            
-            {displayImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {displayImages.map((img: string, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                      selectedImage === idx ? "border-primary" : "border-transparent"
-                    }`}
-                  >
-                    <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
             )}
           </div>
 
@@ -250,7 +259,7 @@ const ProductDetail = () => {
           <div className="space-y-6">
             {/* Title and Badges */}
             <div>
-              <div className="flex gap-2 mb-3">
+              <div className="flex gap-2 mb-3 flex-wrap">
                 <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
                 <Badge variant="outline">{product.condition.replace("_", " ")}</Badge>
                 {product.product_type !== "dress" && (
@@ -292,7 +301,7 @@ const ProductDetail = () => {
                   {(product.listing_type === "sale" || product.listing_type === "both") && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Sale Price</p>
-                      <div className="flex items-baseline gap-3">
+                      <div className="flex items-baseline gap-3 flex-wrap">
                         <p className="text-3xl font-bold text-primary">
                           PKR {product.sale_price?.toLocaleString()}
                         </p>
@@ -326,7 +335,7 @@ const ProductDetail = () => {
                     <Button 
                       variant="outline" 
                       size="lg" 
-                      onClick={() => navigate(`/chat?product=${product.id}`)}
+                      onClick={handleContactSeller}
                       className="flex-1"
                     >
                       <MessageCircle className="mr-2 h-5 w-5" />
@@ -374,7 +383,7 @@ const ProductDetail = () => {
                 <CardTitle>Description</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground whitespace-pre-line">{product.description}</p>
+                <p className="text-muted-foreground whitespace-pre-line">{product.description || "No description provided."}</p>
               </CardContent>
             </Card>
 
@@ -393,10 +402,13 @@ const ProductDetail = () => {
               </Card>
             )}
 
-            {/* Details */}
+            {/* Product Details */}
             <Card>
               <CardHeader>
-                <CardTitle>Details</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Shirt className="h-5 w-5" />
+                  Product Details
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -430,9 +442,57 @@ const ProductDetail = () => {
                       <p className="font-medium">{product.times_rented}</p>
                     </div>
                   )}
+                  
+                  {/* Dry Clean Only */}
+                  <div>
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Droplets className="h-3 w-3" />
+                      Dry Clean Only
+                    </p>
+                    <p className="font-medium flex items-center gap-1">
+                      {product.dry_clean_only ? (
+                        <><Check className="h-4 w-4 text-green-600" /> Yes</>
+                      ) : (
+                        <><X className="h-4 w-4 text-muted-foreground" /> No</>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Alteration Possible */}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Alteration Possible</p>
+                    <p className="font-medium flex items-center gap-1">
+                      {product.alteration_possible ? (
+                        <><Check className="h-4 w-4 text-green-600" /> Yes</>
+                      ) : (
+                        <><X className="h-4 w-4 text-muted-foreground" /> No</>
+                      )}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Included Accessories */}
+            {includedAccessories.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Gem className="h-5 w-5" />
+                    Included Accessories
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {includedAccessories.map((accessory: string, index: number) => (
+                      <Badge key={index} variant="secondary" className="text-sm">
+                        {accessory}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Size & Fit */}
             {(product.product_type === "dress" || product.product_type === "footwear") && (
@@ -457,6 +517,12 @@ const ProductDetail = () => {
                         <p className="font-medium">{product.height_range}</p>
                       </div>
                     )}
+                    {product.weight_range && (
+                      <div>
+                        <p className="text-sm text-muted-foreground">Weight Range</p>
+                        <p className="font-medium">{product.weight_range}</p>
+                      </div>
+                    )}
                     {product.chest_size && (
                       <div>
                         <p className="text-sm text-muted-foreground">Chest</p>
@@ -476,11 +542,6 @@ const ProductDetail = () => {
                       </div>
                     )}
                   </div>
-                  {product.alteration_possible && (
-                    <Badge variant="secondary" className="mt-4">
-                      Alteration Available
-                    </Badge>
-                  )}
                 </CardContent>
               </Card>
             )}
@@ -503,6 +564,15 @@ const ProductDetail = () => {
           )}
         </div>
       </main>
+
+      {/* Real Images Viewer Modal */}
+      <RealImagesViewer
+        isOpen={imageViewerOpen}
+        onClose={() => setImageViewerOpen(false)}
+        images={product.real_images || []}
+        aiCoverImage={product.ai_cover_image}
+        productTitle={product.title}
+      />
     </div>
   );
 };
