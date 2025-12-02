@@ -14,30 +14,18 @@ const ProductAvailabilityCalendar = ({
   nextAvailableDate 
 }: ProductAvailabilityCalendarProps) => {
   
-  // Get all dates from today to 3 months ahead
-  const getAvailableDates = () => {
-    const dates: Date[] = [];
-    const today = new Date();
-    const threeMonthsLater = new Date();
-    threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
-    
-    for (let d = new Date(today); d <= threeMonthsLater; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toDateString();
-      const isBlackedOut = blackoutDates.some(bd => bd.toDateString() === dateStr);
-      if (!isBlackedOut) {
-        dates.push(new Date(d));
-      }
-    }
-    return dates;
-  };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  const availableDates = getAvailableDates();
+  const isDateBooked = (date: Date) => {
+    return blackoutDates.some(bd => bd.toDateString() === date.toDateString());
+  };
   
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <CalendarCheck className="h-5 w-5 text-primary" />
+          <CalendarCheck className="h-5 w-5 text-[#FF69B4]" />
           Availability Calendar
         </CardTitle>
       </CardHeader>
@@ -45,22 +33,22 @@ const ProductAvailabilityCalendar = ({
         {/* Legend */}
         <div className="flex flex-wrap gap-3 text-sm">
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded bg-green-500" />
+            <div className="h-4 w-4 rounded bg-[#FF69B4]/30" />
             <span className="text-muted-foreground">Available</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded bg-destructive line-through" />
+            <div className="h-4 w-4 rounded bg-[#D3D3D3]" />
             <span className="text-muted-foreground">Booked/Unavailable</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded bg-gray-200" />
+            <div className="h-4 w-4 rounded bg-gray-300 opacity-50" />
             <span className="text-muted-foreground">Past Date</span>
           </div>
         </div>
 
         {/* Next Available Badge */}
         {nextAvailableDate && blackoutDates.some(d => d >= new Date()) && (
-          <Badge variant="outline" className="w-full justify-center py-2">
+          <Badge variant="outline" className="w-full justify-center py-2 border-[#FF69B4] text-[#FF69B4]">
             <CalendarX className="mr-2 h-4 w-4" />
             Next available from: {nextAvailableDate.toLocaleDateString('en-US', { 
               month: 'short', 
@@ -76,21 +64,21 @@ const ProductAvailabilityCalendar = ({
             mode="single"
             selected={undefined}
             numberOfMonths={1}
-            disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0, 0, 0, 0))}
+            disabled={(date) => date < today || isDateBooked(date)}
             className={cn("rounded-md border pointer-events-auto")}
             modifiers={{
               booked: blackoutDates,
-              available: availableDates,
+              available: (date) => date >= today && !isDateBooked(date),
             }}
             modifiersClassNames={{
-              booked: "bg-destructive text-destructive-foreground font-bold line-through opacity-50",
-              available: "bg-green-500 text-white font-semibold hover:bg-green-600",
+              booked: "!bg-[#D3D3D3] !text-gray-500 !cursor-not-allowed !opacity-60 line-through",
+              available: "bg-[#FF69B4]/20 text-foreground hover:!bg-[#FF69B4] hover:!text-white",
             }}
           />
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          Red crossed dates are already booked or unavailable. Green dates are available for booking.
+          Grey dates are booked or unavailable. Pink dates are available for booking.
         </p>
       </CardContent>
     </Card>
