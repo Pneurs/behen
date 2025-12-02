@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, Plus, Search, Filter, Loader2, X } from "lucide-react";
+import { Search, Filter, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import ProductCard from "@/components/ProductCard";
 import LocationFilter from "@/components/LocationFilter";
@@ -122,12 +122,6 @@ const Browse = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("Signed out successfully");
-    navigate("/");
-  };
-
   const handleNearMe = () => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -223,8 +217,6 @@ const Browse = () => {
     return dates;
   };
 
-  const userRole = user?.user_metadata?.role || "choti";
-
   let filteredProducts = products.filter((product) => {
     // Search filter
     const matchesSearch =
@@ -264,38 +256,18 @@ const Browse = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="border-b bg-card sticky top-16 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4 flex-1">
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Browse Collection
-            </h1>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/my-bookings")}>
-              My Bookings
-            </Button>
-            {isAdmin && (
-              <Button variant="secondary" onClick={() => navigate("/admin")}>
-                Admin
-              </Button>
-            )}
-            {userRole === "bari" && (
-              <Button onClick={() => navigate("/list-dress")}>
-                <Plus className="mr-2 h-4 w-4" />
-                List Dress
-              </Button>
-            )}
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
+      
+      {/* Page Title - Static */}
+      <div className="border-b bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
+            Browse Collection
+          </h1>
         </div>
       </div>
-      </div>
 
-      {/* Filters */}
-      <div className="border-b bg-card/50 sticky top-32 z-10">
+      {/* Filters - Static (not sticky) */}
+      <div className="border-b bg-card/50">
         <div className="container mx-auto px-4 py-4 space-y-4">
           {/* Search Bar */}
           <div className="relative">
@@ -374,18 +346,11 @@ const Browse = () => {
             <p className="text-muted-foreground mb-8">
               {hasActiveFilters
                 ? "Try adjusting your filters to see more results"
-                : userRole === "bari"
-                ? "Start by listing your first dress!"
                 : "Check back later for new listings"}
             </p>
-            {hasActiveFilters ? (
+            {hasActiveFilters && (
               <Button onClick={clearAllFilters}>Clear Filters</Button>
-            ) : userRole === "bari" ? (
-              <Button onClick={() => navigate("/list-dress")}>
-                <Plus className="mr-2 h-4 w-4" />
-                List Your First Dress
-              </Button>
-            ) : null}
+            )}
           </div>
         ) : (
           <>

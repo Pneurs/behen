@@ -30,19 +30,36 @@ const Auth = () => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/browse");
+        handlePostLoginRedirect();
       }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        navigate("/browse");
+        handlePostLoginRedirect();
       }
     });
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  const handlePostLoginRedirect = () => {
+    // Check if there's a pending redirect (e.g., from Contact button)
+    const redirectTo = localStorage.getItem("auth_redirect");
+    const redirectProductId = localStorage.getItem("auth_redirect_product");
+    
+    if (redirectTo && redirectProductId) {
+      localStorage.removeItem("auth_redirect");
+      localStorage.removeItem("auth_redirect_product");
+      navigate(`${redirectTo}?product=${redirectProductId}`);
+    } else if (redirectTo) {
+      localStorage.removeItem("auth_redirect");
+      navigate(redirectTo);
+    } else {
+      navigate("/browse");
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
