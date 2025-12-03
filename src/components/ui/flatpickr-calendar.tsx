@@ -57,6 +57,7 @@ const FlatpickrCalendar = ({
     maxDate,
     showMonths,
     defaultDate: getDefaultDate(),
+    closeOnSelect: mode !== "range", // Keep open for range selection until both dates selected
     disable: [
       (date: Date) => {
         const dateStr = date.toISOString().split("T")[0];

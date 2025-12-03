@@ -267,6 +267,11 @@ export default function OfferCard({
                       minDate={new Date()}
                       placeholder="Select date range"
                     />
+                    {dateRange.length === 2 && (
+                      <p className="text-xs text-primary font-medium mt-1">
+                        📅 Total: {Math.ceil((dateRange[1].getTime() - dateRange[0].getTime()) / (1000 * 60 * 60 * 24)) + 1} days for rent
+                      </p>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
