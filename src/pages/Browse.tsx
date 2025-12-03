@@ -9,10 +9,14 @@ import { Search, Filter, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import ProductCard from "@/components/ProductCard";
 import LocationFilter from "@/components/LocationFilter";
-import AvailabilityFilter from "@/components/AvailabilityFilter";
+import AvailabilityCalendarFlatpickr from "@/components/AvailabilityCalendarFlatpickr";
 import MapView from "@/components/MapView";
-import { DateRange } from "react-day-picker";
 import { format, isWithinInterval } from "date-fns";
+
+interface DateRange {
+  from?: Date;
+  to?: Date;
+}
 
 const Browse = () => {
   const navigate = useNavigate();
@@ -319,7 +323,7 @@ const Browse = () => {
               </SelectContent>
             </Select>
 
-            <AvailabilityFilter
+            <AvailabilityCalendarFlatpickr
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
             />

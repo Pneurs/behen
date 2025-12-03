@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Upload, Loader2, X, Check, AlertCircle } from "lucide-react";
 import { z } from "zod";
-import AvailabilityCalendarManager from "@/components/AvailabilityCalendarManager";
+import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import { Header } from "@/components/Header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -1091,7 +1091,7 @@ const ListDress = () => {
               <p className="text-sm text-muted-foreground">
                 Mark dates when your dress is NOT available for rent
               </p>
-              <AvailabilityCalendarManager
+              <AvailabilityCalendarManagerFlatpickr
                 blackoutDates={blackoutDates}
                 onBlackoutDatesChange={setBlackoutDates}
               />
