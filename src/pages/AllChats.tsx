@@ -19,6 +19,31 @@ export default function AllChats() {
     checkAuth();
   }, []);
 
+  // Subscribe to new messages for real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('allchats-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        () => {
+          // Refresh conversations when new message arrives
+          fetchConversations(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -37,23 +62,38 @@ export default function AllChats() {
         .select(`
           *,
           products (title, ai_cover_image),
-          chat_messages (message, created_at)
+          chat_messages (id, message, created_at, sender_id)
         `)
         .or(`renter_id.eq.${userId},owner_id.eq.${userId}`)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
 
-      // Get the latest message for each conversation
-      const conversationsWithLatestMessage = data?.map((conv: any) => {
+      // Get the latest message and unread count for each conversation
+      const conversationsWithData = data?.map((conv: any) => {
         const messages = conv.chat_messages || [];
-        const latestMessage = messages.sort(
+        const sortedMessages = messages.sort(
           (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-        return { ...conv, latestMessage };
+        );
+        const latestMessage = sortedMessages[0];
+        
+        // Count messages from others in last 24 hours as "unread"
+        const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+        const unreadCount = messages.filter(
+          (m: any) => m.sender_id !== userId && new Date(m.created_at).getTime() > oneDayAgo
+        ).length;
+
+        return { ...conv, latestMessage, unreadCount };
       });
 
-      setConversations(conversationsWithLatestMessage || []);
+      // Sort by latest message time (most recent first)
+      conversationsWithData?.sort((a, b) => {
+        const aTime = a.latestMessage?.created_at ? new Date(a.latestMessage.created_at).getTime() : 0;
+        const bTime = b.latestMessage?.created_at ? new Date(b.latestMessage.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      setConversations(conversationsWithData || []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -89,10 +129,14 @@ export default function AllChats() {
             <div className="space-y-3">
               {conversations.map((conv) => {
                 const isOwner = user.id === conv.owner_id;
+                const hasUnread = conv.unreadCount > 0;
+                
                 return (
                   <Card
                     key={conv.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    className={`cursor-pointer hover:shadow-md transition-all ${
+                      hasUnread ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20" : ""
+                    }`}
                     onClick={() => navigate(`/chat?product=${conv.product_id}`)}
                   >
                     <CardContent className="p-4">
@@ -107,10 +151,10 @@ export default function AllChats() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold truncate">
+                              <h3 className={`font-semibold truncate ${hasUnread ? "text-primary" : ""}`}>
                                 {conv.products?.title}
                               </h3>
-                              <p className="text-sm text-muted-foreground truncate">
+                              <p className={`text-sm truncate ${hasUnread ? "font-medium text-foreground" : "text-muted-foreground"}`}>
                                 {conv.latestMessage?.message || "No messages yet"}
                               </p>
                             </div>
@@ -120,9 +164,16 @@ export default function AllChats() {
                                   {format(new Date(conv.latestMessage.created_at), "MMM dd")}
                                 </p>
                               )}
-                              <Badge variant="outline" className="text-xs">
-                                {isOwner ? "Seller" : "Buyer"}
-                              </Badge>
+                              <div className="flex items-center gap-1">
+                                {hasUnread && (
+                                  <Badge className="h-5 min-w-5 px-1.5 text-xs bg-primary text-primary-foreground">
+                                    {conv.unreadCount}
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                  {isOwner ? "Seller" : "Buyer"}
+                                </Badge>
+                              </div>
                             </div>
                           </div>
                         </div>
