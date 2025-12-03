@@ -1,5 +1,31 @@
 @tailwind base;
 
+/* Global Flatpickr Range Selection Styling */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: #FF69B4 !important;
+  border-color: #FF69B4 !important;
+  color: white !important;
+}
+
+.flatpickr-day.inRange {
+  background: rgba(255, 105, 180, 0.2) !important;
+  border-color: rgba(255, 105, 180, 0.2) !important;
+  box-shadow: -5px 0 0 rgba(255, 105, 180, 0.2), 5px 0 0 rgba(255, 105, 180, 0.2) !important;
+}
+
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+  background: #FF4DA6 !important;
+  border-color: #FF4DA6 !important;
+}
+
+.flatpickr-day.inRange:hover {
+  background: rgba(255, 105, 180, 0.3) !important;
+}
+
 /* Flatpickr Custom Styles for Behen.pk */
 .flatpickr-behen-wrapper {
   --flatpickr-brand: #FF69B4;

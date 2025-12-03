@@ -122,7 +122,12 @@ export default function Chat() {
           filter: `conversation_id=eq.${conversation.id}`,
         },
         (payload) => {
-          setMessages((current) => [...current, payload.new]);
+          // Check if message already exists to prevent duplicates
+          setMessages((current) => {
+            const exists = current.some(msg => msg.id === payload.new.id);
+            if (exists) return current;
+            return [...current, payload.new];
+          });
         }
       )
       .subscribe();

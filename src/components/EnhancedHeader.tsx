@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   NavigationMenu,
   NavigationMenuContent,
@@ -21,6 +22,7 @@ export const EnhancedHeader = () => {
   const [userRole, setUserRole] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -28,6 +30,7 @@ export const EnhancedHeader = () => {
         setUser(session.user);
         setUserRole(session.user.user_metadata?.role || "choti");
         checkAdminRole(session.user.id);
+        fetchUnreadCount(session.user.id);
       }
     });
 
@@ -36,15 +39,74 @@ export const EnhancedHeader = () => {
         setUser(session.user);
         setUserRole(session.user.user_metadata?.role || "choti");
         checkAdminRole(session.user.id);
+        fetchUnreadCount(session.user.id);
       } else {
         setUser(null);
         setUserRole("");
         setIsAdmin(false);
+        setUnreadCount(0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Subscribe to new messages for unread count
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('header-unread-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        (payload) => {
+          // If the message is not from the current user, increment unread count
+          if (payload.new.sender_id !== user.id) {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const fetchUnreadCount = async (userId: string) => {
+    try {
+      // Get conversations where user is participant
+      const { data: conversations } = await supabase
+        .from("chat_conversations")
+        .select("id, owner_id, renter_id")
+        .or(`renter_id.eq.${userId},owner_id.eq.${userId}`);
+
+      if (!conversations || conversations.length === 0) {
+        setUnreadCount(0);
+        return;
+      }
+
+      // Get messages from others in these conversations from the last 24 hours
+      const convIds = conversations.map(c => c.id);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .in("conversation_id", convIds)
+        .neq("sender_id", userId)
+        .gte("created_at", oneDayAgo);
+
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  };
 
   const checkAdminRole = async (userId: string) => {
     const { data } = await supabase
@@ -141,9 +203,14 @@ export const EnhancedHeader = () => {
                   <Heart className="mr-2 h-4 w-4" />
                   Wishlist
                 </Button>
-                <Button onClick={() => navigate("/chats")} variant="ghost" size="sm">
+                <Button onClick={() => { navigate("/chats"); setUnreadCount(0); }} variant="ghost" size="sm" className="relative">
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Chats
+                  {unreadCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </Badge>
+                  )}
                 </Button>
                 {isAdmin && (
                   <Button onClick={() => navigate("/admin")} variant="secondary" size="sm">
@@ -241,12 +308,18 @@ export const EnhancedHeader = () => {
                       onClick={() => {
                         navigate("/chats");
                         setMobileOpen(false);
+                        setUnreadCount(0);
                       }}
                       variant="outline"
-                      className="w-full"
+                      className="w-full relative"
                     >
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Chats
+                      {unreadCount > 0 && (
+                        <Badge className="ml-2 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                          {unreadCount > 99 ? "99+" : unreadCount}
+                        </Badge>
+                      )}
                     </Button>
                     {isAdmin && (
                       <Button
