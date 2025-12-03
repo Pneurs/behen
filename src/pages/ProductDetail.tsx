@@ -322,24 +322,13 @@ const ProductDetail = () => {
                 
                 {!isOwner && (
                   <div className="flex gap-3 mt-6">
-                    {(product.listing_type === "rent" || product.listing_type === "both") && (
-                      <Button 
-                        className="flex-1" 
-                        size="lg" 
-                        onClick={() => navigate(`/booking/${product.id}`)}
-                      >
-                        <CalendarIcon className="mr-2 h-5 w-5" />
-                        Book Now
-                      </Button>
-                    )}
                     <Button 
-                      variant="outline" 
                       size="lg" 
                       onClick={handleContactSeller}
                       className="flex-1"
                     >
                       <MessageCircle className="mr-2 h-5 w-5" />
-                      Contact
+                      Contact Seller
                     </Button>
                   </div>
                 )}
