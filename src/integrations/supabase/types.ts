@@ -16,64 +16,106 @@ export type Database = {
     Tables: {
       bookings: {
         Row: {
+          acceptance_video_uploaded_at: string | null
+          acceptance_video_url: string | null
           admin_notes: string | null
           booking_status: Database["public"]["Enums"]["booking_status"]
           cancelled_reason: string | null
+          completed_at: string | null
           created_at: string
           daily_rate: number
           end_date: string
           id: string
+          late_days: number | null
+          late_fee_total: number | null
+          order_stage: Database["public"]["Enums"]["order_stage"] | null
           owner_id: string
+          packing_video_uploaded_at: string | null
+          packing_video_url: string | null
           payment_notes: string | null
           payment_proof_url: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
+          picked_at: string | null
+          picked_by_user_id: string | null
           product_id: string
           renter_id: string
+          return_deadline: string | null
+          return_video_uploaded_at: string | null
+          return_video_url: string | null
           security_deposit: number
           start_date: string
           total_days: number
           total_price: number
           updated_at: string
+          videos_delete_after: string | null
         }
         Insert: {
+          acceptance_video_uploaded_at?: string | null
+          acceptance_video_url?: string | null
           admin_notes?: string | null
           booking_status?: Database["public"]["Enums"]["booking_status"]
           cancelled_reason?: string | null
+          completed_at?: string | null
           created_at?: string
           daily_rate: number
           end_date: string
           id?: string
+          late_days?: number | null
+          late_fee_total?: number | null
+          order_stage?: Database["public"]["Enums"]["order_stage"] | null
           owner_id: string
+          packing_video_uploaded_at?: string | null
+          packing_video_url?: string | null
           payment_notes?: string | null
           payment_proof_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          picked_at?: string | null
+          picked_by_user_id?: string | null
           product_id: string
           renter_id: string
+          return_deadline?: string | null
+          return_video_uploaded_at?: string | null
+          return_video_url?: string | null
           security_deposit: number
           start_date: string
           total_days: number
           total_price: number
           updated_at?: string
+          videos_delete_after?: string | null
         }
         Update: {
+          acceptance_video_uploaded_at?: string | null
+          acceptance_video_url?: string | null
           admin_notes?: string | null
           booking_status?: Database["public"]["Enums"]["booking_status"]
           cancelled_reason?: string | null
+          completed_at?: string | null
           created_at?: string
           daily_rate?: number
           end_date?: string
           id?: string
+          late_days?: number | null
+          late_fee_total?: number | null
+          order_stage?: Database["public"]["Enums"]["order_stage"] | null
           owner_id?: string
+          packing_video_uploaded_at?: string | null
+          packing_video_url?: string | null
           payment_notes?: string | null
           payment_proof_url?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
+          picked_at?: string | null
+          picked_by_user_id?: string | null
           product_id?: string
           renter_id?: string
+          return_deadline?: string | null
+          return_video_uploaded_at?: string | null
+          return_video_url?: string | null
           security_deposit?: number
           start_date?: string
           total_days?: number
           total_price?: number
           updated_at?: string
+          videos_delete_after?: string | null
         }
         Relationships: [
           {
@@ -167,6 +209,69 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          end_date: string
+          id: string
+          offered_price: number
+          offered_security_deposit: number
+          product_id: string
+          responded_at: string | null
+          sender_id: string
+          start_date: string
+          status: string
+          total_days: number
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          end_date: string
+          id?: string
+          offered_price: number
+          offered_security_deposit: number
+          product_id: string
+          responded_at?: string | null
+          sender_id: string
+          start_date: string
+          status?: string
+          total_days: number
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          offered_price?: number
+          offered_security_deposit?: number
+          product_id?: string
+          responded_at?: string | null
+          sender_id?: string
+          start_date?: string
+          status?: string
+          total_days?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -486,6 +591,14 @@ export type Database = {
         | "active"
         | "completed"
         | "cancelled"
+      order_stage:
+        | "pending_packing_video"
+        | "pending_pickup"
+        | "in_rental_period"
+        | "pending_return_video"
+        | "pending_acceptance_video"
+        | "completed"
+        | "closed"
       payment_status: "pending" | "submitted" | "verified" | "rejected"
     }
     CompositeTypes: {
@@ -623,6 +736,15 @@ export const Constants = {
         "active",
         "completed",
         "cancelled",
+      ],
+      order_stage: [
+        "pending_packing_video",
+        "pending_pickup",
+        "in_rental_period",
+        "pending_return_video",
+        "pending_acceptance_video",
+        "completed",
+        "closed",
       ],
       payment_status: ["pending", "submitted", "verified", "rejected"],
     },
