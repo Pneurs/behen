@@ -31,12 +31,15 @@ export default function Chat() {
   }, [productId]);
 
   useEffect(() => {
-    if (conversation) {
-      subscribeToMessages();
+    if (conversation?.id) {
       fetchMessages();
       fetchOffers();
+      const unsubscribe = subscribeToMessages();
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
     }
-  }, [conversation]);
+  }, [conversation?.id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -138,12 +141,19 @@ export default function Chat() {
   };
 
   const fetchMessages = async () => {
-    const { data } = await supabase
+    if (!conversation?.id) return;
+    
+    const { data, error } = await supabase
       .from("chat_messages")
       .select("*")
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true });
 
+    if (error) {
+      console.error("Error fetching messages:", error);
+      return;
+    }
+    
     setMessages(data || []);
   };
 
