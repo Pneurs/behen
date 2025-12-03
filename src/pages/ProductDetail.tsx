@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import ProductAvailabilityCalendar from "@/components/ProductAvailabilityCalendar";
+import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabilityCalendarFlatpickr";
 import RealImagesViewer from "@/components/RealImagesViewer";
 import { 
   MapPin, 
@@ -556,7 +556,7 @@ const ProductDetail = () => {
           {/* Availability Calendar */}
           {(product.listing_type === "rent" || product.listing_type === "both") && (
             <div>
-              <ProductAvailabilityCalendar 
+              <ProductAvailabilityCalendarFlatpickr 
                 blackoutDates={blackoutDates}
                 nextAvailableDate={getNextAvailableDate()}
               />

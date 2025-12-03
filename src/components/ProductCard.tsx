@@ -5,7 +5,7 @@ import { MapPin, Tag, Star, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import LocationDistancePopup from "./LocationDistancePopup";
-import ProductMiniAvailabilityCalendar from "./ProductMiniAvailabilityCalendar";
+import ProductMiniAvailabilityCalendarFlatpickr from "./ProductMiniAvailabilityCalendarFlatpickr";
 import { useWishlist } from "@/hooks/useWishlist";
 
 interface ProductCardProps {
