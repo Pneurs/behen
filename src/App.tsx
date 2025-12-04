@@ -16,6 +16,9 @@ import MyBookings from "./pages/MyBookings";
 import BariBehenDashboard from "./pages/BariBehenDashboard";
 import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
+import ReturnPolicy from "./pages/ReturnPolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsAndConditions from "./pages/TermsAndConditions";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/admin" element={<Admin />} />
           <Route path="/my-bookings" element={<MyBookings />} />
           <Route path="/dashboard" element={<BariBehenDashboard />} />
+          <Route path="/return-policy" element={<ReturnPolicy />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
