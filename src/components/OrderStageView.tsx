@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, differenceInDays, differenceInHours, differenceInMinutes, addDays } from "date-fns";
 import VideoRecorder from "./VideoRecorder";
+import PaymentUploadSection from "./PaymentUploadSection";
+import ContactInfoReveal from "./ContactInfoReveal";
 import {
   Package,
   Truck,
@@ -17,6 +19,7 @@ import {
   User,
   Play,
   Loader2,
+  CreditCard,
 } from "lucide-react";
 
 interface OrderStageViewProps {
@@ -30,6 +33,7 @@ const LATE_FEE_PER_DAY = 1550;
 const MAX_LATE_DAYS = 3;
 
 const STAGES = [
+  { key: "payment_pending", label: "Payment", icon: CreditCard },
   { key: "pending_packing_video", label: "Packing Video", icon: Package },
   { key: "pending_pickup", label: "Product Pickup", icon: Truck },
   { key: "in_rental_period", label: "Rental Period", icon: Clock },
@@ -44,7 +48,10 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
 
   const isOwner = userId === booking.owner_id;
   const isRenter = userId === booking.renter_id;
-  const currentStage = booking.order_stage || "pending_packing_video";
+  
+  // Determine current stage - payment takes precedence if not verified
+  const isPaymentPending = booking.payment_status !== "verified";
+  const currentStage = isPaymentPending ? "payment_pending" : (booking.order_stage || "pending_packing_video");
   
   const currentStageIndex = STAGES.findIndex(s => s.key === currentStage);
   const progressPercent = ((currentStageIndex + 1) / STAGES.length) * 100;
@@ -168,8 +175,8 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
           <Progress value={progressPercent} className="h-2" />
           
           {/* Stage indicators */}
-          <div className="flex justify-between mt-4">
-            {STAGES.slice(0, 5).map((stage, index) => {
+          <div className="flex justify-between mt-4 overflow-x-auto pb-2">
+            {STAGES.slice(0, 6).map((stage, index) => {
               const StageIcon = stage.icon;
               const isComplete = index < currentStageIndex;
               const isCurrent = index === currentStageIndex;
@@ -191,8 +198,22 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </CardContent>
       </Card>
 
-      {/* Stage-specific content */}
-      {currentStage === "pending_packing_video" && (
+      {/* Payment Section - Always show if payment not verified */}
+      {isPaymentPending && (
+        <PaymentUploadSection
+          booking={booking}
+          isRenter={isRenter}
+          onUploadComplete={onRefresh}
+        />
+      )}
+
+      {/* Contact Info - Only visible after payment verified */}
+      {booking.payment_status === "verified" && (
+        <ContactInfoReveal booking={booking} userId={userId} />
+      )}
+
+      {/* Stage-specific content - Only show if payment is verified */}
+      {currentStage === "pending_packing_video" && !isPaymentPending && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -219,7 +240,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </Card>
       )}
 
-      {currentStage === "pending_pickup" && (
+      {currentStage === "pending_pickup" && !isPaymentPending && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
