@@ -120,8 +120,24 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="bg-card border-t py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>&copy; 2025 Behen.pk. All rights reserved.</p>
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">&copy; 2025 Behen.pk. All rights reserved.</p>
+            <div className="flex items-center gap-6 text-sm">
+              <Link to="/return-policy" className="text-muted-foreground hover:text-primary transition-colors">
+                Return Policy
+              </Link>
+              <Link to="/privacy-policy" className="text-muted-foreground hover:text-primary transition-colors">
+                Privacy Policy
+              </Link>
+              <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                Terms & Conditions
+              </Link>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border text-center text-xs text-muted-foreground">
+            <p>2nd Floor Plot # 9، Lajna Chowk، College Road, Block 2 Sector C-1 Ahmed Avenue, Lahore, Pakistan | 0328 5913965</p>
+          </div>
         </div>
       </footer>
     </div>
