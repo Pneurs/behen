@@ -11,7 +11,8 @@ import ProductDetail from "./pages/ProductDetail";
 // Booking page removed - orders created through chat offers
 import Chat from "./pages/Chat";
 import AllChats from "./pages/AllChats";
-import Admin from "./pages/Admin";
+import AdminAuth from "./pages/AdminAuth";
+import AdminDashboard from "./pages/AdminDashboard";
 import MyBookings from "./pages/MyBookings";
 import BariBehenDashboard from "./pages/BariBehenDashboard";
 import Wishlist from "./pages/Wishlist";
@@ -38,7 +39,8 @@ const App = () => (
           <Route path="/chat" element={<Chat />} />
           <Route path="/chats" element={<AllChats />} />
           <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/admin" element={<Admin />} />
+          <Route path="/admin" element={<AdminAuth />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/my-bookings" element={<MyBookings />} />
           <Route path="/dashboard" element={<BariBehenDashboard />} />
           <Route path="/return-policy" element={<ReturnPolicy />} />

@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmailNotification {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message";
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome";
   recipientEmail: string;
   recipientName: string;
   data: any;
@@ -9,6 +9,8 @@ interface EmailNotification {
 
 export const sendEmailNotification = async (notification: EmailNotification) => {
   try {
+    console.log("Sending email notification:", notification.type, "to", notification.recipientEmail);
+    
     const { data, error } = await supabase.functions.invoke("send-notifications", {
       body: notification,
     });
@@ -18,6 +20,7 @@ export const sendEmailNotification = async (notification: EmailNotification) => 
       return { success: false, error };
     }
 
+    console.log("Email notification sent successfully:", data);
     return { success: true, data };
   } catch (error) {
     console.error("Error invoking email function:", error);
