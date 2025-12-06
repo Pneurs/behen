@@ -107,6 +107,27 @@ const AdminAuth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Please enter your email address first");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/admin`,
+      });
+      
+      if (error) throw error;
+      toast.success("Password reset link sent to your email!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send reset link");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -171,6 +192,17 @@ const AdminAuth = () => {
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSignUp ? "Create Admin Account" : "Sign In to Admin"}
             </Button>
+            {!isSignUp && (
+              <Button 
+                type="button" 
+                variant="link" 
+                className="w-full text-sm text-slate-400 hover:text-slate-300"
+                onClick={handleForgotPassword}
+                disabled={loading}
+              >
+                Forgot password?
+              </Button>
+            )}
           </form>
           <div className="mt-4 text-center">
             <button
