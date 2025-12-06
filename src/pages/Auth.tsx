@@ -9,6 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
+import { z } from "zod";
+
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const otpSchema = z.string().length(6, "OTP must be 6 digits");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -16,17 +20,29 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [otp, setOtp] = useState("");
   const [role, setRole] = useState<"bari" | "choti">(
     (searchParams.get("role") as "bari" | "choti") || "choti"
   );
-  const [mode, setMode] = useState<"login" | "signup">(
-    (searchParams.get("mode") as "login" | "signup") || "login"
+  const [mode, setMode] = useState<"login" | "signup" | "reset" | "verify-otp">(
+    (searchParams.get("mode") as "login" | "signup" | "reset" | "verify-otp") || "login"
   );
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
 
   useEffect(() => {
+    // Check for password reset or email verification in URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    
+    if (type === "recovery") {
+      setMode("reset");
+      return;
+    }
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -45,7 +61,6 @@ const Auth = () => {
   }, [navigate]);
 
   const handlePostLoginRedirect = () => {
-    // Check if there's a pending redirect (e.g., from Contact button)
     const redirectTo = localStorage.getItem("auth_redirect");
     const redirectProductId = localStorage.getItem("auth_redirect_product");
     
@@ -66,7 +81,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error: signUpError, data } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -80,10 +95,38 @@ const Auth = () => {
 
       if (signUpError) throw signUpError;
 
-      toast.success("Account created! You can now sign in.");
-      setMode("login");
+      setPendingEmail(email);
+      setMode("verify-otp");
+      toast.success("Verification code sent to your email!");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const otpValidation = otpSchema.safeParse(otp);
+    if (!otpValidation.success) {
+      toast.error(otpValidation.error.errors[0].message);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: pendingEmail,
+        token: otp,
+        type: "signup",
+      });
+
+      if (error) throw error;
+      
+      toast.success("Email verified! Welcome to Behen.pk!");
+    } catch (error: any) {
+      toast.error(error.message || "Invalid verification code");
     } finally {
       setLoading(false);
     }
@@ -109,6 +152,38 @@ const Auth = () => {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const passwordValidation = passwordSchema.safeParse(password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error.errors[0].message);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) throw error;
+      
+      toast.success("Password updated successfully!");
+      window.location.hash = "";
+      setMode("login");
+      setPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       toast.error("Please enter your email address");
@@ -118,7 +193,7 @@ const Auth = () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth?mode=reset`,
+        redirectTo: `${window.location.origin}/auth`,
       });
       
       if (error) throw error;
@@ -129,6 +204,150 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingEmail,
+      });
+      
+      if (error) throw error;
+      toast.success("Verification code resent!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to resend code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Password Reset Mode
+  if (mode === "reset") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Reset Password
+              </CardTitle>
+              <CardDescription>
+                Enter your new password
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update Password
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // OTP Verification Mode
+  if (mode === "verify-otp") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Verify Email
+              </CardTitle>
+              <CardDescription>
+                Enter the 6-digit code sent to {pendingEmail}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleVerifyOtp} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="otp">Verification Code</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    placeholder="123456"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    required
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest"
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Verify Email
+                </Button>
+                <div className="text-center space-y-2">
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="text-sm text-muted-foreground"
+                    onClick={handleResendOtp}
+                    disabled={loading}
+                  >
+                    Didn't receive code? Resend
+                  </Button>
+                  <br />
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="text-sm text-muted-foreground"
+                    onClick={() => setMode("login")}
+                  >
+                    ← Back to login
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

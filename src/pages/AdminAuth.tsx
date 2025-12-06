@@ -7,6 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, Shield } from "lucide-react";
+import { z } from "zod";
+
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
+const otpSchema = z.string().length(6, "OTP must be 6 digits");
 
 const AdminAuth = () => {
   const navigate = useNavigate();
@@ -14,10 +18,24 @@ const AdminAuth = () => {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [otp, setOtp] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<"auth" | "reset" | "verify-otp">("auth");
+  const [pendingEmail, setPendingEmail] = useState("");
 
   useEffect(() => {
+    // Check for password reset in URL hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    
+    if (type === "recovery") {
+      setMode("reset");
+      setCheckingAuth(false);
+      return;
+    }
+
     checkAdminSession();
   }, []);
 
@@ -25,7 +43,6 @@ const AdminAuth = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (user) {
-      // Check if user has admin role
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
@@ -47,7 +64,7 @@ const AdminAuth = () => {
 
     try {
       if (isSignUp) {
-        const { error: signUpError, data } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -57,24 +74,9 @@ const AdminAuth = () => {
 
         if (signUpError) throw signUpError;
 
-        if (data.user) {
-          // Check if user has admin role (auto-assigned for ghunvtazeen@gmail.com)
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", data.user.id)
-            .in("role", ["super_admin", "admin", "manager"]);
-
-          if (!roles || roles.length === 0) {
-            await supabase.auth.signOut();
-            toast.error("Access denied. Only authorized emails can register as admin.");
-            setLoading(false);
-            return;
-          }
-
-          toast.success("Admin account created! Welcome to the Admin Panel.");
-          navigate("/admin/dashboard");
-        }
+        setPendingEmail(email);
+        setMode("verify-otp");
+        toast.success("Verification code sent to your email!");
       } else {
         const { error: signInError, data } = await supabase.auth.signInWithPassword({
           email,
@@ -83,7 +85,6 @@ const AdminAuth = () => {
 
         if (signInError) throw signInError;
 
-        // Check if user has admin role
         const { data: roles } = await supabase
           .from("user_roles")
           .select("role")
@@ -102,6 +103,82 @@ const AdminAuth = () => {
       }
     } catch (error: any) {
       toast.error(error.message || "Authentication failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const otpValidation = otpSchema.safeParse(otp);
+    if (!otpValidation.success) {
+      toast.error(otpValidation.error.errors[0].message);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: pendingEmail,
+        token: otp,
+        type: "signup",
+      });
+
+      if (error) throw error;
+      
+      if (data.user) {
+        // Check if user has admin role
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .in("role", ["super_admin", "admin", "manager"]);
+
+        if (!roles || roles.length === 0) {
+          await supabase.auth.signOut();
+          toast.error("Access denied. Only authorized emails can register as admin.");
+          setMode("auth");
+          return;
+        }
+
+        toast.success("Email verified! Welcome to Admin Panel!");
+        navigate("/admin/dashboard");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Invalid verification code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const passwordValidation = passwordSchema.safeParse(password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error.errors[0].message);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) throw error;
+      
+      toast.success("Password updated successfully!");
+      window.location.hash = "";
+      setMode("auth");
+      setPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
     } finally {
       setLoading(false);
     }
@@ -128,10 +205,160 @@ const AdminAuth = () => {
     }
   };
 
+  const handleResendOtp = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: pendingEmail,
+      });
+      
+      if (error) throw error;
+      toast.success("Verification code resent!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to resend code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Password Reset Mode
+  if (mode === "reset") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-slate-700 bg-slate-800/50 backdrop-blur">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-3xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Reset Password
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Enter your new password
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-slate-300">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className="pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-slate-400"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-slate-300">Confirm Password</Label>
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Update Password
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <a href="/" className="text-sm text-slate-500 hover:text-slate-400">
+                ← Back to Behen.pk
+              </a>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // OTP Verification Mode
+  if (mode === "verify-otp") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-2xl border-slate-700 bg-slate-800/50 backdrop-blur">
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-3xl font-bold text-white" style={{ fontFamily: "'Playfair Display', serif" }}>
+              Verify Email
+            </CardTitle>
+            <CardDescription className="text-slate-400">
+              Enter the 6-digit code sent to {pendingEmail}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp" className="text-slate-300">Verification Code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  required
+                  maxLength={6}
+                  className="text-center text-2xl tracking-widest bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                />
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verify Email
+              </Button>
+              <div className="text-center space-y-2">
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-sm text-slate-400 hover:text-slate-300"
+                  onClick={handleResendOtp}
+                  disabled={loading}
+                >
+                  Didn't receive code? Resend
+                </Button>
+                <br />
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-sm text-slate-400 hover:text-slate-300"
+                  onClick={() => { setMode("auth"); setIsSignUp(false); }}
+                >
+                  ← Back to login
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
