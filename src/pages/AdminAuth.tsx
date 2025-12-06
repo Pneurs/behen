@@ -15,6 +15,7 @@ const AdminAuth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
     checkAdminSession();
@@ -40,36 +41,67 @@ const AdminAuth = () => {
     setCheckingAuth(false);
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error: signInError, data } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      if (isSignUp) {
+        const { error: signUpError, data } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/admin/dashboard`
+          }
+        });
 
-      if (signInError) throw signInError;
+        if (signUpError) throw signUpError;
 
-      // Check if user has admin role
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", data.user.id)
-        .in("role", ["super_admin", "admin", "manager"]);
+        if (data.user) {
+          // Check if user has admin role (auto-assigned for ghunvtazeen@gmail.com)
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", data.user.id)
+            .in("role", ["super_admin", "admin", "manager"]);
 
-      if (!roles || roles.length === 0) {
-        await supabase.auth.signOut();
-        toast.error("Access denied. Admin privileges required.");
-        setLoading(false);
-        return;
+          if (!roles || roles.length === 0) {
+            await supabase.auth.signOut();
+            toast.error("Access denied. Only authorized emails can register as admin.");
+            setLoading(false);
+            return;
+          }
+
+          toast.success("Admin account created! Welcome to the Admin Panel.");
+          navigate("/admin/dashboard");
+        }
+      } else {
+        const { error: signInError, data } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+
+        // Check if user has admin role
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .in("role", ["super_admin", "admin", "manager"]);
+
+        if (!roles || roles.length === 0) {
+          await supabase.auth.signOut();
+          toast.error("Access denied. Admin privileges required.");
+          setLoading(false);
+          return;
+        }
+
+        toast.success("Welcome to Admin Panel!");
+        navigate("/admin/dashboard");
       }
-
-      toast.success("Welcome to Admin Panel!");
-      navigate("/admin/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Failed to sign in");
+      toast.error(error.message || "Authentication failed");
     } finally {
       setLoading(false);
     }
@@ -98,7 +130,7 @@ const AdminAuth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignIn} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">Email</Label>
               <Input
@@ -121,6 +153,7 @@ const AdminAuth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                   className="pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                 />
                 <Button
@@ -136,10 +169,19 @@ const AdminAuth = () => {
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In to Admin
+              {isSignUp ? "Create Admin Account" : "Sign In to Admin"}
             </Button>
           </form>
-          <div className="mt-6 text-center">
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? "Already have an account? Sign In" : "New admin? Create Account"}
+            </button>
+          </div>
+          <div className="mt-4 text-center">
             <a href="/" className="text-sm text-slate-500 hover:text-slate-400">
               ← Back to Behen.pk
             </a>
