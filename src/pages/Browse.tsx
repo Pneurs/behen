@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import ProductCard from "@/components/ProductCard";
 import LocationFilter from "@/components/LocationFilter";
 import AvailabilityCalendarFlatpickr from "@/components/AvailabilityCalendarFlatpickr";
+import BrowseFilters from "@/components/BrowseFilters";
 import MapView from "@/components/MapView";
 import { format, isWithinInterval } from "date-fns";
 
@@ -34,6 +35,8 @@ const Browse = () => {
   const [showMap, setShowMap] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -221,6 +224,13 @@ const Browse = () => {
     return dates;
   };
 
+  // Get max price for filter
+  const maxPrice = useMemo(() => {
+    if (products.length === 0) return 500000;
+    const prices = products.map(p => p.rental_price_4days || p.sale_price || 0);
+    return Math.max(...prices, 500000);
+  }, [products]);
+
   let filteredProducts = products.filter((product) => {
     // Search filter
     const matchesSearch =
@@ -230,7 +240,14 @@ const Browse = () => {
     // Availability filter
     const matchesAvailability = isProductAvailableForDates(product, dateRange);
 
-    return matchesSearch && matchesAvailability;
+    // Price filter
+    const productPrice = product.rental_price_4days || product.sale_price || 0;
+    const matchesPrice = productPrice >= priceRange[0] && productPrice <= priceRange[1];
+
+    // Size filter
+    const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(product.size);
+
+    return matchesSearch && matchesAvailability && matchesPrice && matchesSize;
   });
 
   // Sort by distance if "Near Me" is active
@@ -246,7 +263,7 @@ const Browse = () => {
       .filter((p) => p.distance < 50); // Only show within 50km
   }
 
-  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || dateRange || isNearMe;
+  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || dateRange || isNearMe || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0;
 
   const clearAllFilters = () => {
     setCategoryFilter("all");
@@ -255,6 +272,8 @@ const Browse = () => {
     setDateRange(undefined);
     setIsNearMe(false);
     setSearchQuery("");
+    setPriceRange([0, maxPrice]);
+    setSelectedSizes([]);
   };
 
   return (
@@ -326,6 +345,14 @@ const Browse = () => {
             <AvailabilityCalendarFlatpickr
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
+            />
+
+            <BrowseFilters
+              priceRange={priceRange}
+              onPriceRangeChange={setPriceRange}
+              selectedSizes={selectedSizes}
+              onSizesChange={setSelectedSizes}
+              maxPrice={maxPrice}
             />
 
             {hasActiveFilters && (

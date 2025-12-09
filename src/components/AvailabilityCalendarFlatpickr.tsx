@@ -24,56 +24,12 @@ const AvailabilityCalendarFlatpickr = ({
   const [bookedDates, setBookedDates] = useState<Date[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch booked dates from all products
+  // Note: We don't disable dates globally - each product has its own availability
+  // The calendar here is just for selecting a date range to filter products
   useEffect(() => {
-    const fetchBookedDates = async () => {
-      setIsLoading(true);
-      try {
-        const { data: products } = await supabase
-          .from("products")
-          .select("availability_data")
-          .eq("status", "published");
-
-        if (products) {
-          const allBookedDates: Date[] = [];
-          products.forEach((product) => {
-            const availData = product.availability_data as { blackout_dates?: string[] } | null;
-            if (availData?.blackout_dates) {
-              availData.blackout_dates.forEach((dateStr: string) => {
-                allBookedDates.push(new Date(dateStr));
-              });
-            }
-          });
-          setBookedDates(allBookedDates);
-        }
-      } catch (error) {
-        console.error("Error fetching booked dates:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchBookedDates();
-
-    // Subscribe to realtime updates for product availability
-    const channel = supabase
-      .channel("products-availability")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "products",
-        },
-        () => {
-          fetchBookedDates();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    setIsLoading(false);
+    // We intentionally DON'T fetch and block booked dates globally
+    // Each product's availability is independent and shown on the product card/detail page
   }, []);
 
   const handleClear = () => {
@@ -144,20 +100,17 @@ const AvailabilityCalendarFlatpickr = ({
         </div>
 
         <div className="p-3">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-[280px]">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF69B4]" />
-            </div>
-          ) : (
-            <FlatpickrCalendar
-              mode="range"
-              selectedDates={dateRange}
-              onDateChange={handleDateChange}
-              disabledDates={bookedDates}
-              minDate={today}
-              inline={true}
-            />
-          )}
+          <FlatpickrCalendar
+            mode="range"
+            selectedDates={dateRange}
+            onDateChange={handleDateChange}
+            disabledDates={[]} 
+            minDate={today}
+            inline={true}
+          />
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Select dates to filter products by availability
+          </p>
         </div>
         
         <div className="p-3 border-t">
