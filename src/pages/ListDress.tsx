@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, RefreshCw } from "lucide-react";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import { Header } from "@/components/Header";
@@ -48,6 +48,8 @@ const ListDress = () => {
   const [aiCoverImage, setAiCoverImage] = useState<string>("");
   const [confirmImageLoading, setConfirmImageLoading] = useState(false);
   const [confirmImageError, setConfirmImageError] = useState(false);
+  const [aiGenerationAttempts, setAiGenerationAttempts] = useState(0);
+  const MAX_AI_GENERATIONS = 3;
   
   // Step 4: Product details
   const [loading, setLoading] = useState(false);
@@ -249,7 +251,14 @@ const ListDress = () => {
       return;
     }
 
+    if (aiGenerationAttempts >= MAX_AI_GENERATIONS) {
+      toast.error("Maximum AI image generations reached (3).");
+      setCurrentStep("upload");
+      return;
+    }
+
     setGeneratingCover(true);
+    setAiGenerationAttempts(prev => prev + 1);
 
     try {
       // First upload the image to get a URL
@@ -318,6 +327,17 @@ const ListDress = () => {
   const handleAcceptAI = () => {
     setCurrentStep("details");
     toast.success("Great! Now let's add product details.");
+  };
+
+  const handleRegenerateAI = () => {
+    if (aiGenerationAttempts >= MAX_AI_GENERATIONS) {
+      toast.error("Maximum AI image generations reached (3). Please accept the current image or upload new photos.");
+      return;
+    }
+    setAiCoverImage("");
+    setConfirmImageError(false);
+    setCurrentStep("generating");
+    generateAICover();
   };
 
   const handleBackToUpload = () => {
@@ -460,7 +480,18 @@ const ListDress = () => {
     } catch (error: any) {
       console.error("Error submitting form:", error);
       if (error instanceof z.ZodError) {
-        toast.error(error.errors[0].message);
+        const errorMessages = error.errors.map(e => `• ${e.message}`).join('\n');
+        toast.error(
+          <div className="space-y-1">
+            <p className="font-semibold">Please fix the following:</p>
+            <ul className="text-sm">
+              {error.errors.map((e, i) => (
+                <li key={i}>• {e.message}</li>
+              ))}
+            </ul>
+          </div>,
+          { duration: 5000 }
+        );
       } else {
         toast.error(error.message || (isEditMode ? "Failed to update listing" : "Failed to create listing"));
       }
@@ -642,6 +673,18 @@ const ListDress = () => {
             Accept & Continue
           </Button>
 
+          {aiGenerationAttempts < MAX_AI_GENERATIONS && (
+            <Button
+              onClick={handleRegenerateAI}
+              variant="outline"
+              className="w-full"
+              disabled={generatingCover}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Generate New Image ({MAX_AI_GENERATIONS - aiGenerationAttempts} attempts left)
+            </Button>
+          )}
+
           <Button
             onClick={handleBackToUpload}
             variant="ghost"
@@ -809,10 +852,20 @@ const ListDress = () => {
                     id="rental_price_4days"
                     type="number"
                     value={formData.rental_price_4days}
-                    onChange={(e) => setFormData({ ...formData, rental_price_4days: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (formData.original_price && parseFloat(value) > parseFloat(formData.original_price)) {
+                        toast.error("Rental price cannot be higher than original price");
+                      }
+                      setFormData({ ...formData, rental_price_4days: value });
+                    }}
                     placeholder="5000"
                     required
+                    className={formData.original_price && formData.rental_price_4days && parseFloat(formData.rental_price_4days) > parseFloat(formData.original_price) ? "border-destructive" : ""}
                   />
+                  {formData.original_price && formData.rental_price_4days && parseFloat(formData.rental_price_4days) > parseFloat(formData.original_price) && (
+                    <p className="text-sm text-destructive mt-1">Rental price cannot be higher than original price</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="extra_day_rate">Extra Day Rate</Label>
@@ -855,10 +908,20 @@ const ListDress = () => {
                     id="sale_price"
                     type="number"
                     value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (formData.original_price && parseFloat(value) > parseFloat(formData.original_price)) {
+                        toast.error("Sale price cannot be higher than original price");
+                      }
+                      setFormData({ ...formData, sale_price: value });
+                    }}
                     placeholder="35000"
                     required
+                    className={formData.original_price && formData.sale_price && parseFloat(formData.sale_price) > parseFloat(formData.original_price) ? "border-destructive" : ""}
                   />
+                  {formData.original_price && formData.sale_price && parseFloat(formData.sale_price) > parseFloat(formData.original_price) && (
+                    <p className="text-sm text-destructive mt-1">Sale price cannot be higher than original price</p>
+                  )}
                 </div>
               </div>
             )}

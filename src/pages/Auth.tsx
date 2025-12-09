@@ -13,6 +13,7 @@ import { z } from "zod";
 
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 const otpSchema = z.string().length(6, "OTP must be 6 digits");
+const emailSchema = z.string().email("Please enter a valid email address");
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -76,8 +77,27 @@ const Auth = () => {
     }
   };
 
+  const [emailError, setEmailError] = useState("");
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailError("");
+    
+    // Validate email format
+    const emailValidation = emailSchema.safeParse(email);
+    if (!emailValidation.success) {
+      setEmailError(emailValidation.error.errors[0].message);
+      toast.error(emailValidation.error.errors[0].message);
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = passwordSchema.safeParse(password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error.errors[0].message);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -97,7 +117,7 @@ const Auth = () => {
 
       setPendingEmail(email);
       setMode("verify-otp");
-      toast.success("Verification code sent to your email!");
+      toast.success("Signup successful! Please verify your email to continue.");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -441,9 +461,16 @@ const Auth = () => {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError("");
+                    }}
                     required
+                    className={emailError ? "border-destructive" : ""}
                   />
+                  {emailError && (
+                    <p className="text-sm text-destructive">{emailError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>

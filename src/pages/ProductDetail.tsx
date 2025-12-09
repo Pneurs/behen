@@ -22,7 +22,8 @@ import {
   X,
   Shirt,
   Gem,
-  Droplets
+  Droplets,
+  Share2
 } from "lucide-react";
 
 const ProductDetail = () => {
@@ -156,7 +157,15 @@ const ProductDetail = () => {
       navigate("/auth");
       return;
     }
+    setShowRealImages(true);
     setImageViewerOpen(true);
+  };
+
+  const handleWhatsAppShare = () => {
+    const productUrl = `${window.location.origin}/product/${product.id}`;
+    const message = `Check out this ${product.title} on Behen.pk!\n\n${productUrl}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   if (loading) {
@@ -329,6 +338,15 @@ const ProductDetail = () => {
                     >
                       <MessageCircle className="mr-2 h-5 w-5" />
                       Contact Seller
+                    </Button>
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      onClick={handleWhatsAppShare}
+                      className="bg-[#25D366] hover:bg-[#25D366]/90 text-white border-0"
+                    >
+                      <Share2 className="mr-2 h-5 w-5" />
+                      Share
                     </Button>
                   </div>
                 )}
@@ -557,9 +575,12 @@ const ProductDetail = () => {
       {/* Real Images Viewer Modal */}
       <RealImagesViewer
         isOpen={imageViewerOpen}
-        onClose={() => setImageViewerOpen(false)}
+        onClose={() => {
+          setImageViewerOpen(false);
+          setShowRealImages(false);
+        }}
         images={product.real_images || []}
-        aiCoverImage={product.ai_cover_image}
+        aiCoverImage={showRealImages ? undefined : product.ai_cover_image}
         productTitle={product.title}
       />
     </div>

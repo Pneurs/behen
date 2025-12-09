@@ -21,8 +21,16 @@ const RealImagesViewer = ({ isOpen, onClose, images, aiCoverImage, productTitle 
   const [isLoading, setIsLoading] = useState(true);
   const imageRef = useRef<HTMLDivElement>(null);
 
-  // Combine AI cover with real images, AI first
+  // If viewing real images, don't include AI cover. If AI cover is provided, show it first
   const allImages = aiCoverImage ? [aiCoverImage, ...images] : images;
+  
+  // Set initial index based on whether we're showing AI cover or real images
+  useEffect(() => {
+    if (isOpen) {
+      // If no AI cover image, we're viewing real images directly - start at first real image
+      setCurrentIndex(aiCoverImage ? 0 : 0);
+    }
+  }, [isOpen, aiCoverImage]);
 
   useEffect(() => {
     setScale(1);
