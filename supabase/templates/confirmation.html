@@ -2,31 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify your email</title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f9fafb; margin: 0; padding: 20px;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-    <div style="background: linear-gradient(135deg, #FF69B4 0%, #FF1493 100%); padding: 30px; text-align: center;">
-      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Behen.pk</h1>
-      <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.9;">بہنیں تو سب شیئر کرتی ہیں</p>
-    </div>
-    <div style="padding: 40px 30px; text-align: center;">
-      <p style="color: #4b5563; line-height: 1.6; margin: 0 0 20px 0; font-size: 16px;">
-        Verify your email with this code:
-      </p>
-      <div style="background: #fdf2f8; border: 2px solid #FF69B4; border-radius: 8px; padding: 25px; margin: 20px 0;">
-        <span style="font-size: 36px; font-weight: bold; color: #FF1493; letter-spacing: 8px;">{{ .Token }}</span>
-      </div>
-      <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">
-        This code expires in 1 hour.
-      </p>
-    </div>
-    <div style="background: #f9fafb; padding: 15px 30px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="color: #9ca3af; font-size: 11px; margin: 0;">
-        © 2024 Behen.pk
-      </p>
-    </div>
-  </div>
+<body style="font-family: Arial, sans-serif; padding: 20px;">
+  <p>Verify your email with this code:</p>
+  <p style="font-size: 32px; font-weight: bold; letter-spacing: 4px; margin: 20px 0;">{{ .Token }}</p>
 </body>
 </html>
