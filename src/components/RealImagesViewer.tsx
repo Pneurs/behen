@@ -91,10 +91,10 @@ const RealImagesViewer = ({ isOpen, onClose, images, aiCoverImage, productTitle 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] w-full h-full p-0 bg-black/95">
-        <div className="relative w-full h-full flex flex-col">
+      <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 bg-black/95 flex flex-col">
+        <div className="flex flex-col h-full overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 bg-black/50">
+          <div className="flex items-center justify-between p-4 bg-black/50 flex-shrink-0">
             <div className="text-white">
               <h3 className="font-semibold">{productTitle}</h3>
               <p className="text-sm text-white/70">
@@ -132,10 +132,10 @@ const RealImagesViewer = ({ isOpen, onClose, images, aiCoverImage, productTitle 
             </div>
           </div>
 
-          {/* Main Image */}
+          {/* Main Image - Scrollable */}
           <div 
             ref={imageRef}
-            className="flex-1 relative overflow-hidden flex items-center justify-center cursor-grab"
+            className="flex-1 relative overflow-auto flex items-center justify-center cursor-grab min-h-0"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -151,10 +151,11 @@ const RealImagesViewer = ({ isOpen, onClose, images, aiCoverImage, productTitle 
             <img
               src={allImages[currentIndex]}
               alt={`${productTitle} - Image ${currentIndex + 1}`}
-              className="max-w-full max-h-full object-contain transition-transform duration-100"
+              className="max-w-full object-contain transition-transform duration-100"
               style={{
                 transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
-                opacity: isLoading ? 0 : 1
+                opacity: isLoading ? 0 : 1,
+                maxHeight: scale === 1 ? '100%' : 'none'
               }}
               onLoad={() => setIsLoading(false)}
               draggable={false}
@@ -185,7 +186,7 @@ const RealImagesViewer = ({ isOpen, onClose, images, aiCoverImage, productTitle 
 
           {/* Thumbnail Strip */}
           {allImages.length > 1 && (
-            <div className="bg-black/50 p-4">
+            <div className="bg-black/50 p-4 flex-shrink-0">
               <ScrollArea className="w-full">
                 <div className="flex gap-2 justify-center">
                   {allImages.map((img, idx) => (

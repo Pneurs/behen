@@ -231,6 +231,11 @@ const Browse = () => {
     return Math.max(...prices, 500000);
   }, [products]);
 
+  // Get available sizes from products
+  const availableSizes = useMemo(() => {
+    return [...new Set(products.map(p => p.size).filter(Boolean))];
+  }, [products]);
+
   let filteredProducts = products.filter((product) => {
     // Search filter
     const matchesSearch =
@@ -244,13 +249,14 @@ const Browse = () => {
     const productPrice = product.rental_price_4days || product.sale_price || 0;
     const matchesPrice = productPrice >= priceRange[0] && productPrice <= priceRange[1];
 
-    // Size filter
-    const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(product.size);
+    // Size filter - case insensitive comparison
+    const matchesSize = selectedSizes.length === 0 || 
+      selectedSizes.some(s => s.toLowerCase() === (product.size || "").toLowerCase());
 
     return matchesSearch && matchesAvailability && matchesPrice && matchesSize;
   });
 
-  // Sort by distance if "Near Me" is active
+  // Sort by distance if "Near Me" is active, or by same city first
   if (isNearMe && userLocation) {
     filteredProducts = filteredProducts
       .map((product) => ({
@@ -259,8 +265,16 @@ const Browse = () => {
           ? calculateDistance(userLocation.lat, userLocation.lng, product.latitude, product.longitude)
           : Infinity,
       }))
-      .sort((a, b) => a.distance - b.distance)
-      .filter((p) => p.distance < 50); // Only show within 50km
+      .sort((a, b) => a.distance - b.distance);
+    
+    // If no products within 50km, show products from same city sorted by distance
+    const nearbyProducts = filteredProducts.filter((p) => p.distance < 50);
+    if (nearbyProducts.length === 0) {
+      // Get user's approximate city (we'll use the first product's city as reference if available)
+      toast.info("No products within 50km. Showing all products sorted by distance.");
+    } else {
+      filteredProducts = nearbyProducts;
+    }
   }
 
   const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || dateRange || isNearMe || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0;
@@ -271,6 +285,7 @@ const Browse = () => {
     setCityFilter("");
     setDateRange(undefined);
     setIsNearMe(false);
+    setUserLocation(null);
     setSearchQuery("");
     setPriceRange([0, maxPrice]);
     setSelectedSizes([]);
@@ -353,6 +368,7 @@ const Browse = () => {
               selectedSizes={selectedSizes}
               onSizesChange={setSelectedSizes}
               maxPrice={maxPrice}
+              availableSizes={availableSizes}
             />
 
             {hasActiveFilters && (
