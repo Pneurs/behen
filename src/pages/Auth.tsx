@@ -101,7 +101,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -113,7 +113,48 @@ const Auth = () => {
         },
       });
 
-      if (signUpError) throw signUpError;
+      // Check if user already exists but not confirmed
+      if (signUpError) {
+        // If user already registered, try to resend OTP
+        if (signUpError.message?.includes("already registered") || 
+            signUpError.message?.includes("already been registered")) {
+          // Try to resend verification email
+          const { error: resendError } = await supabase.auth.resend({
+            type: "signup",
+            email,
+          });
+          
+          if (resendError) {
+            toast.error("This email is already registered. Please try logging in.");
+            return;
+          }
+          
+          setPendingEmail(email);
+          setMode("verify-otp");
+          toast.success("Verification code resent! Please check your email.");
+          return;
+        }
+        throw signUpError;
+      }
+
+      // Check if user exists but email not confirmed (identities array is empty)
+      if (data?.user?.identities?.length === 0) {
+        // Resend OTP for existing unverified user
+        const { error: resendError } = await supabase.auth.resend({
+          type: "signup",
+          email,
+        });
+        
+        if (resendError) {
+          toast.error("Failed to resend verification code. Please try again.");
+          return;
+        }
+        
+        setPendingEmail(email);
+        setMode("verify-otp");
+        toast.success("Verification code resent! Please check your email.");
+        return;
+      }
 
       setPendingEmail(email);
       setMode("verify-otp");
