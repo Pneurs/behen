@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.send-notifications]
 verify_jwt = false
 
+[functions.send-otp-email]
+verify_jwt = false
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true

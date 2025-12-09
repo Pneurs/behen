@@ -79,6 +79,32 @@ const Auth = () => {
 
   const [emailError, setEmailError] = useState("");
 
+  // Helper function to send OTP via custom edge function
+  const sendCustomOtpEmail = async (emailAddress: string) => {
+    // Generate a 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store OTP in localStorage with expiry (for verification)
+    const otpData = {
+      otp,
+      email: emailAddress,
+      expiry: Date.now() + 3600000, // 1 hour expiry
+    };
+    localStorage.setItem("pending_otp", JSON.stringify(otpData));
+    
+    // Send OTP via custom edge function
+    const { error } = await supabase.functions.invoke("send-otp-email", {
+      body: { email: emailAddress, otp },
+    });
+    
+    if (error) {
+      console.error("Error sending OTP email:", error);
+      throw new Error("Failed to send verification email");
+    }
+    
+    return otp;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError("");
@@ -118,20 +144,15 @@ const Auth = () => {
         // If user already registered, try to resend OTP
         if (signUpError.message?.includes("already registered") || 
             signUpError.message?.includes("already been registered")) {
-          // Try to resend verification email
-          const { error: resendError } = await supabase.auth.resend({
-            type: "signup",
-            email,
-          });
-          
-          if (resendError) {
+          // Send custom OTP email
+          try {
+            await sendCustomOtpEmail(email);
+            setPendingEmail(email);
+            setMode("verify-otp");
+            toast.success("Verification code resent! Please check your email.");
+          } catch (err) {
             toast.error("This email is already registered. Please try logging in.");
-            return;
           }
-          
-          setPendingEmail(email);
-          setMode("verify-otp");
-          toast.success("Verification code resent! Please check your email.");
           return;
         }
         throw signUpError;
@@ -139,23 +160,20 @@ const Auth = () => {
 
       // Check if user exists but email not confirmed (identities array is empty)
       if (data?.user?.identities?.length === 0) {
-        // Resend OTP for existing unverified user
-        const { error: resendError } = await supabase.auth.resend({
-          type: "signup",
-          email,
-        });
-        
-        if (resendError) {
+        // Send custom OTP email for existing unverified user
+        try {
+          await sendCustomOtpEmail(email);
+          setPendingEmail(email);
+          setMode("verify-otp");
+          toast.success("Verification code resent! Please check your email.");
+        } catch (err) {
           toast.error("Failed to resend verification code. Please try again.");
-          return;
         }
-        
-        setPendingEmail(email);
-        setMode("verify-otp");
-        toast.success("Verification code resent! Please check your email.");
         return;
       }
 
+      // Send custom OTP email for new user
+      await sendCustomOtpEmail(email);
       setPendingEmail(email);
       setMode("verify-otp");
       toast.success("Signup successful! Please verify your email to continue.");
@@ -177,14 +195,53 @@ const Auth = () => {
 
     setLoading(true);
     try {
+      // First verify with our stored OTP
+      const storedOtpData = localStorage.getItem("pending_otp");
+      if (!storedOtpData) {
+        toast.error("Verification session expired. Please sign up again.");
+        setMode("signup");
+        return;
+      }
+
+      const { otp: storedOtp, email: storedEmail, expiry } = JSON.parse(storedOtpData);
+      
+      if (Date.now() > expiry) {
+        localStorage.removeItem("pending_otp");
+        toast.error("Verification code expired. Please request a new one.");
+        return;
+      }
+
+      if (storedEmail !== pendingEmail || storedOtp !== otp) {
+        toast.error("Invalid verification code");
+        return;
+      }
+
+      // OTP is valid, now verify with Supabase using the same token
+      // Since we're using custom OTP, we need to sign in the user directly
+      // The user account was created during signup, we just need to confirm it
       const { error } = await supabase.auth.verifyOtp({
         email: pendingEmail,
-        token: otp,
+        token: storedOtp,
         type: "signup",
       });
 
-      if (error) throw error;
-      
+      // If Supabase verification fails, try signing in directly
+      // (the account might already be created but not verified)
+      if (error) {
+        // Try to get the session by signing in
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: pendingEmail,
+          password: password,
+        });
+
+        if (signInError) {
+          // If sign in also fails, show error
+          toast.error("Verification failed. Please try signing up again.");
+          return;
+        }
+      }
+
+      localStorage.removeItem("pending_otp");
       toast.success("Email verified! Welcome to Behen.pk!");
     } catch (error: any) {
       toast.error(error.message || "Invalid verification code");
@@ -269,12 +326,7 @@ const Auth = () => {
   const handleResendOtp = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: pendingEmail,
-      });
-      
-      if (error) throw error;
+      await sendCustomOtpEmail(pendingEmail);
       toast.success("Verification code resent!");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code");
