@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +13,8 @@ interface BrowseFiltersProps {
   selectedSizes: string[];
   onSizesChange: (sizes: string[]) => void;
   maxPrice: number;
+  availableSizes?: string[];
 }
-
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "Custom"];
 
 const BrowseFilters = ({
   priceRange,
@@ -23,9 +22,14 @@ const BrowseFilters = ({
   selectedSizes,
   onSizesChange,
   maxPrice,
+  availableSizes = [],
 }: BrowseFiltersProps) => {
   const [open, setOpen] = useState(false);
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(priceRange);
+
+  useEffect(() => {
+    setLocalPriceRange(priceRange);
+  }, [priceRange]);
 
   const toggleSize = (size: string) => {
     if (selectedSizes.includes(size)) {
@@ -45,6 +49,11 @@ const BrowseFilters = ({
     onSizesChange([]);
     setLocalPriceRange([0, maxPrice]);
   };
+
+  // Use available sizes from products if provided, otherwise show common defaults
+  const sizesToShow = availableSizes.length > 0 
+    ? [...new Set(availableSizes)].filter(Boolean).sort()
+    : [];
 
   const hasActiveFilters = 
     priceRange[0] > 0 || 
@@ -109,19 +118,23 @@ const BrowseFilters = ({
           {/* Size Filter */}
           <div className="space-y-3">
             <Label className="font-medium">Size</Label>
-            <div className="flex flex-wrap gap-2">
-              {SIZES.map((size) => (
-                <Button
-                  key={size}
-                  variant={selectedSizes.includes(size) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleSize(size)}
-                  className="h-8 px-3"
-                >
-                  {size}
-                </Button>
-              ))}
-            </div>
+            {sizesToShow.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {sizesToShow.map((size) => (
+                  <Button
+                    key={size}
+                    variant={selectedSizes.includes(size) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleSize(size)}
+                    className="h-8 px-3"
+                  >
+                    {size}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No sizes available</p>
+            )}
           </div>
 
           <Button onClick={handleApply} className="w-full bg-[#FF69B4] hover:bg-[#FF69B4]/90">

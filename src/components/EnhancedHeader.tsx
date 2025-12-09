@@ -154,20 +154,22 @@ export const EnhancedHeader = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-6">
-          <NavigationMenu>
+        <div className="hidden md:flex items-center gap-6 relative z-50">
+          <NavigationMenu className="z-50">
             <NavigationMenuList>
               <NavigationMenuItem>
-                <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background border shadow-lg z-50">
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 bg-background">
+                <NavigationMenuTrigger className="bg-background hover:bg-accent data-[state=open]:bg-accent">
+                  Categories
+                </NavigationMenuTrigger>
+                <NavigationMenuContent className="bg-popover border border-border shadow-xl rounded-md z-[100]">
+                  <ul className="grid w-[400px] gap-1 p-3 md:w-[500px] md:grid-cols-2">
                     {categories.map((category) => (
                       <li key={category.value}>
                         <NavigationMenuLink asChild>
                           <button
                             onClick={() => handleCategoryClick(category.value)}
                             className={cn(
-                              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground w-full text-left bg-background"
+                              "block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground w-full text-left"
                             )}
                           >
                             <div className="text-sm font-medium leading-none">{category.name}</div>
