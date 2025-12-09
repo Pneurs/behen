@@ -3,17 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export const EnhancedHeader = () => {
@@ -144,7 +141,7 @@ export const EnhancedHeader = () => {
   };
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-50">
       <div className="container flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex flex-col items-start">
           <span className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -154,34 +151,31 @@ export const EnhancedHeader = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-6 relative z-50">
-          <NavigationMenu className="z-50">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-background hover:bg-accent data-[state=open]:bg-accent">
-                  Categories
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-popover border border-border shadow-xl rounded-md z-[100]">
-                  <ul className="grid w-[400px] gap-1 p-3 md:w-[500px] md:grid-cols-2">
-                    {categories.map((category) => (
-                      <li key={category.value}>
-                        <NavigationMenuLink asChild>
-                          <button
-                            onClick={() => handleCategoryClick(category.value)}
-                            className={cn(
-                              "block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground w-full text-left"
-                            )}
-                          >
-                            <div className="text-sm font-medium leading-none">{category.name}</div>
-                          </button>
-                        </NavigationMenuLink>
-                      </li>
-                    ))}
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
+        <div className="hidden md:flex items-center gap-6">
+          {/* Categories Dropdown using DropdownMenu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-1">
+                Categories
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              align="start" 
+              className="w-[200px] bg-popover border shadow-lg z-[200]"
+              sideOffset={8}
+            >
+              {categories.map((category) => (
+                <DropdownMenuItem
+                  key={category.value}
+                  onClick={() => handleCategoryClick(category.value)}
+                  className="cursor-pointer"
+                >
+                  {category.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className="flex items-center gap-3">
             {user ? (

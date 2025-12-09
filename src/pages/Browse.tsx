@@ -29,9 +29,8 @@ const Browse = () => {
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
   const [listingTypeFilter, setListingTypeFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState(searchParams.get("city") || "");
-  const [isNearMe, setIsNearMe] = useState(false);
+  const [areaFilter, setAreaFilter] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [allBookings, setAllBookings] = useState<any[]>([]);
@@ -78,7 +77,7 @@ const Browse = () => {
   useEffect(() => {
     loadProducts();
     loadBookings();
-  }, [categoryFilter, listingTypeFilter, cityFilter]);
+  }, [categoryFilter, listingTypeFilter, cityFilter, areaFilter]);
 
   const loadBookings = async () => {
     try {
@@ -129,41 +128,10 @@ const Browse = () => {
     }
   };
 
-  const handleNearMe = () => {
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-          setIsNearMe(true);
-          setCityFilter("");
-          toast.success("Location detected! Showing nearby dresses");
-        },
-        (error) => {
-          toast.error("Could not get your location. Please enable location access.");
-          setIsNearMe(false);
-        }
-      );
-    } else {
-      toast.error("Location services not available");
-    }
-  };
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the Earth in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in km
-  };
+  // Area filter for query
+  useEffect(() => {
+    // If area filter changes, update products
+  }, [areaFilter]);
 
   const isProductAvailableForDates = (product: any, dateRange: DateRange | undefined) => {
     if (!dateRange?.from || !dateRange?.to) return true;
@@ -231,10 +199,6 @@ const Browse = () => {
     return Math.max(...prices, 500000);
   }, [products]);
 
-  // Get available sizes from products
-  const availableSizes = useMemo(() => {
-    return [...new Set(products.map(p => p.size).filter(Boolean))];
-  }, [products]);
 
   let filteredProducts = products.filter((product) => {
     // Search filter
@@ -253,39 +217,21 @@ const Browse = () => {
     const matchesSize = selectedSizes.length === 0 || 
       selectedSizes.some(s => s.toLowerCase() === (product.size || "").toLowerCase());
 
-    return matchesSearch && matchesAvailability && matchesPrice && matchesSize;
+    // Area filter
+    const matchesArea = !areaFilter || 
+      (product.area || "").toLowerCase().includes(areaFilter.toLowerCase());
+
+    return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea;
   });
 
-  // Sort by distance if "Near Me" is active, or by same city first
-  if (isNearMe && userLocation) {
-    filteredProducts = filteredProducts
-      .map((product) => ({
-        ...product,
-        distance: product.latitude && product.longitude
-          ? calculateDistance(userLocation.lat, userLocation.lng, product.latitude, product.longitude)
-          : Infinity,
-      }))
-      .sort((a, b) => a.distance - b.distance);
-    
-    // If no products within 50km, show products from same city sorted by distance
-    const nearbyProducts = filteredProducts.filter((p) => p.distance < 50);
-    if (nearbyProducts.length === 0) {
-      // Get user's approximate city (we'll use the first product's city as reference if available)
-      toast.info("No products within 50km. Showing all products sorted by distance.");
-    } else {
-      filteredProducts = nearbyProducts;
-    }
-  }
-
-  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || dateRange || isNearMe || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0;
+  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0;
 
   const clearAllFilters = () => {
     setCategoryFilter("all");
     setListingTypeFilter("all");
     setCityFilter("");
+    setAreaFilter("");
     setDateRange(undefined);
-    setIsNearMe(false);
-    setUserLocation(null);
     setSearchQuery("");
     setPriceRange([0, maxPrice]);
     setSelectedSizes([]);
@@ -322,9 +268,9 @@ const Browse = () => {
           <div className="flex flex-col md:flex-row gap-3">
             <LocationFilter
               selectedCity={cityFilter}
+              selectedArea={areaFilter}
               onCityChange={setCityFilter}
-              onNearMeClick={handleNearMe}
-              isNearMe={isNearMe}
+              onAreaChange={setAreaFilter}
             />
             
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -368,7 +314,6 @@ const Browse = () => {
               selectedSizes={selectedSizes}
               onSizesChange={setSelectedSizes}
               maxPrice={maxPrice}
-              availableSizes={availableSizes}
             />
 
             {hasActiveFilters && (
@@ -413,7 +358,8 @@ const Browse = () => {
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-semibold">
                 {filteredProducts.length} {filteredProducts.length === 1 ? "dress" : "dresses"} available
-                {isNearMe && " near you"}
+                {cityFilter && ` in ${cityFilter}`}
+                {areaFilter && `, ${areaFilter}`}
                 {dateRange?.from && dateRange?.to && (
                   <span className="text-muted-foreground text-base font-normal ml-2">
                     for {format(dateRange.from, "MMM dd")} - {format(dateRange.to, "MMM dd")}

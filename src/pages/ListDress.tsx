@@ -991,13 +991,12 @@ const ListDress = () => {
                     <SelectValue placeholder="Select size" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="xs">Extra Small (XS)</SelectItem>
-                    <SelectItem value="s">Small (S)</SelectItem>
-                    <SelectItem value="m">Medium (M)</SelectItem>
-                    <SelectItem value="l">Large (L)</SelectItem>
-                    <SelectItem value="xl">Extra Large (XL)</SelectItem>
-                    <SelectItem value="xxl">XXL</SelectItem>
-                    <SelectItem value="custom">Custom Size</SelectItem>
+                    <SelectItem value="XS">Extra Small (XS)</SelectItem>
+                    <SelectItem value="S">Small (S)</SelectItem>
+                    <SelectItem value="M">Medium (M)</SelectItem>
+                    <SelectItem value="L">Large (L)</SelectItem>
+                    <SelectItem value="XL">Extra Large (XL)</SelectItem>
+                    <SelectItem value="XXL">XXL</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

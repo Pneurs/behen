@@ -13,8 +13,10 @@ interface BrowseFiltersProps {
   selectedSizes: string[];
   onSizesChange: (sizes: string[]) => void;
   maxPrice: number;
-  availableSizes?: string[];
 }
+
+// Standard sizes
+const STANDARD_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
 const BrowseFilters = ({
   priceRange,
@@ -22,7 +24,6 @@ const BrowseFilters = ({
   selectedSizes,
   onSizesChange,
   maxPrice,
-  availableSizes = [],
 }: BrowseFiltersProps) => {
   const [open, setOpen] = useState(false);
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(priceRange);
@@ -50,11 +51,6 @@ const BrowseFilters = ({
     setLocalPriceRange([0, maxPrice]);
   };
 
-  // Use available sizes from products if provided, otherwise show common defaults
-  const sizesToShow = availableSizes.length > 0 
-    ? [...new Set(availableSizes)].filter(Boolean).sort()
-    : [];
-
   const hasActiveFilters = 
     priceRange[0] > 0 || 
     priceRange[1] < maxPrice || 
@@ -73,7 +69,7 @@ const BrowseFilters = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4 bg-background border shadow-lg z-50" align="start">
+      <PopoverContent className="w-80 p-4 bg-popover border shadow-lg z-[200]" align="start">
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Filters</h3>
@@ -115,29 +111,25 @@ const BrowseFilters = ({
             </div>
           </div>
 
-          {/* Size Filter */}
+          {/* Size Filter - Standard Sizes */}
           <div className="space-y-3">
             <Label className="font-medium">Size</Label>
-            {sizesToShow.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {sizesToShow.map((size) => (
-                  <Button
-                    key={size}
-                    variant={selectedSizes.includes(size) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleSize(size)}
-                    className="h-8 px-3"
-                  >
-                    {size}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No sizes available</p>
-            )}
+            <div className="flex flex-wrap gap-2">
+              {STANDARD_SIZES.map((size) => (
+                <Button
+                  key={size}
+                  variant={selectedSizes.includes(size) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleSize(size)}
+                  className="h-8 px-3"
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <Button onClick={handleApply} className="w-full bg-[#FF69B4] hover:bg-[#FF69B4]/90">
+          <Button onClick={handleApply} className="w-full bg-primary hover:bg-primary/90">
             Apply Filters
           </Button>
         </div>
