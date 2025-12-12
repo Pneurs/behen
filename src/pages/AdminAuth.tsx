@@ -12,13 +12,16 @@ import { z } from "zod";
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 const otpSchema = z.string().length(6, "OTP must be 6 digits");
 
-// Allowed admin email domains
+// Allowed admin email domains (woofe.org allowed internally but not shown to users)
 const ALLOWED_ADMIN_DOMAINS = ["behen.pk", "woofe.org"];
 
 const isAllowedAdminDomain = (email: string): boolean => {
   const domain = email.split("@")[1]?.toLowerCase();
   return ALLOWED_ADMIN_DOMAINS.includes(domain);
 };
+
+// User-facing domain restriction message (only shows behen.pk)
+const ADMIN_DOMAIN_ERROR_MESSAGE = "Only @behen.pk email addresses can register as admin";
 
 // Generate a random 6-digit OTP
 const generateOtp = (): string => {
@@ -98,7 +101,7 @@ const AdminAuth = () => {
       if (isSignUp) {
         // Validate email domain for signup
         if (!isAllowedAdminDomain(email)) {
-          toast.error("Only @behen.pk or @woofe.org email addresses can register as admin");
+          toast.error(ADMIN_DOMAIN_ERROR_MESSAGE);
           setLoading(false);
           return;
         }
@@ -243,7 +246,7 @@ const AdminAuth = () => {
 
         if (!roles || roles.length === 0) {
           await supabase.auth.signOut();
-          toast.error("Access denied. Only authorized emails can register as admin.");
+          toast.error(ADMIN_DOMAIN_ERROR_MESSAGE);
           setMode("auth");
           return;
         }
