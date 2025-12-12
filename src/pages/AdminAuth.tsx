@@ -12,6 +12,37 @@ import { z } from "zod";
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 const otpSchema = z.string().length(6, "OTP must be 6 digits");
 
+// Allowed admin email domains
+const ALLOWED_ADMIN_DOMAINS = ["behen.pk", "woofe.org"];
+
+const isAllowedAdminDomain = (email: string): boolean => {
+  const domain = email.split("@")[1]?.toLowerCase();
+  return ALLOWED_ADMIN_DOMAINS.includes(domain);
+};
+
+// Generate a random 6-digit OTP
+const generateOtp = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+// Send custom OTP email via edge function
+const sendCustomOtpEmail = async (email: string, otp: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase.functions.invoke("send-otp-email", {
+      body: { email, otp },
+    });
+
+    if (error) {
+      console.error("Error sending OTP email:", error);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Error invoking send-otp-email function:", error);
+    return false;
+  }
+};
+
 const AdminAuth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -24,6 +55,7 @@ const AdminAuth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [mode, setMode] = useState<"auth" | "reset" | "verify-otp">("auth");
   const [pendingEmail, setPendingEmail] = useState("");
+  const [storedOtp, setStoredOtp] = useState("");
 
   useEffect(() => {
     // Check for password reset in URL hash
@@ -64,6 +96,14 @@ const AdminAuth = () => {
 
     try {
       if (isSignUp) {
+        // Validate email domain for signup
+        if (!isAllowedAdminDomain(email)) {
+          toast.error("Only @behen.pk or @woofe.org email addresses can register as admin");
+          setLoading(false);
+          return;
+        }
+
+        // Create user with Supabase (email confirmation disabled, we use custom OTP)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -74,6 +114,18 @@ const AdminAuth = () => {
 
         if (signUpError) throw signUpError;
 
+        // Generate and send custom OTP
+        const newOtp = generateOtp();
+        const emailSent = await sendCustomOtpEmail(email, newOtp);
+
+        if (!emailSent) {
+          toast.error("Failed to send verification code. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        // Store OTP locally for verification
+        setStoredOtp(newOtp);
         setPendingEmail(email);
         setMode("verify-otp");
         toast.success("Verification code sent to your email!");
@@ -102,7 +154,22 @@ const AdminAuth = () => {
         navigate("/admin/dashboard");
       }
     } catch (error: any) {
-      toast.error(error.message || "Authentication failed");
+      // Handle "already registered" case - resend OTP
+      if (error.message?.includes("already registered") || error.message?.includes("already been registered")) {
+        const newOtp = generateOtp();
+        const emailSent = await sendCustomOtpEmail(email, newOtp);
+        
+        if (emailSent) {
+          setStoredOtp(newOtp);
+          setPendingEmail(email);
+          setMode("verify-otp");
+          toast.success("Verification code resent to your email!");
+        } else {
+          toast.error("Failed to send verification code. Please try again.");
+        }
+      } else {
+        toast.error(error.message || "Authentication failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -119,13 +186,52 @@ const AdminAuth = () => {
 
     setLoading(true);
     try {
+      // Verify OTP locally first
+      if (otp !== storedOtp) {
+        toast.error("Invalid verification code");
+        setLoading(false);
+        return;
+      }
+
+      // OTP is correct, now verify with Supabase
       const { data, error } = await supabase.auth.verifyOtp({
         email: pendingEmail,
         token: otp,
         type: "signup",
       });
 
-      if (error) throw error;
+      if (error) {
+        // If Supabase OTP verification fails, try signing in directly
+        // (user might already be verified)
+        const { error: signInError, data: signInData } = await supabase.auth.signInWithPassword({
+          email: pendingEmail,
+          password,
+        });
+
+        if (signInError) {
+          toast.error("Verification failed. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        // Check admin role
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", signInData.user.id)
+          .in("role", ["super_admin", "admin", "manager"]);
+
+        if (!roles || roles.length === 0) {
+          await supabase.auth.signOut();
+          toast.error("Access denied. Only authorized emails can register as admin.");
+          setMode("auth");
+          return;
+        }
+
+        toast.success("Email verified! Welcome to Admin Panel!");
+        navigate("/admin/dashboard");
+        return;
+      }
       
       if (data.user) {
         // Check if user has admin role
@@ -208,12 +314,16 @@ const AdminAuth = () => {
   const handleResendOtp = async () => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: pendingEmail,
-      });
+      // Generate and send new OTP via custom edge function
+      const newOtp = generateOtp();
+      const emailSent = await sendCustomOtpEmail(pendingEmail, newOtp);
       
-      if (error) throw error;
+      if (!emailSent) {
+        toast.error("Failed to resend verification code");
+        return;
+      }
+      
+      setStoredOtp(newOtp);
       toast.success("Verification code resent!");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code");
@@ -390,6 +500,11 @@ const AdminAuth = () => {
                 required
                 className="bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
               />
+              {isSignUp && (
+                <p className="text-xs text-slate-500">
+                  Only @behen.pk or @woofe.org emails can register
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-slate-300">Password</Label>
