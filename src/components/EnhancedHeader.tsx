@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, ChevronDown } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -151,33 +151,7 @@ export const EnhancedHeader = () => {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-6">
-          {/* Categories Dropdown using DropdownMenu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-1">
-                Categories
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="start" 
-              className="w-[200px] bg-popover border shadow-lg z-[200]"
-              sideOffset={8}
-            >
-              {categories.map((category) => (
-                <DropdownMenuItem
-                  key={category.value}
-                  onClick={() => handleCategoryClick(category.value)}
-                  className="cursor-pointer"
-                >
-                  {category.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
             {user ? (
               <>
                 {userRole === "bari" && (
@@ -226,8 +200,6 @@ export const EnhancedHeader = () => {
               </Button>
             )}
           </div>
-        </div>
-
         {/* Mobile Navigation */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild className="md:hidden">
@@ -238,20 +210,6 @@ export const EnhancedHeader = () => {
           <SheetContent side="right" className="w-[300px]">
             <div className="flex flex-col gap-4 mt-8">
               <div className="space-y-2">
-                <h3 className="font-semibold mb-3">Categories</h3>
-                {categories.map((category) => (
-                  <Button
-                    key={category.value}
-                    variant="ghost"
-                    onClick={() => handleCategoryClick(category.value)}
-                    className="w-full justify-start"
-                  >
-                    {category.name}
-                  </Button>
-                ))}
-              </div>
-
-              <div className="border-t pt-4 space-y-2">
                 {user ? (
                   <>
                     {userRole === "bari" && (
