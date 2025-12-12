@@ -135,16 +135,16 @@ const BrowseFilters = ({
             </div>
           </div>
 
-          {/* Alteration Allowed Filter */}
+          {/* Alterable Products Filter */}
           <div className="space-y-3">
-            <Label className="font-medium">Alteration</Label>
+            <Label className="font-medium">Alterable Products</Label>
             <Button
               variant={alterationFilter ? "default" : "outline"}
               size="sm"
               onClick={() => onAlterationFilterChange(!alterationFilter)}
               className="w-full"
             >
-              {alterationFilter ? "✓ Alteration Allowed Only" : "Alteration Allowed"}
+              {alterationFilter ? "✓ Alterable Only" : "Show Alterable Only"}
             </Button>
           </div>
 
