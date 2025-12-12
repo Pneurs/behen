@@ -36,6 +36,7 @@ const Browse = () => {
   const [allBookings, setAllBookings] = useState<any[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [alterationFilter, setAlterationFilter] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -221,10 +222,13 @@ const Browse = () => {
     const matchesArea = !areaFilter || 
       (product.area || "").toLowerCase().includes(areaFilter.toLowerCase());
 
-    return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea;
+    // Alteration filter
+    const matchesAlteration = !alterationFilter || product.alteration_possible === true;
+
+    return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea && matchesAlteration;
   });
 
-  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0;
+  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0 || alterationFilter;
 
   const clearAllFilters = () => {
     setCategoryFilter("all");
@@ -235,6 +239,7 @@ const Browse = () => {
     setSearchQuery("");
     setPriceRange([0, maxPrice]);
     setSelectedSizes([]);
+    setAlterationFilter(false);
   };
 
   return (
@@ -314,6 +319,8 @@ const Browse = () => {
               selectedSizes={selectedSizes}
               onSizesChange={setSelectedSizes}
               maxPrice={maxPrice}
+              alterationFilter={alterationFilter}
+              onAlterationFilterChange={setAlterationFilter}
             />
 
             {hasActiveFilters && (

@@ -13,6 +13,8 @@ interface BrowseFiltersProps {
   selectedSizes: string[];
   onSizesChange: (sizes: string[]) => void;
   maxPrice: number;
+  alterationFilter: boolean;
+  onAlterationFilterChange: (value: boolean) => void;
 }
 
 // Standard sizes
@@ -24,6 +26,8 @@ const BrowseFilters = ({
   selectedSizes,
   onSizesChange,
   maxPrice,
+  alterationFilter,
+  onAlterationFilterChange,
 }: BrowseFiltersProps) => {
   const [open, setOpen] = useState(false);
   const [localPriceRange, setLocalPriceRange] = useState<[number, number]>(priceRange);
@@ -49,12 +53,14 @@ const BrowseFilters = ({
     onPriceRangeChange([0, maxPrice]);
     onSizesChange([]);
     setLocalPriceRange([0, maxPrice]);
+    onAlterationFilterChange(false);
   };
 
   const hasActiveFilters = 
     priceRange[0] > 0 || 
     priceRange[1] < maxPrice || 
-    selectedSizes.length > 0;
+    selectedSizes.length > 0 ||
+    alterationFilter;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -127,6 +133,19 @@ const BrowseFilters = ({
                 </Button>
               ))}
             </div>
+          </div>
+
+          {/* Alteration Allowed Filter */}
+          <div className="space-y-3">
+            <Label className="font-medium">Alteration</Label>
+            <Button
+              variant={alterationFilter ? "default" : "outline"}
+              size="sm"
+              onClick={() => onAlterationFilterChange(!alterationFilter)}
+              className="w-full"
+            >
+              {alterationFilter ? "✓ Alteration Allowed Only" : "Alteration Allowed"}
+            </Button>
           </div>
 
           <Button onClick={handleApply} className="w-full bg-primary hover:bg-primary/90">
