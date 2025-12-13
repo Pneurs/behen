@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome";
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit";
   recipientEmail: string;
   recipientName: string;
   data: any;
@@ -166,6 +166,42 @@ const handler = async (req: Request): Promise<Response> => {
               ${data.message}
             </blockquote>
             <p><a href="${data.chatLink || 'https://behen.pk/all-chats'}" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Conversation</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        break;
+
+      case "new_review":
+        subject = "You have a new review on your product! - Behen.pk";
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #FF69B4;">New Review Received! ⭐</h1>
+            <p>Hi ${recipientName},</p>
+            <p>You have received a new review on your product <strong>${data.productTitle}</strong>.</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Rating:</strong> ${'⭐'.repeat(data.rating)}</p>
+              ${data.reviewText ? `<p style="margin: 10px 0;"><strong>Review:</strong> "${data.reviewText}"</p>` : ''}
+            </div>
+            <p>Please respond to this review politely to maintain good customer relations.</p>
+            <p><a href="${data.productLink || 'https://behen.pk'}" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View & Respond</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        break;
+
+      case "security_deposit":
+        subject = data.action === "sent" ? "Security Deposit Sent! - Behen.pk" : "Security Deposit Update - Behen.pk";
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: ${data.action === "sent" ? '#22c55e' : '#f59e0b'};">${data.action === "sent" ? "Security Deposit Sent! 💰" : "Security Deposit Update"}</h1>
+            <p>Hi ${recipientName},</p>
+            <p>${data.message}</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 5px 0;"><strong>Product:</strong> ${data.productTitle}</p>
+              <p style="margin: 5px 0;"><strong>Amount:</strong> PKR ${data.amount}</p>
+              ${data.notes ? `<p style="margin: 10px 0;"><strong>Notes:</strong> ${data.notes}</p>` : ''}
+            </div>
+            <p><a href="https://behen.pk/my-bookings" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Details</a></p>
             <p>Best regards,<br>Behen.pk Team</p>
           </div>
         `;

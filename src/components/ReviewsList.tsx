@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Star } from "lucide-react";
+import { Star, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 
 interface ReviewsListProps {
@@ -22,13 +22,9 @@ export default function ReviewsList({ productId }: ReviewsListProps) {
     setLoading(true);
 
     try {
-      // Fetch reviews with reviewer profiles
       const { data: reviewsData, error } = await supabase
         .from("reviews")
-        .select(`
-          *,
-          profiles!reviews_reviewer_id_fkey (name)
-        `)
+        .select("*")
         .eq("product_id", productId)
         .order("created_at", { ascending: false });
 
@@ -97,14 +93,14 @@ export default function ReviewsList({ productId }: ReviewsListProps) {
             <div className="flex items-start gap-4">
               <Avatar>
                 <AvatarFallback>
-                  {review.profiles?.name?.[0]?.toUpperCase() || "U"}
+                  C
                 </AvatarFallback>
               </Avatar>
 
               <div className="flex-1 space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-semibold">{review.profiles?.name || "Anonymous"}</p>
+                    <p className="font-semibold">Choti Behen</p>
                     <p className="text-sm text-muted-foreground">
                       {format(new Date(review.created_at), "MMM dd, yyyy")}
                     </p>
@@ -116,6 +112,24 @@ export default function ReviewsList({ productId }: ReviewsListProps) {
                   <p className="text-sm text-muted-foreground">
                     {review.product_review}
                   </p>
+                )}
+
+                {/* Owner Response */}
+                {review.owner_response && (
+                  <div className="mt-4 ml-4 p-4 bg-muted/50 rounded-lg border-l-4 border-primary">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      <p className="font-semibold text-sm">Bari Behen's Response</p>
+                      {review.owner_response_at && (
+                        <p className="text-xs text-muted-foreground">
+                          • {format(new Date(review.owner_response_at), "MMM dd, yyyy")}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {review.owner_response}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
