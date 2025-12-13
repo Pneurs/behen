@@ -196,7 +196,8 @@ export default function BariBehenDashboard() {
               {products.map((product) => (
                 <Card key={product.id}>
                   <CardContent className="pt-6">
-                    <div className="flex items-start gap-4">
+                    {/* Desktop Layout */}
+                    <div className="hidden md:flex items-start gap-4">
                       {product.ai_cover_image && (
                         <img
                           src={product.ai_cover_image}
@@ -275,6 +276,90 @@ export default function BariBehenDashboard() {
                             View
                           </Button>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Mobile Layout */}
+                    <div className="md:hidden">
+                      <div className="flex gap-3 mb-3">
+                        {product.ai_cover_image && (
+                          <img
+                            src={product.ai_cover_image}
+                            alt={product.title}
+                            className="w-20 h-20 object-cover rounded flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-base truncate">{product.title}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            {product.category} • {product.condition}
+                          </p>
+                          {product.listing_type === "rent" || product.listing_type === "both" ? (
+                            <p className="text-sm font-semibold mt-1">
+                              PKR {product.rental_price_4days?.toLocaleString() || 
+                                   (product.rental_price_per_day * 4)?.toLocaleString()} / 4 days
+                            </p>
+                          ) : (
+                            <p className="text-sm font-semibold mt-1">
+                              PKR {product.sale_price?.toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 mb-3">
+                        <Badge variant={getStatusColor(product.status)} className="text-xs">
+                          {product.status}
+                        </Badge>
+                        <Badge variant={getInventoryColor(product.inventory_status || 'available')} className="text-xs">
+                          <Package className="mr-1 h-3 w-3" />
+                          {product.inventory_status || 'available'}
+                        </Badge>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Select
+                          value={product.inventory_status || "available"}
+                          onValueChange={(value) => handleInventoryStatusChange(product.id, value)}
+                        >
+                          <SelectTrigger className="w-full text-xs h-9">
+                            <SelectValue placeholder="Status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">Available</SelectItem>
+                            <SelectItem value="rented">Rented</SelectItem>
+                            <SelectItem value="unavailable">Unavailable</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs h-9"
+                          onClick={() => handleEdit(product.id)}
+                        >
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Edit
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="w-full text-xs h-9"
+                          onClick={() => setDeleteDialog({ open: true, productId: product.id })}
+                        >
+                          <Trash2 className="mr-1 h-3 w-3" />
+                          Delete
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="w-full text-xs h-9"
+                          onClick={() => navigate(`/product/${product.id}`)}
+                        >
+                          View
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
