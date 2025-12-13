@@ -78,15 +78,15 @@ export const HomeSearch = () => {
         </div>
         
         <div className="flex flex-col md:flex-row gap-4">
-          {/* City Selector */}
-          <div className="flex gap-2 flex-1">
+          {/* Location Selectors - Dynamic width based on selection */}
+          <div className="flex gap-2 shrink-0">
             <Popover open={cityOpen} onOpenChange={setCityOpen}>
               <PopoverTrigger asChild>
                 <Button 
                   variant="outline" 
                   role="combobox" 
                   aria-expanded={cityOpen}
-                  className="w-full md:w-[180px] h-12 justify-between"
+                  className="w-full md:w-[160px] h-12 justify-between"
                 >
                   <span className="flex items-center truncate">
                     <MapPin className="mr-2 h-4 w-4 shrink-0" />
@@ -130,7 +130,7 @@ export const HomeSearch = () => {
                     variant="outline" 
                     role="combobox" 
                     aria-expanded={areaOpen}
-                    className="w-full md:w-[180px] h-12 justify-between"
+                    className="w-full md:w-[160px] h-12 justify-between"
                   >
                     <span className="truncate">
                       {selectedArea || "Select Area"}
