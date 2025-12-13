@@ -73,10 +73,9 @@ export const useEarnings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Generate unique code: username-randomcode
-      const cleanName = userName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10);
-      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const referralCode = `${cleanName}-${randomCode}`;
+      // Generate unique code: bari-behen-username format
+      const cleanName = userName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 15);
+      const referralCode = `bari-behen-${cleanName}`;
 
       // Check if user already has earnings record
       if (earnings) {

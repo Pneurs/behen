@@ -132,10 +132,18 @@ const Auth = () => {
       // Validate referral code if provided (for Bari Behen only)
       let referrerId: string | null = null;
       if (role === "bari" && referralCode.trim()) {
+        // Validate referral code format (should start with "bari-behen-")
+        const trimmedCode = referralCode.trim().toLowerCase();
+        if (!trimmedCode.startsWith("bari-behen-")) {
+          setReferralError("Invalid referral code format. Code should start with 'bari-behen-'");
+          setLoading(false);
+          return;
+        }
+        
         const { data: referralData } = await supabase
           .from("user_earnings")
           .select("user_id")
-          .eq("referral_code", referralCode.trim())
+          .eq("referral_code", trimmedCode)
           .single();
         
         if (!referralData) {
@@ -641,7 +649,7 @@ const Auth = () => {
                     <Input
                       id="referral-code"
                       type="text"
-                      placeholder="Enter referral code (e.g., sarah-ABC1)"
+                      placeholder="Enter referral code (e.g., bari-behen-sarah)"
                       value={referralCode}
                       onChange={(e) => {
                         setReferralCode(e.target.value);
