@@ -213,6 +213,39 @@ export type Database = {
           },
         ]
       }
+      earning_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          reference_id: string | null
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          status?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           conversation_id: string
@@ -515,6 +548,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_earnings: {
+        Row: {
+          balance: number
+          created_at: string
+          first_order_completed: boolean | null
+          first_product_bonus_claimed: boolean | null
+          id: string
+          pending_balance: number
+          referral_code: string | null
+          referred_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          first_order_completed?: boolean | null
+          first_product_bonus_claimed?: boolean | null
+          id?: string
+          pending_balance?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          first_order_completed?: boolean | null
+          first_product_bonus_claimed?: boolean | null
+          id?: string
+          pending_balance?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

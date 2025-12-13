@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
@@ -154,6 +154,10 @@ export const EnhancedHeader = () => {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-3">
             <HeaderSearchPopup />
+            <Button onClick={() => navigate("/earn-money")} variant="ghost" size="sm" className="text-primary">
+              <Wallet className="mr-2 h-4 w-4" />
+              Earn Money
+            </Button>
             {user ? (
               <>
                 {userRole === "bari" && (
@@ -212,6 +216,17 @@ export const EnhancedHeader = () => {
           <SheetContent side="right" className="w-[300px]">
             <div className="flex flex-col gap-4 mt-8">
               <div className="space-y-2">
+                <Button
+                  onClick={() => {
+                    navigate("/earn-money");
+                    setMobileOpen(false);
+                  }}
+                  variant="ghost"
+                  className="w-full justify-start text-primary"
+                >
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Earn Money
+                </Button>
                 {user ? (
                   <>
                     {userRole === "bari" && (

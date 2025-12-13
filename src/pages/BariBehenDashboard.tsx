@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Dialog, 
@@ -13,7 +13,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2 } from "lucide-react";
 import { format } from "date-fns";
 import {
   Select,
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEarnings } from "@/hooks/useEarnings";
+import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 
 export default function BariBehenDashboard() {
   const navigate = useNavigate();
@@ -29,10 +31,12 @@ export default function BariBehenDashboard() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>("");
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; productId: string | null }>({
     open: false,
     productId: null,
   });
+  const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
 
   useEffect(() => {
     checkAuth();
@@ -57,7 +61,44 @@ export default function BariBehenDashboard() {
     }
     
     setUser(user);
+    setUserName(user.user_metadata?.name || "User");
     fetchProducts(user.id);
+  };
+
+  const handleGenerateReferralCode = async () => {
+    if (earnings?.referral_code) {
+      copyReferralCode();
+      return;
+    }
+    await generateReferralCode(userName);
+  };
+
+  const copyReferralCode = () => {
+    if (earnings?.referral_code) {
+      navigator.clipboard.writeText(earnings.referral_code);
+      toast({
+        title: "Copied!",
+        description: "Referral code copied to clipboard",
+      });
+    }
+  };
+
+  const shareReferralCode = () => {
+    const shareUrl = `${window.location.origin}/auth?role=bari&ref=${earnings?.referral_code}`;
+    const shareText = `Join Behen.pk using my referral code: ${earnings?.referral_code} and get PKR 150 bonus! Sign up here: ${shareUrl}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: "Join Behen.pk",
+        text: shareText,
+      });
+    } else {
+      navigator.clipboard.writeText(shareText);
+      toast({
+        title: "Copied!",
+        description: "Share link copied to clipboard",
+      });
+    }
   };
 
   const fetchProducts = async (userId: string) => {
@@ -168,6 +209,7 @@ export default function BariBehenDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <EarningsPromoPopup userRole="bari" />
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex items-center justify-between">
@@ -179,6 +221,83 @@ export default function BariBehenDashboard() {
               <Plus className="mr-2 h-4 w-4" />
               Add New Product
             </Button>
+          </div>
+
+          {/* Earnings & Ambassador Section */}
+          <div className="grid md:grid-cols-2 gap-4 mb-8">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Wallet className="h-5 w-5 text-primary" />
+                  My Earnings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Available Balance</p>
+                    <p className="text-2xl font-bold text-primary">
+                      PKR {earnings?.balance?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pending Balance</p>
+                    <p className="text-2xl font-bold text-muted-foreground">
+                      PKR {earnings?.pending_balance?.toLocaleString() || 0}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Available after first order
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-100 to-pink-50 border-purple-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  Brand Ambassador
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {earnings?.referral_code ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
+                      <div className="flex items-center gap-2">
+                        <code className="bg-white px-3 py-2 rounded font-mono text-lg font-bold text-purple-600 flex-1">
+                          {earnings.referral_code}
+                        </code>
+                        <Button size="icon" variant="outline" onClick={copyReferralCode}>
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="outline" onClick={shareReferralCode}>
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Share this code! Both you and your friend get PKR 150 when they upload their first product.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Generate your referral code and earn PKR 150 for every friend who joins!
+                    </p>
+                    <Button 
+                      onClick={handleGenerateReferralCode}
+                      className="w-full bg-purple-600 hover:bg-purple-700"
+                      disabled={earningsLoading}
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Become Brand Ambassador
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {products.length === 0 ? (
