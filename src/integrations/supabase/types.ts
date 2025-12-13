@@ -460,6 +460,8 @@ export type Database = {
           id: string
           owner_id: string
           owner_rating: number
+          owner_response: string | null
+          owner_response_at: string | null
           owner_review: string | null
           product_id: string
           product_rating: number
@@ -473,6 +475,8 @@ export type Database = {
           id?: string
           owner_id: string
           owner_rating: number
+          owner_response?: string | null
+          owner_response_at?: string | null
           owner_review?: string | null
           product_id: string
           product_rating: number
@@ -486,6 +490,8 @@ export type Database = {
           id?: string
           owner_id?: string
           owner_rating?: number
+          owner_response?: string | null
+          owner_response_at?: string | null
           owner_review?: string | null
           product_id?: string
           product_rating?: number

@@ -7,9 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, Shield, LogOut, UserCog } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { 
+  Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
+  Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
+  Send, Trash2, Pencil, ExternalLink
+} from "lucide-react";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 
@@ -18,12 +24,33 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentRole, setCurrentRole] = useState<string>("");
-  const [stats, setStats] = useState({ users: 0, products: 0, bookings: 0, revenue: 0 });
+  const [stats, setStats] = useState({ 
+    users: 0, products: 0, bookings: 0, revenue: 0, 
+    activeRentals: 0, soldProducts: 0, totalRentals: 0 
+  });
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [pendingProducts, setPendingProducts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [allBookings, setAllBookings] = useState<any[]>([]);
+  const [allChats, setAllChats] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userProducts, setUserProducts] = useState<any[]>([]);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [securityDepositDialog, setSecurityDepositDialog] = useState<{
+    open: boolean;
+    booking: any;
+    recipient: 'owner' | 'renter';
+    amount: string;
+    notes: string;
+  }>({ open: false, booking: null, recipient: 'renter', amount: '', notes: '' });
+  const [reviewResponseDialog, setReviewResponseDialog] = useState<{
+    open: boolean;
+    review: any;
+    response: string;
+  }>({ open: false, review: null, response: '' });
 
   useEffect(() => {
     checkAdminAccess();
@@ -80,32 +107,47 @@ export default function AdminDashboard() {
 
     const revenue = completedBookings?.reduce((sum, b) => sum + Number(b.total_price), 0) || 0;
 
+    // Count active rentals (not completed/cancelled)
+    const { count: activeRentals } = await supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .in("booking_status", ["confirmed", "pending_payment", "payment_submitted"]);
+
+    // Count total completed rentals
+    const { count: totalRentals } = await supabase
+      .from("bookings")
+      .select("*", { count: "exact", head: true })
+      .eq("booking_status", "completed");
+
+    // Count products that were sold (listing_type = 'sale')
+    const { count: soldProducts } = await supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("listing_type", "sale")
+      .eq("inventory_status", "unavailable");
+
     setStats({
       users: userCount || 0,
       products: productCount || 0,
       bookings: bookingCount || 0,
       revenue,
+      activeRentals: activeRentals || 0,
+      soldProducts: soldProducts || 0,
+      totalRentals: totalRentals || 0,
     });
 
     // Fetch pending bookings with owner and renter info
     const { data: bookings } = await supabase
       .from("bookings")
-      .select(`
-        *,
-        products (title, ai_cover_image)
-      `)
+      .select(`*, products (title, ai_cover_image)`)
       .eq("payment_status", "submitted")
       .order("created_at", { ascending: false });
 
-    // Fetch owner and renter names for each booking
     const bookingsWithNames = await Promise.all((bookings || []).map(async (booking) => {
       const [ownerProfile, renterProfile] = await Promise.all([
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).single(),
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).single(),
+        supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
+        supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
       ]);
-      
-      // Get renter email from auth
-      const { data: renterAuth } = await supabase.auth.admin?.getUserById(booking.renter_id) || { data: null };
       
       return {
         ...booking,
@@ -113,11 +155,33 @@ export default function AdminDashboard() {
         owner_phone: ownerProfile.data?.phone || null,
         renter_name: renterProfile.data?.name || "Choti Behen",
         renter_phone: renterProfile.data?.phone || null,
-        renter_email: renterAuth?.user?.email || null,
       };
     }));
 
     setPendingBookings(bookingsWithNames);
+
+    // Fetch ALL bookings for rental holdings view
+    const { data: allBookingsData } = await supabase
+      .from("bookings")
+      .select(`*, products (title, ai_cover_image)`)
+      .order("created_at", { ascending: false });
+
+    const allBookingsWithNames = await Promise.all((allBookingsData || []).map(async (booking) => {
+      const [ownerProfile, renterProfile] = await Promise.all([
+        supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
+        supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
+      ]);
+      
+      return {
+        ...booking,
+        owner_name: ownerProfile.data?.name || "Bari Behen",
+        owner_phone: ownerProfile.data?.phone || null,
+        renter_name: renterProfile.data?.name || "Choti Behen",
+        renter_phone: renterProfile.data?.phone || null,
+      };
+    }));
+
+    setAllBookings(allBookingsWithNames);
 
     // Fetch pending products
     const { data: products } = await supabase
@@ -126,13 +190,12 @@ export default function AdminDashboard() {
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    // Fetch owner names for products
     const productsWithNames = await Promise.all((products || []).map(async (product) => {
       const { data: ownerProfile } = await supabase
         .from("profiles")
         .select("name")
         .eq("user_id", product.owner_id)
-        .single();
+        .maybeSingle();
       
       return {
         ...product,
@@ -148,7 +211,6 @@ export default function AdminDashboard() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    // Fetch roles for each user
     const usersWithRoles = await Promise.all((allUsers || []).map(async (user) => {
       const { data: userRoles } = await supabase
         .from("user_roles")
@@ -162,6 +224,53 @@ export default function AdminDashboard() {
     }));
 
     setUsers(usersWithRoles);
+
+    // Fetch all chats with messages
+    const { data: conversations } = await supabase
+      .from("chat_conversations")
+      .select(`
+        *,
+        products (title, ai_cover_image)
+      `)
+      .order("updated_at", { ascending: false });
+
+    const chatsWithDetails = await Promise.all((conversations || []).map(async (conv) => {
+      const [ownerProfile, renterProfile, messages] = await Promise.all([
+        supabase.from("profiles").select("name").eq("user_id", conv.owner_id).maybeSingle(),
+        supabase.from("profiles").select("name").eq("user_id", conv.renter_id).maybeSingle(),
+        supabase.from("chat_messages").select("*").eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(20),
+      ]);
+
+      return {
+        ...conv,
+        owner_name: ownerProfile.data?.name || "Bari Behen",
+        renter_name: renterProfile.data?.name || "Choti Behen",
+        messages: messages.data || [],
+      };
+    }));
+
+    setAllChats(chatsWithDetails);
+
+    // Fetch all reviews
+    const { data: reviews } = await supabase
+      .from("reviews")
+      .select(`*, products (title)`)
+      .order("created_at", { ascending: false });
+
+    const reviewsWithDetails = await Promise.all((reviews || []).map(async (review) => {
+      const [reviewerProfile, ownerProfile] = await Promise.all([
+        supabase.from("profiles").select("name").eq("user_id", review.reviewer_id).maybeSingle(),
+        supabase.from("profiles").select("name").eq("user_id", review.owner_id).maybeSingle(),
+      ]);
+
+      return {
+        ...review,
+        reviewer_name: reviewerProfile.data?.name || "Choti Behen",
+        owner_name: ownerProfile.data?.name || "Bari Behen",
+      };
+    }));
+
+    setAllReviews(reviewsWithDetails);
 
     setLoading(false);
   };
@@ -183,26 +292,27 @@ export default function AdminDashboard() {
       .eq("id", booking.id);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update booking",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update booking", variant: "destructive" });
       return;
     }
 
-    // Send email notification
-    if (booking.renter_email) {
-      await sendEmailNotification({
-        type: "payment_verification",
-        recipientEmail: booking.renter_email,
-        recipientName: booking.renter_name,
-        data: {
-          productTitle: booking.products?.title,
-          verified: approved,
-        },
-      });
-    }
+    // Get renter email
+    const { data: renterProfile } = await supabase
+      .from("profiles")
+      .select("name")
+      .eq("user_id", booking.renter_id)
+      .maybeSingle();
+
+    // Send email notification  
+    await sendEmailNotification({
+      type: "payment_verification",
+      recipientEmail: `user-${booking.renter_id}@behen.pk`, // Placeholder - in real app, get from auth
+      recipientName: renterProfile?.name || "Choti Behen",
+      data: {
+        productTitle: booking.products?.title,
+        verified: approved,
+      },
+    });
 
     toast({
       title: approved ? "Payment Verified" : "Payment Rejected",
@@ -221,11 +331,7 @@ export default function AdminDashboard() {
       .eq("id", productId);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update product",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update product", variant: "destructive" });
       return;
     }
 
@@ -239,11 +345,7 @@ export default function AdminDashboard() {
 
   const handleAssignRole = async (userId: string, role: string) => {
     if (currentRole !== "super_admin") {
-      toast({
-        title: "Access Denied",
-        description: "Only super admins can assign roles",
-        variant: "destructive",
-      });
+      toast({ title: "Access Denied", description: "Only super admins can assign roles", variant: "destructive" });
       return;
     }
 
@@ -253,36 +355,20 @@ export default function AdminDashboard() {
 
     if (error) {
       if (error.code === "23505") {
-        toast({
-          title: "Role Exists",
-          description: "User already has this role",
-          variant: "destructive",
-        });
+        toast({ title: "Role Exists", description: "User already has this role", variant: "destructive" });
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to assign role",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to assign role", variant: "destructive" });
       }
       return;
     }
 
-    toast({
-      title: "Role Assigned",
-      description: `Successfully assigned ${role} role`,
-    });
-
+    toast({ title: "Role Assigned", description: `Successfully assigned ${role} role` });
     fetchData();
   };
 
   const handleRemoveRole = async (userId: string, role: string) => {
     if (currentRole !== "super_admin") {
-      toast({
-        title: "Access Denied",
-        description: "Only super admins can remove roles",
-        variant: "destructive",
-      });
+      toast({ title: "Access Denied", description: "Only super admins can remove roles", variant: "destructive" });
       return;
     }
 
@@ -290,28 +376,148 @@ export default function AdminDashboard() {
       .from("user_roles")
       .delete()
       .eq("user_id", userId)
-      .eq("role", role as "super_admin" | "admin" | "manager" | "bari_behen" | "choti_behen");
+      .eq("role", role as any);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove role",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to remove role", variant: "destructive" });
       return;
     }
 
-    toast({
-      title: "Role Removed",
-      description: `Successfully removed ${role} role`,
+    toast({ title: "Role Removed", description: `Successfully removed ${role} role` });
+    fetchData();
+  };
+
+  const handleViewUserProfile = async (user: any) => {
+    setSelectedUser(user);
+    
+    // Fetch user's products
+    const { data: products } = await supabase
+      .from("products")
+      .select("*")
+      .eq("owner_id", user.user_id)
+      .order("created_at", { ascending: false });
+    
+    setUserProducts(products || []);
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete product", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Product Deleted", description: "Product has been removed" });
+    
+    // Refresh user products
+    if (selectedUser) {
+      handleViewUserProfile(selectedUser);
+    }
+    fetchData();
+  };
+
+  const handleEditProduct = async (productId: string) => {
+    navigate(`/list-dress?edit=${productId}`);
+  };
+
+  const handleSendSecurityDeposit = async () => {
+    const { booking, recipient, amount, notes } = securityDepositDialog;
+    if (!booking || !amount) return;
+
+    const recipientId = recipient === 'owner' ? booking.owner_id : booking.renter_id;
+    const recipientName = recipient === 'owner' ? booking.owner_name : booking.renter_name;
+
+    // Update booking with security deposit info
+    const { error } = await supabase
+      .from("bookings")
+      .update({
+        admin_notes: `Security deposit of PKR ${amount} sent to ${recipient}. Notes: ${notes || 'N/A'}`,
+        booking_status: "completed" as const,
+      })
+      .eq("id", booking.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to update booking", variant: "destructive" });
+      return;
+    }
+
+    // Send notification
+    await sendEmailNotification({
+      type: "security_deposit",
+      recipientEmail: `user-${recipientId}@behen.pk`,
+      recipientName: recipientName,
+      data: {
+        action: "sent",
+        productTitle: booking.products?.title,
+        amount: amount,
+        notes: notes,
+        message: `Your security deposit of PKR ${amount} has been processed.`,
+      },
     });
 
+    toast({ title: "Security Deposit Sent", description: `PKR ${amount} sent to ${recipientName}` });
+    setSecurityDepositDialog({ open: false, booking: null, recipient: 'renter', amount: '', notes: '' });
+    fetchData();
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Are you sure you want to delete this review?")) return;
+
+    const { error } = await supabase
+      .from("reviews")
+      .delete()
+      .eq("id", reviewId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete review", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Review Deleted", description: "Review has been removed" });
+    fetchData();
+  };
+
+  const handleRespondToReview = async () => {
+    const { review, response } = reviewResponseDialog;
+    if (!review || !response.trim()) return;
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({
+        owner_response: response.trim(),
+        owner_response_at: new Date().toISOString(),
+      })
+      .eq("id", review.id);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to submit response", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Response Submitted", description: "Review response has been added" });
+    setReviewResponseDialog({ open: false, review: null, response: '' });
     fetchData();
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/admin");
+  };
+
+  const getBookingStatusColor = (status: string) => {
+    switch (status) {
+      case "completed": return "bg-green-500/20 text-green-400";
+      case "confirmed": return "bg-blue-500/20 text-blue-400";
+      case "pending_payment": return "bg-yellow-500/20 text-yellow-400";
+      case "cancelled": return "bg-red-500/20 text-red-400";
+      default: return "bg-slate-500/20 text-slate-400";
+    }
   };
 
   if (loading) {
@@ -349,10 +555,10 @@ export default function AdminDashboard() {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Stats Cards */}
-          <div className="grid md:grid-cols-4 gap-6 mb-8">
+          <div className="grid md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Total Users</CardTitle>
+                <CardTitle className="text-xs font-medium text-slate-300">Users</CardTitle>
                 <Users className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
@@ -362,7 +568,7 @@ export default function AdminDashboard() {
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Total Products</CardTitle>
+                <CardTitle className="text-xs font-medium text-slate-300">Products</CardTitle>
                 <Package className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
@@ -372,7 +578,7 @@ export default function AdminDashboard() {
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Total Bookings</CardTitle>
+                <CardTitle className="text-xs font-medium text-slate-300">Total Bookings</CardTitle>
                 <Calendar className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
@@ -382,35 +588,75 @@ export default function AdminDashboard() {
 
             <Card className="bg-slate-800/50 border-slate-700">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Total Revenue</CardTitle>
+                <CardTitle className="text-xs font-medium text-slate-300">Active Rentals</CardTitle>
+                <ShoppingBag className="h-4 w-4 text-slate-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-400">{stats.activeRentals}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-slate-300">Completed</CardTitle>
+                <Check className="h-4 w-4 text-slate-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-400">{stats.totalRentals}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-slate-300">Sold</CardTitle>
+                <DollarSign className="h-4 w-4 text-slate-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-400">{stats.soldProducts}</div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xs font-medium text-slate-300">Revenue</CardTitle>
                 <TrendingUp className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">PKR {stats.revenue.toLocaleString()}</div>
+                <div className="text-xl font-bold text-white">PKR {stats.revenue.toLocaleString()}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Management Tabs */}
           <Tabs defaultValue="bookings" className="space-y-4">
-            <TabsList className="bg-slate-800 border-slate-700">
+            <TabsList className="bg-slate-800 border-slate-700 flex-wrap h-auto gap-1">
               <TabsTrigger value="bookings" className="data-[state=active]:bg-primary">
-                Pending Payments ({pendingBookings.length})
+                Payments ({pendingBookings.length})
+              </TabsTrigger>
+              <TabsTrigger value="rentals" className="data-[state=active]:bg-primary">
+                Rentals ({allBookings.length})
               </TabsTrigger>
               <TabsTrigger value="products" className="data-[state=active]:bg-primary">
-                Pending Products ({pendingProducts.length})
+                Products ({pendingProducts.length})
               </TabsTrigger>
               <TabsTrigger value="users" className="data-[state=active]:bg-primary">
                 Users ({users.length})
               </TabsTrigger>
+              <TabsTrigger value="reviews" className="data-[state=active]:bg-primary">
+                Reviews ({allReviews.length})
+              </TabsTrigger>
+              <TabsTrigger value="chats" className="data-[state=active]:bg-primary">
+                Chats ({allChats.length})
+              </TabsTrigger>
               {currentRole === "super_admin" && (
                 <TabsTrigger value="roles" className="data-[state=active]:bg-primary">
-                  <UserCog className="h-4 w-4 mr-2" />
-                  Role Management
+                  <UserCog className="h-4 w-4 mr-1" />
+                  Roles
                 </TabsTrigger>
               )}
             </TabsList>
 
+            {/* Pending Payments Tab */}
             <TabsContent value="bookings">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
@@ -447,18 +693,14 @@ export default function AdminDashboard() {
                                 
                                 <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
-                                    <p className="text-slate-400">Bari Behen (Owner)</p>
+                                    <p className="text-slate-400">Bari Behen</p>
                                     <p className="font-medium text-white">{booking.owner_name}</p>
-                                    {booking.owner_phone && (
-                                      <p className="text-xs text-slate-500">{booking.owner_phone}</p>
-                                    )}
+                                    {booking.owner_phone && <p className="text-xs text-slate-500">{booking.owner_phone}</p>}
                                   </div>
                                   <div>
-                                    <p className="text-slate-400">Choti Behen (Renter)</p>
+                                    <p className="text-slate-400">Choti Behen</p>
                                     <p className="font-medium text-white">{booking.renter_name}</p>
-                                    {booking.renter_phone && (
-                                      <p className="text-xs text-slate-500">{booking.renter_phone}</p>
-                                    )}
+                                    {booking.renter_phone && <p className="text-xs text-slate-500">{booking.renter_phone}</p>}
                                   </div>
                                 </div>
                                 
@@ -475,12 +717,6 @@ export default function AdminDashboard() {
                                     <span className="text-slate-500">Security: </span>
                                     <span className="font-semibold">PKR {Number(booking.security_deposit).toLocaleString()}</span>
                                   </div>
-                                  <div>
-                                    <span className="text-slate-500">Total: </span>
-                                    <span className="font-bold text-primary">
-                                      PKR {(Number(booking.total_price) + Number(booking.security_deposit)).toLocaleString()}
-                                    </span>
-                                  </div>
                                 </div>
                                 
                                 {booking.payment_notes && (
@@ -492,30 +728,16 @@ export default function AdminDashboard() {
                               
                               <div className="flex flex-col gap-2 lg:w-32">
                                 {booking.payment_proof_url && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setSelectedProof(booking.payment_proof_url)}
-                                    className="w-full border-slate-600 text-slate-300"
-                                  >
+                                  <Button variant="outline" size="sm" onClick={() => setSelectedProof(booking.payment_proof_url)} className="w-full border-slate-600 text-slate-300">
                                     <Eye className="h-4 w-4 mr-2" />
                                     View Proof
                                   </Button>
                                 )}
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleVerifyPayment(booking, true)}
-                                  className="w-full"
-                                >
+                                <Button size="sm" onClick={() => handleVerifyPayment(booking, true)} className="w-full">
                                   <Check className="h-4 w-4 mr-2" />
                                   Approve
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleVerifyPayment(booking, false)}
-                                  className="w-full"
-                                >
+                                <Button size="sm" variant="destructive" onClick={() => handleVerifyPayment(booking, false)} className="w-full">
                                   <X className="h-4 w-4 mr-2" />
                                   Reject
                                 </Button>
@@ -536,6 +758,67 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
+            {/* All Rentals Tab */}
+            <TabsContent value="rentals">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <ShoppingBag className="h-5 w-5" />
+                    Rental Holdings & Completed Rentals
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[500px]">
+                    <div className="space-y-3">
+                      {allBookings.map((booking) => (
+                        <Card key={booking.id} className="bg-slate-700/50 border-slate-600">
+                          <CardContent className="py-4">
+                            <div className="flex items-center gap-4">
+                              {booking.products?.ai_cover_image && (
+                                <img src={booking.products.ai_cover_image} alt="" className="w-16 h-16 object-cover rounded" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-white truncate">{booking.products?.title}</p>
+                                <p className="text-sm text-slate-400">{booking.renter_name} ← {booking.owner_name}</p>
+                                <p className="text-xs text-slate-500">
+                                  {format(new Date(booking.start_date), "MMM dd")} - {format(new Date(booking.end_date), "MMM dd")}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <Badge className={getBookingStatusColor(booking.booking_status)}>
+                                  {booking.booking_status.replace("_", " ")}
+                                </Badge>
+                                <p className="text-sm text-white mt-1">PKR {Number(booking.total_price).toLocaleString()}</p>
+                                <p className="text-xs text-slate-400">+ PKR {Number(booking.security_deposit).toLocaleString()} security</p>
+                              </div>
+                              {booking.booking_status === "completed" && currentRole === "super_admin" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setSecurityDepositDialog({
+                                    open: true,
+                                    booking,
+                                    recipient: 'renter',
+                                    amount: String(booking.security_deposit),
+                                    notes: '',
+                                  })}
+                                  className="border-green-500/50 text-green-400"
+                                >
+                                  <DollarSign className="h-4 w-4 mr-1" />
+                                  Send Security
+                                </Button>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Products Tab */}
             <TabsContent value="products">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
@@ -549,35 +832,20 @@ export default function AdminDashboard() {
                           <CardContent className="pt-6">
                             <div className="flex items-start gap-4">
                               {product.ai_cover_image && (
-                                <img
-                                  src={product.ai_cover_image}
-                                  alt={product.title}
-                                  className="w-24 h-24 object-cover rounded"
-                                />
+                                <img src={product.ai_cover_image} alt={product.title} className="w-24 h-24 object-cover rounded" />
                               )}
                               <div className="flex-1">
                                 <h3 className="font-semibold text-white">{product.title}</h3>
-                                <p className="text-sm text-slate-400">
-                                  Owner: {product.owner_name}
-                                </p>
+                                <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
                                 <p className="text-sm text-slate-300">Category: {product.category}</p>
-                                <p className="text-sm text-slate-300">
-                                  Price: PKR {product.rental_price_4days}/4 days
-                                </p>
+                                <p className="text-sm text-slate-300">Price: PKR {product.rental_price_4days}/4 days</p>
                               </div>
                               <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleApproveProduct(product.id, true)}
-                                >
+                                <Button size="sm" onClick={() => handleApproveProduct(product.id, true)}>
                                   <Check className="h-4 w-4 mr-2" />
                                   Approve
                                 </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleApproveProduct(product.id, false)}
-                                >
+                                <Button size="sm" variant="destructive" onClick={() => handleApproveProduct(product.id, false)}>
                                   <X className="h-4 w-4 mr-2" />
                                   Reject
                                 </Button>
@@ -598,6 +866,7 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
+            {/* Users Tab */}
             <TabsContent value="users">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
@@ -612,20 +881,20 @@ export default function AdminDashboard() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="font-medium text-white">{user.name}</p>
-                                <p className="text-sm text-slate-400">{user.phone || "No phone"}</p>
-                                <p className="text-xs text-slate-500">
-                                  Joined: {format(new Date(user.created_at), "MMM dd, yyyy")}
-                                </p>
+                                <p className="text-sm text-slate-400">{user.phone || "No phone"} • {user.city || "No city"}</p>
+                                <p className="text-xs text-slate-500">Joined: {format(new Date(user.created_at), "MMM dd, yyyy")}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="border-slate-600 text-slate-300">
-                                  {user.role}
-                                </Badge>
+                                <Badge variant="outline" className="border-slate-600 text-slate-300">{user.role}</Badge>
                                 {user.roles?.map((role: string) => (
-                                  <Badge key={role} className="bg-primary/20 text-primary border-primary/30">
-                                    {role.replace("_", " ")}
-                                  </Badge>
+                                  <Badge key={role} className="bg-primary/20 text-primary border-primary/30">{role.replace("_", " ")}</Badge>
                                 ))}
+                                {currentRole === "super_admin" && (
+                                  <Button size="sm" variant="ghost" onClick={() => handleViewUserProfile(user)} className="text-slate-300">
+                                    <Eye className="h-4 w-4 mr-1" />
+                                    View Profile
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </CardContent>
@@ -637,6 +906,127 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
+            {/* Reviews Tab */}
+            <TabsContent value="reviews">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Star className="h-5 w-5" />
+                    All Reviews
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[500px]">
+                    <div className="space-y-3">
+                      {allReviews.map((review) => (
+                        <Card key={review.id} className="bg-slate-700/50 border-slate-600">
+                          <CardContent className="py-4">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="font-medium text-white">{review.products?.title}</p>
+                                  <p className="text-sm text-slate-400">By: Choti Behen • To: {review.owner_name}</p>
+                                  <div className="flex items-center gap-1 mt-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star key={star} className={`h-4 w-4 ${star <= review.product_rating ? "fill-yellow-400 text-yellow-400" : "text-slate-600"}`} />
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="ghost" onClick={() => setReviewResponseDialog({ open: true, review, response: review.owner_response || '' })} className="text-slate-300">
+                                    <MessageSquare className="h-4 w-4" />
+                                  </Button>
+                                  {currentRole === "super_admin" && (
+                                    <Button size="sm" variant="ghost" onClick={() => handleDeleteReview(review.id)} className="text-red-400">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              {review.product_review && (
+                                <p className="text-sm text-slate-300 bg-slate-600/30 p-2 rounded">"{review.product_review}"</p>
+                              )}
+                              {review.owner_response && (
+                                <div className="ml-4 p-3 bg-primary/10 border-l-2 border-primary rounded">
+                                  <p className="text-xs text-slate-400 mb-1">Bari Behen's Response:</p>
+                                  <p className="text-sm text-slate-200">"{review.owner_response}"</p>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {allReviews.length === 0 && (
+                        <div className="text-center py-12 text-slate-500">
+                          <Star className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>No reviews yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Chats Tab */}
+            <TabsContent value="chats">
+              <Card className="bg-slate-800/50 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <MessageSquare className="h-5 w-5" />
+                    All Chats (Recent First)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[500px]">
+                    <div className="space-y-3">
+                      {allChats.map((chat) => (
+                        <Card key={chat.id} className="bg-slate-700/50 border-slate-600">
+                          <CardContent className="py-4">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="font-medium text-white">{chat.products?.title || "Direct Chat"}</p>
+                                  <p className="text-sm text-slate-400">{chat.renter_name} ↔ {chat.owner_name}</p>
+                                  <p className="text-xs text-slate-500">Last active: {format(new Date(chat.updated_at), "MMM dd, hh:mm a")}</p>
+                                </div>
+                                <Badge variant={chat.is_booking_confirmed ? "default" : "outline"} className={chat.is_booking_confirmed ? "bg-green-500/20 text-green-400" : ""}>
+                                  {chat.is_booking_confirmed ? "Booking Confirmed" : "Negotiating"}
+                                </Badge>
+                              </div>
+                              
+                              {chat.messages?.length > 0 && (
+                                <div className="space-y-2 max-h-40 overflow-y-auto bg-slate-800/50 rounded p-2">
+                                  {chat.messages.slice(0, 5).map((msg: any) => (
+                                    <div key={msg.id} className="text-sm">
+                                      <span className="text-slate-400">{msg.sender_id === chat.owner_id ? chat.owner_name : chat.renter_name}: </span>
+                                      <span className={`${msg.is_moderated ? "text-red-400 line-through" : "text-slate-200"}`}>
+                                        {msg.is_moderated ? "[Moderated]" : msg.message}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {chat.messages.length > 5 && (
+                                    <p className="text-xs text-slate-500">+ {chat.messages.length - 5} more messages</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                      {allChats.length === 0 && (
+                        <div className="text-center py-12 text-slate-500">
+                          <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>No chats yet</p>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Role Management Tab */}
             {currentRole === "super_admin" && (
               <TabsContent value="roles">
                 <Card className="bg-slate-800/50 border-slate-700">
@@ -668,7 +1058,7 @@ export default function AdminDashboard() {
                                     ))}
                                   </div>
                                 </div>
-                <Select onValueChange={(value: "super_admin" | "admin" | "manager") => handleAssignRole(user.user_id, value)}>
+                                <Select onValueChange={(value) => handleAssignRole(user.user_id, value)}>
                                   <SelectTrigger className="w-40 bg-slate-600 border-slate-500 text-white">
                                     <SelectValue placeholder="Add Role" />
                                   </SelectTrigger>
@@ -698,13 +1088,151 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-white">Payment Proof</DialogTitle>
           </DialogHeader>
-          {selectedProof && (
-            <img
-              src={selectedProof}
-              alt="Payment Proof"
-              className="w-full rounded-lg"
-            />
-          )}
+          {selectedProof && <img src={selectedProof} alt="Payment Proof" className="w-full rounded-lg" />}
+        </DialogContent>
+      </Dialog>
+
+      {/* User Profile Modal */}
+      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">User Profile: {selectedUser?.name}</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              {selectedUser?.phone} • {selectedUser?.city}, {selectedUser?.area}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <h4 className="font-semibold text-white">Products ({userProducts.length})</h4>
+            <div className="grid gap-3">
+              {userProducts.map((product) => (
+                <Card key={product.id} className="bg-slate-700/50 border-slate-600">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-4">
+                      {product.ai_cover_image && (
+                        <img src={product.ai_cover_image} alt="" className="w-16 h-16 object-cover rounded" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium text-white">{product.title}</p>
+                        <p className="text-sm text-slate-400">{product.category} • {product.status}</p>
+                        <p className="text-sm text-slate-300">PKR {product.rental_price_4days}/4 days</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => navigate(`/product/${product.id}`)} className="text-slate-300">
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleEditProduct(product.id)} className="text-slate-300">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDeleteProduct(product.id)} className="text-red-400">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {userProducts.length === 0 && (
+                <p className="text-slate-500 text-center py-4">No products</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Security Deposit Dialog */}
+      <Dialog open={securityDepositDialog.open} onOpenChange={(open) => !open && setSecurityDepositDialog({ open: false, booking: null, recipient: 'renter', amount: '', notes: '' })}>
+        <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Send Security Deposit</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Order: {securityDepositDialog.booking?.products?.title}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-slate-300">Send To</label>
+              <Select 
+                value={securityDepositDialog.recipient} 
+                onValueChange={(value: 'owner' | 'renter') => setSecurityDepositDialog(prev => ({ ...prev, recipient: value }))}
+              >
+                <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-700 border-slate-600">
+                  <SelectItem value="renter" className="text-white">
+                    Choti Behen ({securityDepositDialog.booking?.renter_name})
+                  </SelectItem>
+                  <SelectItem value="owner" className="text-white">
+                    Bari Behen ({securityDepositDialog.booking?.owner_name})
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm text-slate-300">Amount (PKR)</label>
+              <Input
+                type="number"
+                value={securityDepositDialog.amount}
+                onChange={(e) => setSecurityDepositDialog(prev => ({ ...prev, amount: e.target.value }))}
+                className="bg-slate-700 border-slate-600 text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="text-sm text-slate-300">Notes (optional)</label>
+              <Textarea
+                value={securityDepositDialog.notes}
+                onChange={(e) => setSecurityDepositDialog(prev => ({ ...prev, notes: e.target.value }))}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Any notes about the deposit..."
+              />
+            </div>
+            
+            <Button onClick={handleSendSecurityDeposit} className="w-full">
+              <Send className="h-4 w-4 mr-2" />
+              Send Security Deposit
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Response Dialog */}
+      <Dialog open={reviewResponseDialog.open} onOpenChange={(open) => !open && setReviewResponseDialog({ open: false, review: null, response: '' })}>
+        <DialogContent className="bg-slate-800 border-slate-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">Respond to Review</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Product: {reviewResponseDialog.review?.products?.title}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {reviewResponseDialog.review?.product_review && (
+              <div className="bg-slate-700/50 p-3 rounded">
+                <p className="text-xs text-slate-400 mb-1">Original Review:</p>
+                <p className="text-sm text-slate-200">"{reviewResponseDialog.review.product_review}"</p>
+              </div>
+            )}
+            
+            <div>
+              <label className="text-sm text-slate-300">Your Response</label>
+              <Textarea
+                value={reviewResponseDialog.response}
+                onChange={(e) => setReviewResponseDialog(prev => ({ ...prev, response: e.target.value }))}
+                className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Write a polite response..."
+                rows={4}
+              />
+            </div>
+            
+            <Button onClick={handleRespondToReview} className="w-full" disabled={!reviewResponseDialog.response.trim()}>
+              <Send className="h-4 w-4 mr-2" />
+              Submit Response
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
