@@ -1,15 +1,28 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Shield, Sparkles } from "lucide-react";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 import { HomeSearch } from "@/components/HomeSearch";
 import { HomeProducts } from "@/components/HomeProducts";
+import EarningsPromoPopup from "@/components/EarningsPromoPopup";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const [userRole, setUserRole] = useState<string>("");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setUserRole(session.user.user_metadata?.role || "");
+      }
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <EnhancedHeader />
-      
+      <EarningsPromoPopup userRole={userRole} />
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />

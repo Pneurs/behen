@@ -20,6 +20,7 @@ import NotFound from "./pages/NotFound";
 import ReturnPolicy from "./pages/ReturnPolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import EarnMoney from "./pages/EarnMoney";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/earn-money" element={<EarnMoney />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -12,6 +12,7 @@ import LocationFilter from "@/components/LocationFilter";
 import AvailabilityCalendarFlatpickr from "@/components/AvailabilityCalendarFlatpickr";
 import BrowseFilters from "@/components/BrowseFilters";
 import MapView from "@/components/MapView";
+import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import { format, isWithinInterval } from "date-fns";
 
 interface DateRange {
@@ -242,10 +243,12 @@ const Browse = () => {
     setAlterationFilter(false);
   };
 
+  const userRole = user?.user_metadata?.role || "";
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      
+      <EarningsPromoPopup userRole={userRole} />
       {/* Page Title - Static */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">

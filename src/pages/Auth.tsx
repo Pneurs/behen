@@ -24,6 +24,8 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [otp, setOtp] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [referralError, setReferralError] = useState("");
   const [role, setRole] = useState<"bari" | "choti">(
     (searchParams.get("role") as "bari" | "choti") || "choti"
   );
@@ -127,6 +129,23 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Validate referral code if provided (for Bari Behen only)
+      let referrerId: string | null = null;
+      if (role === "bari" && referralCode.trim()) {
+        const { data: referralData } = await supabase
+          .from("user_earnings")
+          .select("user_id")
+          .eq("referral_code", referralCode.trim())
+          .single();
+        
+        if (!referralData) {
+          setReferralError("Invalid referral code");
+          setLoading(false);
+          return;
+        }
+        referrerId = referralData.user_id;
+      }
+
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -135,6 +154,7 @@ const Auth = () => {
           data: {
             name,
             role,
+            referred_by: referrerId,
           },
         },
       });
@@ -610,6 +630,28 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
+                {role === "bari" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="referral-code">Referral Code (Optional)</Label>
+                    <Input
+                      id="referral-code"
+                      type="text"
+                      placeholder="Enter referral code"
+                      value={referralCode}
+                      onChange={(e) => {
+                        setReferralCode(e.target.value);
+                        setReferralError("");
+                      }}
+                      className={referralError ? "border-destructive" : ""}
+                    />
+                    {referralError && (
+                      <p className="text-sm text-destructive">{referralError}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Have a referral code? Enter it to get PKR 150 bonus on your first product!
+                    </p>
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
