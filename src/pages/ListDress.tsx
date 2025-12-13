@@ -9,18 +9,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, RefreshCw } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, RefreshCw, MapPin, ChevronRight } from "lucide-react";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import { Header } from "@/components/Header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
   category: z.enum(["bridal", "barat", "walima", "formal", "party_wear", "footwear", "accessories", "jewelry", "bags", "fashion_tips"]),
   condition: z.enum(["new", "like_new", "used_twice", "used_often"]),
-  listing_type: z.enum(["rent", "sale", "both"]),
+  listing_type: z.enum(["rent", "sale"]),
   description: z.string().min(20, "Description must be at least 20 characters").max(1000),
   city: z.string().min(1, "City is required"),
   area: z.string().min(1, "Area is required"),
@@ -832,9 +836,8 @@ const ListDress = () => {
                   <SelectValue placeholder="Select listing type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rent">For Rent Only</SelectItem>
-                  <SelectItem value="sale">For Sale Only</SelectItem>
-                  <SelectItem value="both">Both Rent & Sale</SelectItem>
+                  <SelectItem value="rent">For Rent</SelectItem>
+                  <SelectItem value="sale">For Sale</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -844,7 +847,7 @@ const ListDress = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Pricing</h3>
             
-            {(formData.listing_type === "rent" || formData.listing_type === "both") && (
+            {formData.listing_type === "rent" && (
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="rental_price_4days">4-Day Rental Price *</Label>
@@ -890,7 +893,7 @@ const ListDress = () => {
               </div>
             )}
 
-            {(formData.listing_type === "sale" || formData.listing_type === "both") && (
+            {formData.listing_type === "sale" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="original_price">Original Price</Label>
@@ -1115,30 +1118,95 @@ const ListDress = () => {
             </div>
           </div>
 
-          {/* Location - NOW REQUIRED */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Location *</h3>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g., Lahore, Karachi"
-                  required
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      role="combobox" 
+                      className="w-full justify-between mt-1"
+                    >
+                      <span className="flex items-center truncate">
+                        <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                        {formData.city || "Select City"}
+                      </span>
+                      <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[220px] p-0 z-[200]" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search city..." />
+                      <CommandList>
+                        <CommandEmpty>No city found.</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-y-auto">
+                          {CITIES.map((city) => (
+                            <CommandItem
+                              key={city}
+                              value={city}
+                              onSelect={() => setFormData({ ...formData, city: city, area: "" })}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.city === city ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {city}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label htmlFor="area">Area *</Label>
-                <Input
-                  id="area"
-                  value={formData.area}
-                  onChange={(e) => setFormData({ ...formData, area: e.target.value })}
-                  placeholder="e.g., DHA Phase 5, Gulberg"
-                  required
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      role="combobox" 
+                      className="w-full justify-between mt-1"
+                      disabled={!formData.city}
+                    >
+                      <span className="truncate">
+                        {formData.area || "Select Area"}
+                      </span>
+                      <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[220px] p-0 z-[200]" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search area..." />
+                      <CommandList>
+                        <CommandEmpty>No area found.</CommandEmpty>
+                        <CommandGroup className="max-h-[300px] overflow-y-auto">
+                          {(PAKISTAN_LOCATIONS[formData.city] || []).map((area) => (
+                            <CommandItem
+                              key={area}
+                              value={area}
+                              onSelect={() => setFormData({ ...formData, area: area })}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.area === area ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {area}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -1147,7 +1215,7 @@ const ListDress = () => {
           </div>
 
           {/* Availability Calendar (only for rentals) */}
-          {(formData.listing_type === "rent" || formData.listing_type === "both") && (
+          {formData.listing_type === "rent" && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Availability Calendar</h3>
               <p className="text-sm text-muted-foreground">
