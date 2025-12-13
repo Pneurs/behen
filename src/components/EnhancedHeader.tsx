@@ -21,6 +21,7 @@ export const EnhancedHeader = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -29,6 +30,7 @@ export const EnhancedHeader = () => {
         setUserRole(session.user.user_metadata?.role || "choti");
         checkAdminRole(session.user.id);
         fetchUnreadCount(session.user.id);
+        fetchWishlistCount(session.user.id);
       }
     });
 
@@ -38,11 +40,13 @@ export const EnhancedHeader = () => {
         setUserRole(session.user.user_metadata?.role || "choti");
         checkAdminRole(session.user.id);
         fetchUnreadCount(session.user.id);
+        fetchWishlistCount(session.user.id);
       } else {
         setUser(null);
         setUserRole("");
         setIsAdmin(false);
         setUnreadCount(0);
+        setWishlistCount(0);
       }
     });
 
@@ -117,6 +121,19 @@ export const EnhancedHeader = () => {
     setIsAdmin(!!data);
   };
 
+  const fetchWishlistCount = async (userId: string) => {
+    try {
+      const { count } = await supabase
+        .from("wishlists")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId);
+
+      setWishlistCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching wishlist count:", error);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out successfully");
@@ -175,9 +192,14 @@ export const EnhancedHeader = () => {
                   <CalendarDays className="mr-2 h-4 w-4" />
                   My Bookings
                 </Button>
-                <Button onClick={() => navigate("/wishlist")} variant="ghost" size="sm">
+                <Button onClick={() => navigate("/wishlist")} variant="ghost" size="sm" className="relative">
                   <Heart className="mr-2 h-4 w-4" />
                   Wishlist
+                  {wishlistCount > 0 && (
+                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                      {wishlistCount > 99 ? "99+" : wishlistCount}
+                    </Badge>
+                  )}
                 </Button>
                 <Button onClick={() => { navigate("/chats"); setUnreadCount(0); }} variant="ghost" size="sm" className="relative">
                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -270,10 +292,15 @@ export const EnhancedHeader = () => {
                         setMobileOpen(false);
                       }}
                       variant="outline"
-                      className="w-full"
+                      className="w-full relative"
                     >
                       <Heart className="mr-2 h-4 w-4" />
                       Wishlist
+                      {wishlistCount > 0 && (
+                        <Badge className="ml-2 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                          {wishlistCount > 99 ? "99+" : wishlistCount}
+                        </Badge>
+                      )}
                     </Button>
                     <Button
                       onClick={() => {

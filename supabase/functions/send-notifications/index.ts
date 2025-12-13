@@ -255,14 +255,17 @@ const handler = async (req: Request): Promise<Response> => {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h1 style="color: #FF69B4;">New Order Received! 🎊</h1>
             <p>Hi ${recipientName},</p>
-            <p>Great news! You have received a new order for <strong>${data.productTitle}</strong>.</p>
+            <p>Great news! You have received a new ${data.orderType || 'Rental'} order for <strong>${data.productTitle}</strong>.</p>
             <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 5px 0;"><strong>Renter:</strong> ${data.renterName}</p>
-              <p style="margin: 5px 0;"><strong>Dates:</strong> ${data.startDate} to ${data.endDate}</p>
-              <p style="margin: 5px 0;"><strong>Rent:</strong> PKR ${data.totalPrice}</p>
+              <p style="margin: 5px 0;"><strong>Customer:</strong> ${data.renterName}</p>
+              <p style="margin: 5px 0;"><strong>Total:</strong> PKR ${data.totalPrice}</p>
+              <p style="margin: 5px 0;"><strong>Status:</strong> ⏳ Waiting for payment confirmation</p>
             </div>
-            <p>The renter will upload payment proof. Once verified, you'll be notified to prepare the item.</p>
-            <p><a href="https://behen.pk/bari-behen-dashboard" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Dashboard</a></p>
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0;">⏰ Payment verification typically takes up to <strong>8 hours</strong>.</p>
+              <p style="margin: 10px 0 0 0;">You'll be notified once payment is confirmed.</p>
+            </div>
+            <p><a href="https://behen.pk/chats" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Chats</a></p>
             <p>Best regards,<br>Behen.pk Team</p>
           </div>
         `;

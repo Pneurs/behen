@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { sendEmailNotification } from "@/lib/emailNotifications";
 
 const PLATFORM_WHATSAPP = "03328133263";
 const SALE_FEE_PERCENT = 5;
@@ -206,12 +207,13 @@ export default function Cart() {
 
       const { basePrice, platformFee, total, deposit, days } = calculateTotals();
 
+      let bookingData: any;
       if (orderType === "rent") {
         const startDate = selectedDates[0];
         const endDate = selectedDates[selectedDates.length - 1];
 
         // Create booking for rental
-        const { error: bookingError } = await supabase
+        const { data, error: bookingError } = await supabase
           .from("bookings")
           .insert({
             product_id: productId,
@@ -227,12 +229,15 @@ export default function Cart() {
             payment_notes: `Platform fee: PKR ${platformFee} (${RENT_FEE_PERCENT}%). ${paymentNotes}`,
             booking_status: 'payment_submitted',
             payment_status: 'submitted',
-          });
+          })
+          .select()
+          .single();
 
         if (bookingError) throw bookingError;
+        bookingData = data;
       } else {
         // Create booking for sale (using same table with different tracking)
-        const { error: bookingError } = await supabase
+        const { data, error: bookingError } = await supabase
           .from("bookings")
           .insert({
             product_id: productId,
@@ -248,10 +253,40 @@ export default function Cart() {
             payment_notes: `SALE ORDER. Platform fee: PKR ${platformFee} (${SALE_FEE_PERCENT}%). ${paymentNotes}`,
             booking_status: 'payment_submitted',
             payment_status: 'submitted',
-          });
+          })
+          .select()
+          .single();
 
         if (bookingError) throw bookingError;
+        bookingData = data;
       }
+
+      // Get owner profile and send notification
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("user_id", product.owner_id)
+        .single();
+
+      const { data: renterProfile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("user_id", user.id)
+        .single();
+
+      // Send email notification to Bari Behen
+      await sendEmailNotification({
+        type: "new_order",
+        recipientEmail: `owner-${product.owner_id}@behen.pk`,
+        recipientName: ownerProfile?.name || "Bari Behen",
+        data: {
+          productTitle: product.title,
+          renterName: renterProfile?.name || "Choti Behen",
+          totalPrice: total,
+          orderType: orderType === "buy" ? "Sale" : "Rental",
+          waitingTime: "8 hours",
+        },
+      });
 
       toast.success("Order submitted! We'll verify your payment and contact you soon.");
       navigate("/my-bookings");
@@ -424,16 +459,6 @@ export default function Cart() {
                       <div className="flex justify-between text-lg">
                         <span className="font-bold">Total Amount:</span>
                         <span className="font-bold text-primary">PKR {total.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Fee Notice for Both Users */}
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-amber-800">
-                          <strong>Note:</strong> Both buyer and seller are charged {orderType === "buy" ? "5%" : "10%"} platform fee to maintain our services.
-                        </p>
                       </div>
                     </div>
                   </CardContent>

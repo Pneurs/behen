@@ -23,6 +23,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [referralError, setReferralError] = useState("");
@@ -161,6 +162,7 @@ const Auth = () => {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
             name,
+            phone,
             role,
             referred_by: referrerId,
           },
@@ -612,6 +614,18 @@ const Auth = () => {
                   {emailError && (
                     <p className="text-sm text-destructive">{emailError}</p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="03XX-XXXXXXX"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">Required for order coordination</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
