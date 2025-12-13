@@ -484,31 +484,40 @@ const ListDress = () => {
         if (insertedProduct && !earnings?.first_product_bonus_claimed) {
           const bonusClaimed = await claimFirstProductBonus(insertedProduct.id);
           
-          // Check if user was referred and process referral bonus
-          if (bonusClaimed && earnings?.referred_by) {
-            await processReferralBonus(earnings.referred_by, user.id);
+          if (bonusClaimed) {
+            // Re-fetch earnings to get the referred_by field (might have been created by trigger)
+            const { data: updatedEarnings } = await supabase
+              .from("user_earnings")
+              .select("referred_by")
+              .eq("user_id", user.id)
+              .single();
             
-            // Show combined bonus message
-            toast.success(
-              <div className="space-y-1">
-                <p className="font-bold text-lg">🎉 Congratulations!</p>
-                <p>You earned <span className="font-bold text-primary">PKR 250 + 150 = 400</span>!</p>
-                <p className="text-sm text-muted-foreground">Refer more friends to earn more money!</p>
-              </div>,
-              { duration: 8000 }
-            );
-            
-            // Send email notifications to both users
-            try {
-              await supabase.functions.invoke("send-notifications", {
-                body: {
-                  type: "referral_bonus",
-                  referrer_id: earnings.referred_by,
-                  new_user_id: user.id,
-                },
-              });
-            } catch (emailError) {
-              console.error("Error sending referral emails:", emailError);
+            // Check if user was referred and process referral bonus
+            if (updatedEarnings?.referred_by) {
+              await processReferralBonus(updatedEarnings.referred_by, user.id);
+              
+              // Show combined bonus message
+              toast.success(
+                <div className="space-y-1">
+                  <p className="font-bold text-lg">🎉 Congratulations!</p>
+                  <p>You earned <span className="font-bold text-primary">PKR 250 + 150 = 400</span>!</p>
+                  <p className="text-sm text-muted-foreground">Refer more friends to earn more money!</p>
+                </div>,
+                { duration: 8000 }
+              );
+              
+              // Send email notifications to both users
+              try {
+                await supabase.functions.invoke("send-notifications", {
+                  body: {
+                    type: "referral_bonus",
+                    referrer_id: updatedEarnings.referred_by,
+                    new_user_id: user.id,
+                  },
+                });
+              } catch (emailError) {
+                console.error("Error sending referral emails:", emailError);
+              }
             }
           }
         }
