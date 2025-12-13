@@ -34,7 +34,7 @@ const Browse = () => {
   const [showMap, setShowMap] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [allBookings, setAllBookings] = useState<any[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [alterationFilter, setAlterationFilter] = useState(false);
 
@@ -210,9 +210,9 @@ const Browse = () => {
     // Availability filter
     const matchesAvailability = isProductAvailableForDates(product, dateRange);
 
-    // Price filter
+    // Price filter - only apply if priceRange is set
     const productPrice = product.rental_price_4days || product.sale_price || 0;
-    const matchesPrice = productPrice >= priceRange[0] && productPrice <= priceRange[1];
+    const matchesPrice = !priceRange || (productPrice >= priceRange[0] && productPrice <= priceRange[1]);
 
     // Size filter - case insensitive comparison
     const matchesSize = selectedSizes.length === 0 || 
@@ -228,7 +228,7 @@ const Browse = () => {
     return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea && matchesAlteration;
   });
 
-  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || priceRange[0] > 0 || priceRange[1] < maxPrice || selectedSizes.length > 0 || alterationFilter;
+  const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || (priceRange && (priceRange[0] > 0 || priceRange[1] < maxPrice)) || selectedSizes.length > 0 || alterationFilter;
 
   const clearAllFilters = () => {
     setCategoryFilter("all");
@@ -237,7 +237,7 @@ const Browse = () => {
     setAreaFilter("");
     setDateRange(undefined);
     setSearchQuery("");
-    setPriceRange([0, maxPrice]);
+    setPriceRange(null);
     setSelectedSizes([]);
     setAlterationFilter(false);
   };
@@ -314,7 +314,7 @@ const Browse = () => {
             />
 
             <BrowseFilters
-              priceRange={priceRange}
+              priceRange={priceRange || [0, maxPrice]}
               onPriceRangeChange={setPriceRange}
               selectedSizes={selectedSizes}
               onSizesChange={setSelectedSizes}
