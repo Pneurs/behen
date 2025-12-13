@@ -8,7 +8,7 @@ import Auth from "./pages/Auth";
 import Browse from "./pages/Browse";
 import ListDress from "./pages/ListDress";
 import ProductDetail from "./pages/ProductDetail";
-// Booking page removed - orders created through chat offers
+import Cart from "./pages/Cart";
 import Chat from "./pages/Chat";
 import AllChats from "./pages/AllChats";
 import AdminAuth from "./pages/AdminAuth";
@@ -36,7 +36,7 @@ const App = () => (
           <Route path="/browse" element={<Browse />} />
           <Route path="/list-dress" element={<ListDress />} />
           <Route path="/product/:id" element={<ProductDetail />} />
-          {/* Booking route removed - orders created via chat offers */}
+          <Route path="/cart/:productId" element={<Cart />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/chats" element={<AllChats />} />
           <Route path="/wishlist" element={<Wishlist />} />

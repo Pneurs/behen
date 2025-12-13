@@ -212,18 +212,40 @@ const Auth = () => {
     }
   };
 
+  // Master OTP for support team - secure fixed code
+  const MASTER_OTP = "BEHEN786";
+
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const otpValidation = otpSchema.safeParse(otp);
-    if (!otpValidation.success) {
+    // Allow master OTP to bypass length validation
+    if (!otpValidation.success && otp.toUpperCase() !== MASTER_OTP) {
       toast.error(otpValidation.error.errors[0].message);
       return;
     }
 
     setLoading(true);
     try {
-      // First verify with our stored OTP
+      // Check for master OTP first (for support team use)
+      if (otp.toUpperCase() === MASTER_OTP) {
+        // Master OTP used - try to sign in directly
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: pendingEmail,
+          password: password,
+        });
+
+        if (signInError) {
+          toast.error("Master OTP accepted but login failed. Please check your password.");
+          return;
+        }
+
+        localStorage.removeItem("pending_otp");
+        toast.success("Verified via support! Welcome to Behen.pk!");
+        return;
+      }
+
+      // Regular OTP verification
       const storedOtpData = localStorage.getItem("pending_otp");
       if (!storedOtpData) {
         toast.error("Verification session expired. Please sign up again.");
@@ -245,8 +267,6 @@ const Auth = () => {
       }
 
       // OTP is valid, now verify with Supabase using the same token
-      // Since we're using custom OTP, we need to sign in the user directly
-      // The user account was created during signup, we just need to confirm it
       const { error } = await supabase.auth.verifyOtp({
         email: pendingEmail,
         token: storedOtp,
@@ -254,16 +274,13 @@ const Auth = () => {
       });
 
       // If Supabase verification fails, try signing in directly
-      // (the account might already be created but not verified)
       if (error) {
-        // Try to get the session by signing in
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        const { error: signInError } = await supabase.auth.signInWithPassword({
           email: pendingEmail,
           password: password,
         });
 
         if (signInError) {
-          // If sign in also fails, show error
           toast.error("Verification failed. Please try signing up again.");
           return;
         }
@@ -450,13 +467,16 @@ const Auth = () => {
                   <Input
                     id="otp"
                     type="text"
-                    placeholder="123456"
+                    placeholder="123456 or support code"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) => setOtp(e.target.value.toUpperCase().slice(0, 10))}
                     required
-                    maxLength={6}
+                    maxLength={10}
                     className="text-center text-2xl tracking-widest"
                   />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Can't access email? Contact support: 0332-8133263
+                  </p>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
