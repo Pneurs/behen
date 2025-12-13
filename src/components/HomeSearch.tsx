@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, ChevronRight, Check, X } from "lucide-react";
+import { Search, MapPin, ChevronRight, Check, X, ChevronsUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,7 +29,7 @@ const CATEGORIES = [
 
 export const HomeSearch = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -56,7 +56,7 @@ export const HomeSearch = () => {
 
   const handleSearch = () => {
     const params = new URLSearchParams();
-    if (searchQuery) params.append("search", searchQuery);
+    if (keyword) params.append("search", keyword);
     if (selectedCity) params.append("city", selectedCity);
     if (selectedArea) params.append("area", selectedArea);
     if (selectedCategory) params.append("category", selectedCategory);
@@ -67,53 +67,106 @@ export const HomeSearch = () => {
   return (
     <div className="w-full max-w-4xl mx-auto bg-card p-6 rounded-2xl shadow-lg">
       <div className="flex flex-col gap-4">
-        {/* Search Input */}
-        <div className="w-full">
-          <Input
-            placeholder="Search dresses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-12"
-          />
-        </div>
         
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Location Selectors - Dynamic width based on selection */}
-          <div className="flex gap-2 shrink-0">
-            <Popover open={cityOpen} onOpenChange={setCityOpen}>
+        {/* All elements in one row */}
+        <div className="flex flex-col lg:flex-row gap-3">
+          {/* Keyword Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search dresses, designers..."
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="pl-10 h-12 bg-background border-input"
+            />
+          </div>
+
+          {/* City Selector */}
+          <Popover open={cityOpen} onOpenChange={setCityOpen}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="outline" 
+                role="combobox" 
+                aria-expanded={cityOpen}
+                className="w-full lg:w-[150px] h-12 justify-between"
+              >
+                <span className="flex items-center truncate">
+                  <MapPin className="mr-2 h-4 w-4 shrink-0" />
+                  {selectedCity || "City"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0 z-[200] bg-popover border shadow-lg" align="start">
+              <Command>
+                <CommandInput placeholder="Search city..." />
+                <CommandList>
+                  <CommandEmpty>No city found.</CommandEmpty>
+                  <CommandGroup>
+                    {CITIES.map((city) => (
+                      <CommandItem
+                        key={city}
+                        value={city}
+                        onSelect={() => {
+                          setSelectedCity(city === selectedCity ? "" : city);
+                          setSelectedArea("");
+                          setCityOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedCity === city ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {city}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {/* Area Selector - Only show if city selected */}
+          {selectedCity && PAKISTAN_LOCATIONS[selectedCity] && (
+            <Popover open={areaOpen} onOpenChange={setAreaOpen}>
               <PopoverTrigger asChild>
                 <Button 
                   variant="outline" 
                   role="combobox" 
-                  aria-expanded={cityOpen}
-                  className="w-full md:w-[160px] h-12 justify-between"
+                  aria-expanded={areaOpen}
+                  className="w-full lg:w-[150px] h-12 justify-between"
                 >
-                  <span className="flex items-center truncate">
-                    <MapPin className="mr-2 h-4 w-4 shrink-0" />
-                    {selectedCity || "Select City"}
+                  <span className="truncate">
+                    {selectedArea || "Area"}
                   </span>
-                  <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[220px] p-0 z-[200]" align="start">
+              <PopoverContent className="w-[200px] p-0 z-[200] bg-popover border shadow-lg" align="start">
                 <Command>
-                  <CommandInput placeholder="Search city..." />
+                  <CommandInput placeholder="Search area..." />
                   <CommandList>
-                    <CommandEmpty>No city found.</CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-y-auto">
-                      {CITIES.map((city) => (
+                    <CommandEmpty>No area found.</CommandEmpty>
+                    <CommandGroup>
+                      {PAKISTAN_LOCATIONS[selectedCity].map((area) => (
                         <CommandItem
-                          key={city}
-                          value={city}
-                          onSelect={() => handleCitySelect(city)}
+                          key={area}
+                          value={area}
+                          onSelect={() => {
+                            setSelectedArea(area === selectedArea ? "" : area);
+                            setAreaOpen(false);
+                          }}
                         >
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              selectedCity === city ? "opacity-100" : "opacity-0"
+                              selectedArea === area ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          {city}
+                          {area}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -121,74 +174,30 @@ export const HomeSearch = () => {
                 </Command>
               </PopoverContent>
             </Popover>
+          )}
 
-            {/* Area Selector - Only show when city is selected */}
-            {selectedCity && areas.length > 0 && (
-              <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                <PopoverTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    role="combobox" 
-                    aria-expanded={areaOpen}
-                    className="w-full md:w-[160px] h-12 justify-between"
-                  >
-                    <span className="truncate">
-                      {selectedArea || "Select Area"}
-                    </span>
-                    <ChevronRight className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[220px] p-0 z-[200]" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search area..." />
-                    <CommandList>
-                      <CommandEmpty>No area found.</CommandEmpty>
-                      <CommandGroup className="max-h-[300px] overflow-y-auto">
-                        {areas.map((area) => (
-                          <CommandItem
-                            key={area}
-                            value={area}
-                            onSelect={() => handleAreaSelect(area)}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedArea === area ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {area}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            )}
-
-            {/* Clear Location Button */}
-            {(selectedCity || selectedArea) && (
-              <Button variant="ghost" size="icon" onClick={handleClearLocation} className="shrink-0 h-12 w-12">
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-
+          {/* Category Selector */}
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full md:w-[200px] h-12">
+            <SelectTrigger className="w-full lg:w-[150px] h-12 bg-background">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((cat) => (
-                <SelectItem key={cat.value} value={cat.value}>
-                  {cat.label}
-                </SelectItem>
-              ))}
+            <SelectContent className="bg-popover border shadow-lg z-[200]">
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="bridal">Bridal</SelectItem>
+              <SelectItem value="barat">Barat</SelectItem>
+              <SelectItem value="walima">Walima</SelectItem>
+              <SelectItem value="formal">Formal</SelectItem>
+              <SelectItem value="party_wear">Party Wear</SelectItem>
+              <SelectItem value="footwear">Footwear</SelectItem>
+              <SelectItem value="accessories">Accessories</SelectItem>
+              <SelectItem value="jewelry">Jewelry</SelectItem>
+              <SelectItem value="bags">Bags</SelectItem>
             </SelectContent>
           </Select>
 
-          <Button onClick={handleSearch} size="lg" className="h-12 px-8">
-            <Search className="mr-2 h-5 w-5" />
+          {/* Search Button */}
+          <Button onClick={handleSearch} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 lg:w-auto w-full">
+            <Search className="mr-2 h-4 w-4" />
             Search
           </Button>
         </div>
