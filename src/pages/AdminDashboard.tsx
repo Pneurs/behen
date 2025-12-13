@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   });
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
   const [pendingProducts, setPendingProducts] = useState<any[]>([]);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [allBookings, setAllBookings] = useState<any[]>([]);
   const [allChats, setAllChats] = useState<any[]>([]);
@@ -204,6 +205,27 @@ export default function AdminDashboard() {
     }));
 
     setPendingProducts(productsWithNames);
+
+    // Fetch ALL products for super admin
+    const { data: allProductsData } = await supabase
+      .from("products")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    const allProductsWithNames = await Promise.all((allProductsData || []).map(async (product) => {
+      const { data: ownerProfile } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("user_id", product.owner_id)
+        .maybeSingle();
+      
+      return {
+        ...product,
+        owner_name: ownerProfile?.name || "Unknown",
+      };
+    }));
+
+    setAllProducts(allProductsWithNames);
 
     // Fetch users with their roles
     const { data: allUsers } = await supabase
@@ -637,8 +659,13 @@ export default function AdminDashboard() {
                 Rentals ({allBookings.length})
               </TabsTrigger>
               <TabsTrigger value="products" className="data-[state=active]:bg-primary">
-                Products ({pendingProducts.length})
+                Pending ({pendingProducts.length})
               </TabsTrigger>
+              {currentRole === "super_admin" && (
+                <TabsTrigger value="all-products" className="data-[state=active]:bg-primary">
+                  All Products ({allProducts.length})
+                </TabsTrigger>
+              )}
               <TabsTrigger value="users" className="data-[state=active]:bg-primary">
                 Users ({users.length})
               </TabsTrigger>
@@ -865,6 +892,97 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* All Products Tab (Super Admin) */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="all-products">
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <Package className="h-5 w-5" />
+                      All Products ({allProducts.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[500px]">
+                      <div className="space-y-3">
+                        {allProducts.map((product) => (
+                          <Card key={product.id} className="bg-slate-700/50 border-slate-600">
+                            <CardContent className="py-4">
+                              <div className="flex items-center gap-4">
+                                {product.ai_cover_image && (
+                                  <img src={product.ai_cover_image} alt={product.title} className="w-20 h-20 object-cover rounded" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold text-white truncate">{product.title}</h3>
+                                    <Badge variant="outline" className={
+                                      product.status === "published" ? "border-green-500/50 text-green-400" :
+                                      product.status === "pending" ? "border-yellow-500/50 text-yellow-400" :
+                                      "border-red-500/50 text-red-400"
+                                    }>
+                                      {product.status}
+                                    </Badge>
+                                    <Badge variant="outline" className="border-slate-600 text-slate-300">
+                                      {product.listing_type}
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
+                                  <div className="flex gap-4 text-sm text-slate-300 mt-1">
+                                    <span>Category: {product.category}</span>
+                                    <span>Size: {product.size}</span>
+                                    <span>Location: {product.city}, {product.area}</span>
+                                  </div>
+                                  <div className="flex gap-4 text-sm text-slate-400 mt-1">
+                                    {product.rental_price_4days && <span>Rent: PKR {product.rental_price_4days}/4 days</span>}
+                                    {product.sale_price && <span>Sale: PKR {product.sale_price}</span>}
+                                    {product.security_deposit && <span>Security: PKR {product.security_deposit}</span>}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => window.open(`/product/${product.id}`, '_blank')}
+                                    className="border-slate-600 text-slate-300"
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-1" />
+                                    View
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    onClick={() => handleEditProduct(product.id)}
+                                    className="border-blue-500/50 text-blue-400"
+                                  >
+                                    <Pencil className="h-4 w-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive" 
+                                    onClick={() => handleDeleteProduct(product.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                        {allProducts.length === 0 && (
+                          <div className="text-center py-12 text-slate-500">
+                            <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No products found</p>
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* Users Tab */}
             <TabsContent value="users">
