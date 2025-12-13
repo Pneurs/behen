@@ -9,6 +9,7 @@ import ReviewsList from "@/components/ReviewsList";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabilityCalendarFlatpickr";
 import RealImagesViewer from "@/components/RealImagesViewer";
+import { useWishlist } from "@/hooks/useWishlist";
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -23,7 +24,9 @@ import {
   Shirt,
   Gem,
   Droplets,
-  Share2
+  Share2,
+  Heart,
+  ShoppingBag
 } from "lucide-react";
 
 const ProductDetail = () => {
@@ -37,6 +40,7 @@ const ProductDetail = () => {
   const [showRealImages, setShowRealImages] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -330,24 +334,49 @@ const ProductDetail = () => {
                 </div>
                 
                 {!isOwner && (
-                  <div className="flex gap-3 mt-6">
-                    <Button 
-                      size="lg" 
-                      onClick={handleContactSeller}
-                      className="flex-1"
-                    >
-                      <MessageCircle className="mr-2 h-5 w-5" />
-                      Contact Seller
-                    </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      onClick={handleWhatsAppShare}
-                      className="bg-[#25D366] hover:bg-[#25D366]/90 text-white border-0"
-                    >
-                      <Share2 className="mr-2 h-5 w-5" />
-                      Share
-                    </Button>
+                  <div className="space-y-3 mt-6">
+                    {/* Main Action Buttons */}
+                    <div className="flex gap-3">
+                      <Button 
+                        size="lg" 
+                        onClick={handleContactSeller}
+                        className="flex-1"
+                      >
+                        <MessageCircle className="mr-2 h-5 w-5" />
+                        Contact Seller
+                      </Button>
+                      <Button 
+                        size="lg" 
+                        onClick={handleContactSeller}
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                      >
+                        <ShoppingBag className="mr-2 h-5 w-5" />
+                        {product.listing_type === "sale" ? "Buy Now" : "Rent Now"}
+                      </Button>
+                    </div>
+                    
+                    {/* Secondary Action Buttons */}
+                    <div className="flex gap-3">
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        onClick={toggleWishlist}
+                        disabled={wishlistLoading}
+                        className={`flex-1 ${isInWishlist ? "border-primary text-primary" : ""}`}
+                      >
+                        <Heart className={`mr-2 h-5 w-5 ${isInWishlist ? "fill-primary" : ""}`} />
+                        {isInWishlist ? "In Wishlist" : "Add to Wishlist"}
+                      </Button>
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        onClick={handleWhatsAppShare}
+                        className="bg-[#25D366] hover:bg-[#25D366]/90 text-white border-0"
+                      >
+                        <Share2 className="mr-2 h-5 w-5" />
+                        Share
+                      </Button>
+                    </div>
                   </div>
                 )}
                 {isOwner && (
