@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { HeaderSearchPopup } from "./HeaderSearchPopup";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
@@ -152,6 +153,7 @@ export const EnhancedHeader = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-3">
+            <HeaderSearchPopup />
             {user ? (
               <>
                 {userRole === "bari" && (
