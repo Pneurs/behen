@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ReviewsList from "@/components/ReviewsList";
+import ProductCard from "@/components/ProductCard";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabilityCalendarFlatpickr";
 import RealImagesViewer from "@/components/RealImagesViewer";
@@ -40,6 +41,7 @@ const ProductDetail = () => {
   const [showRealImages, setShowRealImages] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
 
   useEffect(() => {
@@ -84,6 +86,18 @@ const ProductDetail = () => {
 
       if (!bookingsError && bookingsData) {
         setBookings(bookingsData);
+      }
+      // Load related products (same category or city)
+      const { data: relatedData } = await supabase
+        .from("products")
+        .select("*")
+        .eq("status", "published")
+        .neq("id", id)
+        .or(`category.eq.${productData.category},city.eq.${productData.city}`)
+        .limit(4);
+
+      if (relatedData) {
+        setRelatedProducts(relatedData);
       }
     } catch (error: any) {
       toast.error("Failed to load product");
@@ -599,6 +613,24 @@ const ProductDetail = () => {
             </div>
           )}
         </div>
+
+        {/* Related Products Section */}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold mb-6" style={{ fontFamily: "'Playfair Display', serif" }}>
+              You May Also Like
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct) => (
+                <ProductCard
+                  key={relatedProduct.id}
+                  product={relatedProduct}
+                  onClick={() => navigate(`/product/${relatedProduct.id}`)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Real Images Viewer Modal */}
