@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,11 +11,37 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit";
-  recipientEmail: string;
-  recipientName: string;
-  data: any;
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "referral_bonus";
+  recipientEmail?: string;
+  recipientName?: string;
+  data?: any;
+  referrer_id?: string;
+  new_user_id?: string;
 }
+
+const sendEmail = async (to: string, subject: string, html: string) => {
+  const emailResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: "Behen.pk <onboarding@resend.dev>",
+      to: [to],
+      subject: subject,
+      html: html,
+    }),
+  });
+
+  if (!emailResponse.ok) {
+    const errorText = await emailResponse.text();
+    console.error("Resend API error:", errorText);
+    throw new Error(`Resend API error: ${errorText}`);
+  }
+
+  return await emailResponse.json();
+};
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -20,14 +49,119 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { type, recipientEmail, recipientName, data }: NotificationRequest = await req.json();
+    const requestData: NotificationRequest = await req.json();
+    const { type } = requestData;
 
-    console.log(`Sending ${type} notification to ${recipientEmail}`);
+    console.log(`Processing ${type} notification`);
 
     if (!RESEND_API_KEY) {
       console.error("RESEND_API_KEY not configured");
       throw new Error("Email service not configured");
     }
+
+    // Handle referral bonus notifications separately
+    if (type === "referral_bonus") {
+      const { referrer_id, new_user_id } = requestData;
+      
+      if (!referrer_id || !new_user_id) {
+        throw new Error("Missing referrer_id or new_user_id");
+      }
+
+      const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+      // Get referrer profile
+      const { data: referrerProfile } = await supabase
+        .from("profiles")
+        .select("name, user_id")
+        .eq("user_id", referrer_id)
+        .single();
+
+      // Get new user profile
+      const { data: newUserProfile } = await supabase
+        .from("profiles")
+        .select("name, user_id")
+        .eq("user_id", new_user_id)
+        .single();
+
+      // Get emails from auth.users
+      const { data: referrerAuth } = await supabase.auth.admin.getUserById(referrer_id);
+      const { data: newUserAuth } = await supabase.auth.admin.getUserById(new_user_id);
+
+      const referrerEmail = referrerAuth?.user?.email;
+      const newUserEmail = newUserAuth?.user?.email;
+      const referrerName = referrerProfile?.name || "Bari Behen";
+      const newUserName = newUserProfile?.name || "Bari Behen";
+
+      // Send email to referrer
+      if (referrerEmail) {
+        const referrerHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #FF69B4 0%, #9b59b6 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #fff; margin: 0;">🎉 You Earned PKR 150!</h1>
+            </div>
+            <p>Hi ${referrerName},</p>
+            <p>Great news! Your referral <strong>${newUserName}</strong> just uploaded their first product on Behen.pk!</p>
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+              <p style="margin: 0; font-size: 24px; color: #22c55e; font-weight: bold;">+PKR 150</p>
+              <p style="margin: 10px 0 0 0; color: #666;">Added to your pending balance</p>
+            </div>
+            <p>Keep referring more behens to earn more money! Share your referral code with friends and family.</p>
+            <p><a href="https://behen.pk/bari-behen-dashboard" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Your Earnings</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        await sendEmail(referrerEmail, "🎉 You Earned PKR 150 from Referral! - Behen.pk", referrerHtml);
+        console.log("Referrer email sent to:", referrerEmail);
+      }
+
+      // Send email to new user
+      if (newUserEmail) {
+        const newUserHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #FF69B4 0%, #9b59b6 100%); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #fff; margin: 0;">🎉 Congratulations!</h1>
+              <p style="color: #fff; margin: 10px 0 0 0; font-size: 20px;">You Earned PKR 400!</p>
+            </div>
+            <p>Hi ${newUserName},</p>
+            <p>Amazing! You've earned:</p>
+            <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>First Product Bonus:</span>
+                <strong>PKR 250</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>Referral Signup Bonus:</span>
+                <strong>PKR 150</strong>
+              </div>
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 10px 0;">
+              <div style="display: flex; justify-content: space-between; font-size: 18px;">
+                <span><strong>Total:</strong></span>
+                <strong style="color: #22c55e;">PKR 400</strong>
+              </div>
+            </div>
+            <p>🎁 <strong>Earn More!</strong> Refer your friends to Behen.pk and earn PKR 150 for each friend who uploads their first product!</p>
+            <p><a href="https://behen.pk/earn-money" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Learn How to Earn More</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        await sendEmail(newUserEmail, "🎉 You Earned PKR 400! - Behen.pk", newUserHtml);
+        console.log("New user email sent to:", newUserEmail);
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Handle other notification types
+    const { recipientEmail, recipientName, data } = requestData;
+    
+    if (!recipientEmail || !recipientName) {
+      throw new Error("Missing recipientEmail or recipientName");
+    }
+
+    console.log(`Sending ${type} notification to ${recipientEmail}`);
 
     let subject = "";
     let html = "";
@@ -211,27 +345,7 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Unknown notification type: ${type}`);
     }
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-      },
-      body: JSON.stringify({
-        from: "Behen.pk <onboarding@resend.dev>",
-        to: [recipientEmail],
-        subject: subject,
-        html: html,
-      }),
-    });
-
-    if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      console.error("Resend API error:", errorText);
-      throw new Error(`Resend API error: ${errorText}`);
-    }
-
-    const emailData = await emailResponse.json();
+    const emailData = await sendEmail(recipientEmail, subject, html);
     console.log("Email sent successfully:", emailData);
 
     return new Response(JSON.stringify({ success: true, data: emailData }), {

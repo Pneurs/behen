@@ -19,6 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
+import { useEarnings } from "@/hooks/useEarnings";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -38,6 +39,7 @@ const ListDress = () => {
   const editProductId = searchParams.get("edit");
   const [user, setUser] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   
   // Multi-step wizard state
   const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details">("upload");
@@ -462,7 +464,7 @@ const ListDress = () => {
         toast.success("Product updated successfully!");
       } else {
         // Create new product
-        const { error: insertError } = await supabase
+        const { data: insertedProduct, error: insertError } = await supabase
           .from("products")
           .insert({
             ...productData,
@@ -472,9 +474,44 @@ const ListDress = () => {
             ai_generation_attempts: 1,
             image_quality_validated: imageQualityChecked,
             status: "published",
-          });
+          })
+          .select("id")
+          .single();
 
         if (insertError) throw insertError;
+
+        // Check and claim first product bonus
+        if (insertedProduct && !earnings?.first_product_bonus_claimed) {
+          const bonusClaimed = await claimFirstProductBonus(insertedProduct.id);
+          
+          // Check if user was referred and process referral bonus
+          if (bonusClaimed && earnings?.referred_by) {
+            await processReferralBonus(earnings.referred_by, user.id);
+            
+            // Show combined bonus message
+            toast.success(
+              <div className="space-y-1">
+                <p className="font-bold text-lg">🎉 Congratulations!</p>
+                <p>You earned <span className="font-bold text-primary">PKR 250 + 150 = 400</span>!</p>
+                <p className="text-sm text-muted-foreground">Refer more friends to earn more money!</p>
+              </div>,
+              { duration: 8000 }
+            );
+            
+            // Send email notifications to both users
+            try {
+              await supabase.functions.invoke("send-notifications", {
+                body: {
+                  type: "referral_bonus",
+                  referrer_id: earnings.referred_by,
+                  new_user_id: user.id,
+                },
+              });
+            } catch (emailError) {
+              console.error("Error sending referral emails:", emailError);
+            }
+          }
+        }
 
         toast.success("Product listed successfully!");
       }
