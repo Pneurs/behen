@@ -318,28 +318,104 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Get renter email
-    const { data: renterProfile } = await supabase
-      .from("profiles")
-      .select("name")
-      .eq("user_id", booking.renter_id)
-      .maybeSingle();
+    // Get both profiles with phone numbers
+    const [renterProfileRes, ownerProfileRes] = await Promise.all([
+      supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
+      supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
+    ]);
 
-    // Send email notification  
-    await sendEmailNotification({
-      type: "payment_verification",
-      recipientEmail: `user-${booking.renter_id}@behen.pk`, // Placeholder - in real app, get from auth
-      recipientName: renterProfile?.name || "Choti Behen",
-      data: {
-        productTitle: booking.products?.title,
-        verified: approved,
-      },
-    });
+    const renterProfile = renterProfileRes.data;
+    const ownerProfile = ownerProfileRes.data;
+
+    if (approved) {
+      // Find or create chat conversation for this booking
+      let conversationId: string;
+      
+      const { data: existingConv } = await supabase
+        .from("chat_conversations")
+        .select("id")
+        .eq("product_id", booking.product_id)
+        .eq("owner_id", booking.owner_id)
+        .eq("renter_id", booking.renter_id)
+        .single();
+
+      if (existingConv) {
+        conversationId = existingConv.id;
+      } else {
+        // Create new conversation
+        const { data: newConv, error: convError } = await supabase
+          .from("chat_conversations")
+          .insert({
+            product_id: booking.product_id,
+            owner_id: booking.owner_id,
+            renter_id: booking.renter_id,
+            is_booking_confirmed: true,
+            booking_id: booking.id,
+          })
+          .select()
+          .single();
+
+        if (convError) {
+          console.error("Error creating conversation:", convError);
+        } else {
+          conversationId = newConv.id;
+        }
+      }
+
+      // Update conversation to mark booking confirmed
+      if (conversationId!) {
+        await supabase
+          .from("chat_conversations")
+          .update({ is_booking_confirmed: true, booking_id: booking.id })
+          .eq("id", conversationId);
+
+        // Send system message with contact details to both users
+        const contactMessage = `✅ **Payment Verified by Behen.pk!**\n\n👩 **Bari Behen Details:**\nName: ${ownerProfile?.name || 'N/A'}\nPhone: ${ownerProfile?.phone || 'Contact via app'}\n\n👧 **Choti Behen Details:**\nName: ${renterProfile?.name || 'N/A'}\nPhone: ${renterProfile?.phone || 'Contact via app'}\n\n📦 You both can now decide where and how to pick/deliver the dress.\n\n🔗 Check your chat on behen.pk for updates!`;
+
+        await supabase.from("chat_messages").insert({
+          conversation_id: conversationId,
+          sender_id: booking.owner_id,
+          message: contactMessage,
+        });
+      }
+
+      // Send email to both users
+      await sendEmailNotification({
+        type: "payment_verification",
+        recipientEmail: `renter-${booking.renter_id}@behen.pk`,
+        recipientName: renterProfile?.name || "Choti Behen",
+        data: {
+          productTitle: booking.products?.title,
+          verified: true,
+        },
+      });
+
+      await sendEmailNotification({
+        type: "payment_verification",
+        recipientEmail: `owner-${booking.owner_id}@behen.pk`,
+        recipientName: ownerProfile?.name || "Bari Behen",
+        data: {
+          productTitle: booking.products?.title,
+          verified: true,
+        },
+      });
+    } else {
+      // Send rejection email to renter
+      await sendEmailNotification({
+        type: "payment_verification",
+        recipientEmail: `renter-${booking.renter_id}@behen.pk`,
+        recipientName: renterProfile?.name || "Choti Behen",
+        data: {
+          productTitle: booking.products?.title,
+          verified: false,
+        },
+      });
+    }
 
     toast({
       title: approved ? "Payment Verified" : "Payment Rejected",
       description: approved 
-        ? "Contact details unlocked. Video verification flow is now active."
+        ? "Contact details unlocked and shared in chat. Both users notified."
         : "Choti Behen will be notified to upload correct payment proof.",
     });
 
