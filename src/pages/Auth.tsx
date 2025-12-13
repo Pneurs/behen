@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Gift } from "lucide-react";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { z } from "zod";
 
@@ -631,24 +631,29 @@ const Auth = () => {
                   </div>
                 </div>
                 {role === "bari" && (
-                  <div className="space-y-2">
-                    <Label htmlFor="referral-code">Referral Code (Optional)</Label>
+                  <div className="space-y-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-5 w-5 text-purple-600" />
+                      <Label htmlFor="referral-code" className="text-purple-700 font-medium">
+                        Do you have a referral code?
+                      </Label>
+                    </div>
                     <Input
                       id="referral-code"
                       type="text"
-                      placeholder="Enter referral code"
+                      placeholder="Enter referral code (e.g., sarah-ABC1)"
                       value={referralCode}
                       onChange={(e) => {
                         setReferralCode(e.target.value);
                         setReferralError("");
                       }}
-                      className={referralError ? "border-destructive" : ""}
+                      className={`bg-white ${referralError ? "border-destructive" : "border-purple-300"}`}
                     />
                     {referralError && (
                       <p className="text-sm text-destructive">{referralError}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Have a referral code? Enter it to get PKR 150 bonus on your first product!
+                    <p className="text-xs text-purple-600 font-medium">
+                      🎁 Enter a referral code to get PKR 150 bonus when you upload your first product!
                     </p>
                   </div>
                 )}

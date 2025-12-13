@@ -1,11 +1,57 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Gift, Users, Upload, ArrowRight, Wallet, CheckCircle2 } from "lucide-react";
+import { Gift, Users, Upload, ArrowRight, Wallet, CheckCircle2, Copy, Share2 } from "lucide-react";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
+import { supabase } from "@/integrations/supabase/client";
+import { useEarnings } from "@/hooks/useEarnings";
+import { toast } from "sonner";
 
 const EarnMoney = () => {
   const navigate = useNavigate();
+  const [isBariBehenLoggedIn, setIsBariBehenLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
+  const { earnings, generateReferralCode, loading } = useEarnings();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, name")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (profile?.role === "bari") {
+          setIsBariBehenLoggedIn(true);
+          setUserName(profile.name || "");
+        }
+      }
+    };
+    checkUser();
+  }, []);
+
+  const handleCopyReferralCode = () => {
+    if (earnings?.referral_code) {
+      navigator.clipboard.writeText(earnings.referral_code);
+      toast.success("Referral code copied!");
+    }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (earnings?.referral_code) {
+      const message = `🎉 Join Behen.pk and earn PKR 150! Use my referral code: ${earnings.referral_code}\n\nSign up here: ${window.location.origin}/auth?role=bari`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
+    }
+  };
+
+  const handleGenerateCode = async () => {
+    if (userName) {
+      await generateReferralCode(userName);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,16 +204,58 @@ const EarnMoney = () => {
                 </div>
               </div>
 
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => navigate("/auth?role=bari")}
-                className="gap-2 border-purple-300 text-purple-600 hover:bg-purple-50"
-              >
-                <Users className="h-5 w-5" />
-                Sign Up as Bari Behen
-                <ArrowRight className="h-5 w-5" />
-              </Button>
+              {/* Conditional: Show share section for logged-in Bari Behens with referral code */}
+              {isBariBehenLoggedIn && earnings?.referral_code ? (
+                <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold mb-3 text-purple-700">Share Your Referral Code with Your Behens!</h3>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="flex-1 bg-white border-2 border-purple-300 rounded-lg px-4 py-3 font-mono text-lg font-bold text-purple-600">
+                        {earnings.referral_code}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyReferralCode}
+                        className="border-purple-300 hover:bg-purple-100"
+                      >
+                        <Copy className="h-5 w-5 text-purple-600" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        onClick={handleShareWhatsApp}
+                        className="flex-1 bg-green-600 hover:bg-green-700 gap-2"
+                      >
+                        <Share2 className="h-5 w-5" />
+                        Share on WhatsApp
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : isBariBehenLoggedIn && !earnings?.referral_code ? (
+                <Button 
+                  size="lg" 
+                  onClick={handleGenerateCode}
+                  disabled={loading}
+                  className="gap-2 bg-purple-600 hover:bg-purple-700"
+                >
+                  <Users className="h-5 w-5" />
+                  Generate Your Referral Code
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              ) : (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  onClick={() => navigate("/auth?role=bari")}
+                  className="gap-2 border-purple-300 text-purple-600 hover:bg-purple-50"
+                >
+                  <Users className="h-5 w-5" />
+                  Sign Up as Bari Behen
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              )}
             </div>
           </div>
         </div>
