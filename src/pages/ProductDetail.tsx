@@ -351,23 +351,54 @@ const ProductDetail = () => {
                   <div className="space-y-3 mt-6">
                     {/* Main Action Buttons */}
                     <div className="flex gap-3">
-                      <Button 
-                        size="lg" 
-                        onClick={handleContactSeller}
-                        className="flex-1"
-                      >
-                        <MessageCircle className="mr-2 h-5 w-5" />
-                        Contact Seller
-                      </Button>
-                      <Button 
-                        size="lg" 
-                        onClick={handleContactSeller}
-                        className="flex-1 bg-primary hover:bg-primary/90"
-                      >
-                        <ShoppingBag className="mr-2 h-5 w-5" />
-                        {product.listing_type === "sale" ? "Buy Now" : "Rent Now"}
-                      </Button>
+                      {(product.listing_type === "sale" || product.listing_type === "both") && (
+                        <Button 
+                          size="lg" 
+                          onClick={() => {
+                            if (!currentUser) {
+                              localStorage.setItem("auth_redirect", `/cart/${product.id}?type=buy`);
+                              toast.info("Please sign in to continue");
+                              navigate("/auth");
+                              return;
+                            }
+                            navigate(`/cart/${product.id}?type=buy`);
+                          }}
+                          className="flex-1 bg-primary hover:bg-primary/90"
+                        >
+                          <ShoppingBag className="mr-2 h-5 w-5" />
+                          Buy Now
+                        </Button>
+                      )}
+                      {(product.listing_type === "rent" || product.listing_type === "both") && (
+                        <Button 
+                          size="lg" 
+                          onClick={() => {
+                            if (!currentUser) {
+                              localStorage.setItem("auth_redirect", `/cart/${product.id}?type=rent`);
+                              toast.info("Please sign in to continue");
+                              navigate("/auth");
+                              return;
+                            }
+                            navigate(`/cart/${product.id}?type=rent`);
+                          }}
+                          className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
+                        >
+                          <CalendarIcon className="mr-2 h-5 w-5" />
+                          Rent Now
+                        </Button>
+                      )}
                     </div>
+                    
+                    {/* Contact Seller */}
+                    <Button 
+                      size="lg" 
+                      variant="outline"
+                      onClick={handleContactSeller}
+                      className="w-full"
+                    >
+                      <MessageCircle className="mr-2 h-5 w-5" />
+                      Chat to Negotiate
+                    </Button>
                     
                     {/* Secondary Action Buttons */}
                     <div className="flex gap-3">
