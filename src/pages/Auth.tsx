@@ -527,15 +527,15 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "signup")} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-12 sm:h-10">
+              <TabsTrigger value="login" className="text-base sm:text-sm h-10 sm:h-8">Login</TabsTrigger>
+              <TabsTrigger value="signup" className="text-base sm:text-sm h-10 sm:h-8">Sign Up</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form onSubmit={handleSignIn} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-base sm:text-sm">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -546,7 +546,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-base sm:text-sm">Password</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -568,7 +568,7 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-12 sm:h-10 text-base sm:text-sm mt-2" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Sign In
                 </Button>
@@ -585,9 +585,9 @@ const Auth = () => {
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form onSubmit={handleSignUp} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+                  <Label htmlFor="name" className="text-base sm:text-sm">Name</Label>
                   <Input
                     id="name"
                     type="text"
@@ -598,7 +598,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-base sm:text-sm">Email</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -616,7 +616,7 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone" className="text-base sm:text-sm">Phone Number</Label>
                   <Input
                     id="phone"
                     type="tel"
@@ -628,7 +628,7 @@ const Auth = () => {
                   <p className="text-xs text-muted-foreground">Required for order coordination</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-base sm:text-sm">Password</Label>
                   <div className="relative">
                     <Input
                       id="signup-password"
@@ -651,14 +651,14 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>I want to be a</Label>
+                <div className="space-y-3">
+                  <Label className="text-base sm:text-sm">I want to be a</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <Button
                       type="button"
                       variant={role === "choti" ? "default" : "outline"}
                       onClick={() => setRole("choti")}
-                      className="w-full"
+                      className="w-full h-14 sm:h-12 text-base"
                     >
                       Choti Behen<br/><span className="text-xs font-normal">(Browse products)</span>
                     </Button>
@@ -666,7 +666,7 @@ const Auth = () => {
                       type="button"
                       variant={role === "bari" ? "default" : "outline"}
                       onClick={() => setRole("bari")}
-                      className="w-full"
+                      className="w-full h-14 sm:h-12 text-base"
                     >
                       Bari Behen<br/><span className="text-xs font-normal">(List my products)</span>
                     </Button>
@@ -699,7 +699,7 @@ const Auth = () => {
                     </p>
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full h-12 sm:h-10 text-base sm:text-sm mt-2" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Create Account
                 </Button>
