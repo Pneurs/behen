@@ -240,28 +240,30 @@ export default function AdminDashboard() {
         .select("role")
         .eq("user_id", user.user_id);
       
-      // Get email from auth.users via edge function or direct lookup
-      // For now we'll fetch it separately using admin context
       return {
         ...user,
         roles: userRoles?.map(r => r.role) || [],
-        email: null, // Will be populated by separate call
+        email: null as string | null,
       };
     }));
 
-    // Fetch emails for all users via admin API
+    // Fetch emails for all users via edge function
     try {
-      const { data: authData } = await supabase.auth.admin.listUsers();
-      const emailMap = new Map<string, string | undefined>(
-        authData?.users?.map(u => [u.id, u.email] as [string, string | undefined]) || []
-      );
-      
-      usersWithRolesAndEmails.forEach(user => {
-        user.email = emailMap.get(user.user_id) || null;
+      const { data: session } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('admin-list-users', {
+        headers: {
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
       });
+      
+      if (response.data?.userEmails) {
+        const emailMap = response.data.userEmails as Record<string, string>;
+        usersWithRolesAndEmails.forEach(user => {
+          user.email = emailMap[user.user_id] || null;
+        });
+      }
     } catch (e) {
-      // If admin API fails, try getting current user's own email at least
-      console.log("Could not fetch user emails via admin API");
+      console.log("Could not fetch user emails via edge function:", e);
     }
 
     setUsers(usersWithRolesAndEmails);
