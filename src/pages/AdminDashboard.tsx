@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw
 } from "lucide-react";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
@@ -227,25 +227,44 @@ export default function AdminDashboard() {
 
     setAllProducts(allProductsWithNames);
 
-    // Fetch users with their roles
+    // Fetch users with their roles and emails
     const { data: allUsers } = await supabase
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
 
-    const usersWithRoles = await Promise.all((allUsers || []).map(async (user) => {
+    // Fetch auth users to get emails (super admin can see this)
+    const usersWithRolesAndEmails = await Promise.all((allUsers || []).map(async (user) => {
       const { data: userRoles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.user_id);
       
+      // Get email from auth.users via edge function or direct lookup
+      // For now we'll fetch it separately using admin context
       return {
         ...user,
         roles: userRoles?.map(r => r.role) || [],
+        email: null, // Will be populated by separate call
       };
     }));
 
-    setUsers(usersWithRoles);
+    // Fetch emails for all users via admin API
+    try {
+      const { data: authData } = await supabase.auth.admin.listUsers();
+      const emailMap = new Map<string, string | undefined>(
+        authData?.users?.map(u => [u.id, u.email] as [string, string | undefined]) || []
+      );
+      
+      usersWithRolesAndEmails.forEach(user => {
+        user.email = emailMap.get(user.user_id) || null;
+      });
+    } catch (e) {
+      // If admin API fails, try getting current user's own email at least
+      console.log("Could not fetch user emails via admin API");
+    }
+
+    setUsers(usersWithRolesAndEmails);
 
     // Fetch all chats with messages
     const { data: conversations } = await supabase
@@ -482,6 +501,53 @@ export default function AdminDashboard() {
     }
 
     toast({ title: "Role Removed", description: `Successfully removed ${role} role` });
+    fetchData();
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete user "${userName}"? This will delete ALL their data including products, bookings, chats, and reviews. This action cannot be undone.`)) return;
+
+    if (currentRole !== "super_admin") {
+      toast({ title: "Access Denied", description: "Only super admins can delete users", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('admin-delete-user', {
+        body: { userId },
+      });
+
+      if (response.error) {
+        toast({ title: "Error", description: response.error.message || "Failed to delete user", variant: "destructive" });
+        return;
+      }
+
+      toast({ title: "User Deleted", description: `User "${userName}" and all their data has been deleted` });
+      fetchData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete user", variant: "destructive" });
+    }
+  };
+
+  const handleChangeUserRole = async (userId: string, newRole: string) => {
+    if (currentRole !== "super_admin") {
+      toast({ title: "Access Denied", description: "Only super admins can change user roles", variant: "destructive" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: newRole })
+      .eq("user_id", userId);
+
+    if (error) {
+      toast({ title: "Error", description: "Failed to change user role", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Role Changed", description: `User role changed to ${newRole === 'bari' ? 'Bari Behen' : 'Choti Behen'}` });
     fetchData();
   };
 
@@ -1064,36 +1130,81 @@ export default function AdminDashboard() {
             <TabsContent value="users">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="text-white">All Users</CardTitle>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    All Users
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[500px]">
-                    <div className="space-y-2">
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-3">
                       {users.map((user) => (
                         <Card key={user.id} className="bg-slate-700/50 border-slate-600">
                           <CardContent className="py-4">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-white">{user.name}</p>
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium text-white">{user.name}</p>
+                                  <Badge variant="outline" className={`border-slate-600 ${user.role === 'bari' ? 'text-pink-400 border-pink-400/50' : 'text-blue-400 border-blue-400/50'}`}>
+                                    {user.role === 'bari' ? 'Bari Behen' : 'Choti Behen'}
+                                  </Badge>
+                                  {user.roles?.map((role: string) => (
+                                    <Badge key={role} className="bg-primary/20 text-primary border-primary/30">{role.replace("_", " ")}</Badge>
+                                  ))}
+                                </div>
+                                {user.email && (
+                                  <p className="text-sm text-slate-300 flex items-center gap-1 mt-1">
+                                    <Mail className="h-3 w-3" />
+                                    {user.email}
+                                  </p>
+                                )}
                                 <p className="text-sm text-slate-400">{user.phone || "No phone"} • {user.city || "No city"}</p>
                                 <p className="text-xs text-slate-500">Joined: {format(new Date(user.created_at), "MMM dd, yyyy")}</p>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="border-slate-600 text-slate-300">{user.role}</Badge>
-                                {user.roles?.map((role: string) => (
-                                  <Badge key={role} className="bg-primary/20 text-primary border-primary/30">{role.replace("_", " ")}</Badge>
-                                ))}
-                                {currentRole === "super_admin" && (
+                              
+                              {currentRole === "super_admin" && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {/* Role Switch */}
+                                  <Select 
+                                    value={user.role} 
+                                    onValueChange={(value) => handleChangeUserRole(user.user_id, value)}
+                                  >
+                                    <SelectTrigger className="w-32 bg-slate-600 border-slate-500 text-white text-xs">
+                                      <RefreshCw className="h-3 w-3 mr-1" />
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-slate-700 border-slate-600">
+                                      <SelectItem value="bari" className="text-white">Bari Behen</SelectItem>
+                                      <SelectItem value="choti" className="text-white">Choti Behen</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+
                                   <Button size="sm" variant="ghost" onClick={() => handleViewUserProfile(user)} className="text-slate-300">
                                     <Eye className="h-4 w-4 mr-1" />
-                                    View Profile
+                                    View
                                   </Button>
-                                )}
-                              </div>
+                                  
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive" 
+                                    onClick={() => handleDeleteUser(user.user_id, user.name)}
+                                    className="bg-red-500/20 text-red-400 hover:bg-red-500/40"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
                       ))}
+                      {users.length === 0 && (
+                        <div className="text-center py-12 text-slate-500">
+                          <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                          <p>No users found</p>
+                        </div>
+                      )}
                     </div>
                   </ScrollArea>
                 </CardContent>
@@ -1292,7 +1403,20 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-white">User Profile: {selectedUser?.name}</DialogTitle>
             <DialogDescription className="text-slate-400">
-              {selectedUser?.phone} • {selectedUser?.city}, {selectedUser?.area}
+              <div className="space-y-1 mt-1">
+                {selectedUser?.email && (
+                  <p className="flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {selectedUser.email}
+                  </p>
+                )}
+                <p>{selectedUser?.phone || "No phone"} • {selectedUser?.city || "N/A"}, {selectedUser?.area || "N/A"}</p>
+                <p className="flex items-center gap-2">
+                  Role: <Badge variant="outline" className={`${selectedUser?.role === 'bari' ? 'text-pink-400 border-pink-400/50' : 'text-blue-400 border-blue-400/50'}`}>
+                    {selectedUser?.role === 'bari' ? 'Bari Behen' : 'Choti Behen'}
+                  </Badge>
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           
