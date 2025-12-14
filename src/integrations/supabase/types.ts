@@ -651,6 +651,7 @@ export type Database = {
         Args: { product_uuid: string }
         Returns: number
       }
+      get_user_role_by_email: { Args: { user_email: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
