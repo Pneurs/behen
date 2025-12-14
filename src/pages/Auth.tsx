@@ -171,12 +171,27 @@ const Auth = () => {
 
       // Check if user already exists
       if (signUpError) {
-        // If user already registered, show friendly message
+        // If user already registered, show friendly message with account type
         if (signUpError.message?.includes("already registered") || 
             signUpError.message?.includes("already been registered") ||
             signUpError.message?.includes("User already registered")) {
-          setEmailError("You already have an account with this email. Please login instead.");
-          toast.error("You already have an account! Please login instead.", {
+          
+          // Try to get the user's role
+          let accountType = "";
+          try {
+            const { data: roleData } = await supabase.rpc('get_user_role_by_email', { user_email: email });
+            if (roleData === "bari") {
+              accountType = " as a Bari Behen";
+            } else if (roleData === "choti") {
+              accountType = " as a Choti Behen";
+            }
+          } catch (err) {
+            // Ignore error, just show generic message
+          }
+          
+          const errorMessage = `You already have an account${accountType}! Please login instead.`;
+          setEmailError(errorMessage);
+          toast.error(errorMessage, {
             action: {
               label: "Go to Login",
               onClick: () => setMode("login"),
