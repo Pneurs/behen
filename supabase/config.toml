@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.send-otp-email]
 verify_jwt = false
 
+[functions.admin-delete-user]
+verify_jwt = true
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
