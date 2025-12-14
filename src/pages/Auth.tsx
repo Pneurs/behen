@@ -169,20 +169,20 @@ const Auth = () => {
         },
       });
 
-      // Check if user already exists but not confirmed
+      // Check if user already exists
       if (signUpError) {
-        // If user already registered, try to resend OTP
+        // If user already registered, show friendly message
         if (signUpError.message?.includes("already registered") || 
-            signUpError.message?.includes("already been registered")) {
-          // Send custom OTP email
-          try {
-            await sendCustomOtpEmail(email);
-            setPendingEmail(email);
-            setMode("verify-otp");
-            toast.success("Verification code resent! Please check your email.");
-          } catch (err) {
-            toast.error("This email is already registered. Please try logging in.");
-          }
+            signUpError.message?.includes("already been registered") ||
+            signUpError.message?.includes("User already registered")) {
+          setEmailError("You already have an account with this email. Please login instead.");
+          toast.error("You already have an account! Please login instead.", {
+            action: {
+              label: "Go to Login",
+              onClick: () => setMode("login"),
+            },
+          });
+          setLoading(false);
           return;
         }
         throw signUpError;
