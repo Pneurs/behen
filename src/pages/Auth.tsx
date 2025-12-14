@@ -36,6 +36,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
+  const [pendingPassword, setPendingPassword] = useState("");
 
   useEffect(() => {
     // Check for password reset or email verification in URL hash
@@ -220,6 +221,7 @@ const Auth = () => {
       // Send custom OTP email for new user
       await sendCustomOtpEmail(email);
       setPendingEmail(email);
+      setPendingPassword(password); // Store password for OTP verification
       setMode("verify-otp");
       toast.success("Signup successful! Please verify your email to continue.");
     } catch (error: any) {
@@ -247,9 +249,16 @@ const Auth = () => {
       // Check for master OTP first (for support team use)
       if (otp.toUpperCase() === MASTER_OTP) {
         // Master OTP used - try to sign in directly
+        const passwordToUse = pendingPassword || password;
+        if (!passwordToUse) {
+          toast.error("Master OTP accepted but password is missing. Please sign up again.");
+          setMode("signup");
+          return;
+        }
+        
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: pendingEmail,
-          password: password,
+          password: passwordToUse,
         });
 
         if (signInError) {
@@ -292,13 +301,25 @@ const Auth = () => {
 
       // If Supabase verification fails, try signing in directly
       if (error) {
+        const passwordToUse = pendingPassword || password;
+        if (!passwordToUse) {
+          toast.error("Verification session expired. Please sign up again.");
+          setMode("signup");
+          return;
+        }
+        
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email: pendingEmail,
-          password: password,
+          password: passwordToUse,
         });
 
         if (signInError) {
-          toast.error("Verification failed. Please try signing up again.");
+          // Check if email is not confirmed
+          if (signInError.message?.includes("Email not confirmed")) {
+            toast.error("Email not yet confirmed. Please check your inbox for the verification link.");
+          } else {
+            toast.error("Verification failed. Please try signing up again.");
+          }
           return;
         }
       }
