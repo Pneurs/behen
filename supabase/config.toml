@@ -1,5 +1,8 @@
 project_id = "xtoeehqcdfhxpdiasijc"
 
+[functions.admin-list-users]
+verify_jwt = false
+
 [functions.generate-cover-image]
 verify_jwt = true
 
