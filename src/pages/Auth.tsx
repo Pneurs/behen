@@ -12,7 +12,6 @@ import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { z } from "zod";
 
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
-const otpSchema = z.string().length(6, "OTP must be 6 digits");
 const emailSchema = z.string().email("Please enter a valid email address");
 
 const Auth = () => {
@@ -24,21 +23,29 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [referralError, setReferralError] = useState("");
   const [role, setRole] = useState<"bari" | "choti">(
     (searchParams.get("role") as "bari" | "choti") || "choti"
   );
-  const [mode, setMode] = useState<"login" | "signup" | "reset" | "verify-otp">(
-    (searchParams.get("mode") as "login" | "signup" | "reset" | "verify-otp") || "login"
+  const [mode, setMode] = useState<"login" | "signup" | "reset" | "check-email">(
+    (searchParams.get("mode") as "login" | "signup" | "reset" | "check-email") || "login"
   );
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const [pendingPassword, setPendingPassword] = useState("");
 
   useEffect(() => {
+    // Check for email verification token in URL
+    const urlToken = searchParams.get("token");
+    const urlEmail = searchParams.get("email");
+    const urlType = searchParams.get("type");
+    
+    if (urlToken && urlEmail && urlType === "signup") {
+      handleVerifyFromLink(urlToken, urlEmail);
+      return;
+    }
+    
     // Check for password reset or email verification in URL hash
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get("type");
@@ -63,7 +70,59 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, searchParams]);
+  
+  const handleVerifyFromLink = async (token: string, email: string) => {
+    setLoading(true);
+    try {
+      // Check stored token
+      const storedData = localStorage.getItem("pending_verification");
+      if (!storedData) {
+        toast.error("Verification session expired. Please sign up again.");
+        setMode("signup");
+        setLoading(false);
+        return;
+      }
+      
+      const { token: storedToken, email: storedEmail, password, expiry } = JSON.parse(storedData);
+      
+      if (Date.now() > expiry) {
+        localStorage.removeItem("pending_verification");
+        toast.error("Verification link expired. Please sign up again.");
+        setMode("signup");
+        setLoading(false);
+        return;
+      }
+      
+      if (storedEmail !== email || storedToken !== token) {
+        toast.error("Invalid verification link");
+        setMode("signup");
+        setLoading(false);
+        return;
+      }
+      
+      // Token is valid - sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: storedEmail,
+        password,
+      });
+      
+      if (signInError) {
+        toast.error("Verification failed. Please try signing up again.");
+        setMode("signup");
+        setLoading(false);
+        return;
+      }
+      
+      localStorage.removeItem("pending_verification");
+      toast.success("Email verified! Welcome to Behen.pk!");
+    } catch (error: any) {
+      toast.error("Verification failed. Please try again.");
+      setMode("signup");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePostLoginRedirect = () => {
     const redirectTo = localStorage.getItem("auth_redirect");
@@ -83,30 +142,36 @@ const Auth = () => {
 
   const [emailError, setEmailError] = useState("");
 
-  // Helper function to send OTP via custom edge function
-  const sendCustomOtpEmail = async (emailAddress: string) => {
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  // Helper function to send verification email via custom edge function
+  const sendVerificationEmail = async (emailAddress: string, password: string) => {
+    // Generate a secure token
+    const token = crypto.randomUUID();
     
-    // Store OTP in localStorage with expiry (for verification)
-    const otpData = {
-      otp,
+    // Store token in localStorage for verification
+    const tokenData = {
+      token,
       email: emailAddress,
+      password,
       expiry: Date.now() + 3600000, // 1 hour expiry
     };
-    localStorage.setItem("pending_otp", JSON.stringify(otpData));
+    localStorage.setItem("pending_verification", JSON.stringify(tokenData));
     
-    // Send OTP via custom edge function
+    // Send verification email via custom edge function
     const { error } = await supabase.functions.invoke("send-otp-email", {
-      body: { email: emailAddress, otp },
+      body: { 
+        email: emailAddress, 
+        token,
+        redirectUrl: `${window.location.origin}/auth`,
+        type: "signup"
+      },
     });
     
     if (error) {
-      console.error("Error sending OTP email:", error);
+      console.error("Error sending verification email:", error);
       throw new Error("Failed to send verification email");
     }
     
-    return otp;
+    return token;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -206,24 +271,23 @@ const Auth = () => {
 
       // Check if user exists but email not confirmed (identities array is empty)
       if (data?.user?.identities?.length === 0) {
-        // Send custom OTP email for existing unverified user
+        // Send verification email for existing unverified user
         try {
-          await sendCustomOtpEmail(email);
+          await sendVerificationEmail(email, password);
           setPendingEmail(email);
-          setMode("verify-otp");
-          toast.success("Verification code resent! Please check your email.");
+          setMode("check-email");
+          toast.success("Verification email resent! Please check your email.");
         } catch (err) {
-          toast.error("Failed to resend verification code. Please try again.");
+          toast.error("Failed to resend verification email. Please try again.");
         }
         return;
       }
 
-      // Send custom OTP email for new user
-      await sendCustomOtpEmail(email);
+      // Send verification email for new user
+      await sendVerificationEmail(email, password);
       setPendingEmail(email);
-      setPendingPassword(password); // Store password for OTP verification
-      setMode("verify-otp");
-      toast.success("Signup successful! Please verify your email to continue.");
+      setMode("check-email");
+      toast.success("Signup successful! Please check your email for the verification link.");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -231,103 +295,20 @@ const Auth = () => {
     }
   };
 
-  // Master OTP for support team - secure fixed code
-  const MASTER_OTP = "BEHEN786";
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const otpValidation = otpSchema.safeParse(otp);
-    // Allow master OTP to bypass length validation
-    if (!otpValidation.success && otp.toUpperCase() !== MASTER_OTP) {
-      toast.error(otpValidation.error.errors[0].message);
-      return;
-    }
-
+  const handleResendEmail = async () => {
     setLoading(true);
     try {
-      // Check for master OTP first (for support team use)
-      if (otp.toUpperCase() === MASTER_OTP) {
-        // Master OTP used - try to sign in directly
-        const passwordToUse = pendingPassword || password;
-        if (!passwordToUse) {
-          toast.error("Master OTP accepted but password is missing. Please sign up again.");
-          setMode("signup");
-          return;
-        }
-        
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: pendingEmail,
-          password: passwordToUse,
-        });
-
-        if (signInError) {
-          toast.error("Master OTP accepted but login failed. Please check your password.");
-          return;
-        }
-
-        localStorage.removeItem("pending_otp");
-        toast.success("Verified via support! Welcome to Behen.pk!");
-        return;
-      }
-
-      // Regular OTP verification
-      const storedOtpData = localStorage.getItem("pending_otp");
-      if (!storedOtpData) {
-        toast.error("Verification session expired. Please sign up again.");
+      const storedData = localStorage.getItem("pending_verification");
+      if (storedData) {
+        const { password } = JSON.parse(storedData);
+        await sendVerificationEmail(pendingEmail, password);
+        toast.success("Verification email resent!");
+      } else {
+        toast.error("Please sign up again.");
         setMode("signup");
-        return;
       }
-
-      const { otp: storedOtp, email: storedEmail, expiry } = JSON.parse(storedOtpData);
-      
-      if (Date.now() > expiry) {
-        localStorage.removeItem("pending_otp");
-        toast.error("Verification code expired. Please request a new one.");
-        return;
-      }
-
-      if (storedEmail !== pendingEmail || storedOtp !== otp) {
-        toast.error("Invalid verification code");
-        return;
-      }
-
-      // OTP is valid, now verify with Supabase using the same token
-      const { error } = await supabase.auth.verifyOtp({
-        email: pendingEmail,
-        token: storedOtp,
-        type: "signup",
-      });
-
-      // If Supabase verification fails, try signing in directly
-      if (error) {
-        const passwordToUse = pendingPassword || password;
-        if (!passwordToUse) {
-          toast.error("Verification session expired. Please sign up again.");
-          setMode("signup");
-          return;
-        }
-        
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: pendingEmail,
-          password: passwordToUse,
-        });
-
-        if (signInError) {
-          // Check if email is not confirmed
-          if (signInError.message?.includes("Email not confirmed")) {
-            toast.error("Email not yet confirmed. Please check your inbox for the verification link.");
-          } else {
-            toast.error("Verification failed. Please try signing up again.");
-          }
-          return;
-        }
-      }
-
-      localStorage.removeItem("pending_otp");
-      toast.success("Email verified! Welcome to Behen.pk!");
     } catch (error: any) {
-      toast.error(error.message || "Invalid verification code");
+      toast.error(error.message || "Failed to resend email");
     } finally {
       setLoading(false);
     }
@@ -406,17 +387,6 @@ const Auth = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    setLoading(true);
-    try {
-      await sendCustomOtpEmail(pendingEmail);
-      toast.success("Verification code resent!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to resend code");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Password Reset Mode
   if (mode === "reset") {
@@ -483,64 +453,54 @@ const Auth = () => {
     );
   }
 
-  // OTP Verification Mode
-  if (mode === "verify-otp") {
+  // Check Email Mode (after signup)
+  if (mode === "check-email") {
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center p-4">
           <Card className="w-full max-w-md shadow-xl">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Verify Email
+              <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <CardTitle className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Check Your Email
               </CardTitle>
-              <CardDescription>
-                Enter the 6-digit code sent to {pendingEmail}
+              <CardDescription className="mt-2">
+                We've sent a verification link to<br/>
+                <span className="font-medium text-foreground">{pendingEmail}</span>
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleVerifyOtp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Verification Code</Label>
-                  <Input
-                    id="otp"
-                    type="text"
-                    placeholder="123456 or support code"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.toUpperCase().slice(0, 10))}
-                    required
-                    maxLength={10}
-                    className="text-center text-2xl tracking-widest"
-                  />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Can't access email? Contact support: 0332-8133263
-                  </p>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">
+                Click the link in the email to verify your account and start using Behen.pk.
+              </p>
+              <div className="text-center space-y-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleResendEmail}
+                  disabled={loading}
+                >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Verify Email
+                  Resend Email
                 </Button>
-                <div className="text-center space-y-2">
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-sm text-muted-foreground"
-                    onClick={handleResendOtp}
-                    disabled={loading}
-                  >
-                    Didn't receive code? Resend
-                  </Button>
-                  <br />
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="text-sm text-muted-foreground"
-                    onClick={() => setMode("login")}
-                  >
-                    ← Back to login
-                  </Button>
-                </div>
-              </form>
+                <p className="text-xs text-muted-foreground">
+                  Can't access email? Contact support: 0332-8133263
+                </p>
+                <Button 
+                  type="button" 
+                  variant="link" 
+                  className="text-sm text-muted-foreground"
+                  onClick={() => setMode("login")}
+                >
+                  ← Back to login
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
