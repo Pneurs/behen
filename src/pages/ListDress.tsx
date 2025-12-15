@@ -296,7 +296,31 @@ const ListDress = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const status = (error as any)?.context?.status as number | undefined;
+
+        if (status === 403) {
+          toast.error(
+            "OpenAI hasn’t enabled gpt-image-1 for this account yet. Please complete OpenAI organization verification and wait ~15 minutes, then try again."
+          );
+          setCurrentStep("upload");
+          return;
+        }
+
+        if (status === 429) {
+          toast.error("Rate limit exceeded. Please try again in a moment.");
+          setCurrentStep("upload");
+          return;
+        }
+
+        if (status === 402) {
+          toast.error("OpenAI credits exhausted. Please check your OpenAI billing.");
+          setCurrentStep("upload");
+          return;
+        }
+
+        throw error;
+      }
 
       if (data?.code === "RATE_LIMIT") {
         toast.error("Rate limit exceeded. Please try again in a moment.");
@@ -305,7 +329,7 @@ const ListDress = () => {
       }
 
       if (data?.code === "NO_CREDITS") {
-        toast.error("AI credits exhausted. Please contact support.");
+        toast.error("OpenAI credits exhausted. Please check your OpenAI billing.");
         setCurrentStep("upload");
         return;
       }
