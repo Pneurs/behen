@@ -1,3 +1,4 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -20,8 +21,8 @@ serve(async (req) => {
   try {
     const { imageUrl, product_type } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
     if (!imageUrl || typeof imageUrl !== "string") {
       return json(400, {
@@ -30,78 +31,76 @@ serve(async (req) => {
       });
     }
 
-    const productTypeLabel = product_type === "dress" ? "lehnga" : (product_type || "dress");
+    const productTypeLabel = product_type === "dress" ? "lehnga/dress" : (product_type || "dress");
 
-    // Prompt for Lovable AI image generation
-    const prompt = `Transform this photo into a clean studio product photo. Replace the human model/person with a faceless standing mannequin in a neutral straight pose. The ${productTypeLabel} must remain EXACTLY the same: identical colors, embroidery, patterns, fabric texture, cut, and all details. Do NOT change the dress design. Background must be pure white with studio lighting.`;
+    // Highly specific prompt for preserving exact dress details
+    const prompt = [
+      `IMPORTANT: Keep the EXACT same ${productTypeLabel} with ALL its details - same colors, embroidery patterns, fabric texture, beadwork, sequins, and design.`,
+      `Replace ONLY the human model/person with a simple faceless white mannequin in a standing pose.`,
+      `The mannequin should be plain white/off-white, standing straight, arms slightly away from body.`,
+      `Background: clean pure white studio background with soft lighting.`,
+      `DO NOT alter, simplify, or change ANY part of the clothing - every embroidery stitch, pattern, and color must remain identical.`,
+      `The output should look like a professional product photo with the exact same outfit on a mannequin.`,
+    ].join(" ");
 
-    console.log("[generate-cover-image] Using Lovable AI (google/gemini-2.5-flash-image-preview)");
+    console.log("[generate-cover-image] Using OpenAI gpt-image-1");
     console.log("[generate-cover-image] imageUrl:", imageUrl);
 
-    // Call Lovable AI Gateway for image editing
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Download input image
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    }
+    const imageBlob = await imageResponse.blob();
+    console.log("[generate-cover-image] Input image size:", imageBlob.size);
+
+    // OpenAI image edit (gpt-image-1)
+    const formData = new FormData();
+    formData.append("model", "gpt-image-1");
+    formData.append("image", imageBlob, "input.png");
+    formData.append("prompt", prompt);
+    formData.append("n", "1");
+    formData.append("size", "1024x1024");
+    formData.append("quality", "high");
+
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: prompt,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: imageUrl,
-                },
-              },
-            ],
-          },
-        ],
-        modalities: ["image", "text"],
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[generate-cover-image] Lovable AI error:", response.status, errorText);
+      console.error("[generate-cover-image] OpenAI error:", response.status, errorText);
 
       if (response.status === 429) {
         return json(429, { error: "Rate limit exceeded. Please try again in a moment.", code: "RATE_LIMIT" });
       }
       if (response.status === 402) {
-        return json(402, { error: "AI credits exhausted. Please add credits to your Lovable workspace.", code: "NO_CREDITS" });
+        return json(402, { error: "Payment required. Please check your OpenAI credits.", code: "NO_CREDITS" });
+      }
+      if (response.status === 403) {
+        return json(403, {
+          error: "OpenAI rejected the request (403). Please verify your OpenAI organization at platform.openai.com and wait ~15 minutes.",
+          code: "FORBIDDEN",
+          raw: errorText,
+        });
       }
 
-      throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log("[generate-cover-image] Lovable AI response received");
+    const generatedImageBase64: string | undefined = data?.data?.[0]?.b64_json;
 
-    // Extract base64 image from response
-    const generatedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!generatedImageUrl || !generatedImageUrl.startsWith("data:image")) {
-      console.error("[generate-cover-image] No image in response:", JSON.stringify(data));
+    if (!generatedImageBase64) {
+      console.error("[generate-cover-image] No b64_json in response:", JSON.stringify(data));
       throw new Error("No image generated in response");
     }
 
-    // Parse base64 data
-    const base64Match = generatedImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!base64Match) {
-      throw new Error("Invalid base64 image format");
-    }
-
-    const imageFormat = base64Match[1]; // png, jpeg, etc.
-    const base64Data = base64Match[2];
-    const imageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
+    const imageBytes = Uint8Array.from(atob(generatedImageBase64), (c) => c.charCodeAt(0));
     console.log("[generate-cover-image] Generated bytes:", imageBytes.length);
 
     // Upload to storage
@@ -109,10 +108,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const fileName = `ai-covers/${crypto.randomUUID()}.${imageFormat}`;
+    const fileName = `ai-covers/${crypto.randomUUID()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("product-images")
-      .upload(fileName, imageBytes, { contentType: `image/${imageFormat}`, upsert: false });
+      .upload(fileName, imageBytes, { contentType: "image/png", upsert: false });
 
     if (uploadError) {
       console.error("[generate-cover-image] Storage upload error:", uploadError);
