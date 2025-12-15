@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
@@ -216,6 +216,10 @@ export const EnhancedHeader = () => {
                     Admin
                   </Button>
                 )}
+                <Button onClick={() => navigate("/profile")} variant="ghost" size="sm">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Button>
                 <Button onClick={handleSignOut} variant="outline" size="sm">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
@@ -332,6 +336,17 @@ export const EnhancedHeader = () => {
                         Admin
                       </Button>
                     )}
+                    <Button
+                      onClick={() => {
+                        navigate("/profile");
+                        setMobileOpen(false);
+                      }}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Button>
                     <Button
                       onClick={handleSignOut}
                       variant="outline"
