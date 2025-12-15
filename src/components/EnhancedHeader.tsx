@@ -24,23 +24,26 @@ export const EnhancedHeader = () => {
   const [wishlistCount, setWishlistCount] = useState(0);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeUser = async (session: any) => {
       if (session) {
         setUser(session.user);
         setUserRole(session.user.user_metadata?.role || "choti");
-        checkAdminRole(session.user.id);
-        fetchUnreadCount(session.user.id);
-        fetchWishlistCount(session.user.id);
+        // Run all API calls in parallel for speed
+        Promise.all([
+          checkAdminRole(session.user.id),
+          fetchUnreadCount(session.user.id),
+          fetchWishlistCount(session.user.id)
+        ]);
       }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      initializeUser(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        setUser(session.user);
-        setUserRole(session.user.user_metadata?.role || "choti");
-        checkAdminRole(session.user.id);
-        fetchUnreadCount(session.user.id);
-        fetchWishlistCount(session.user.id);
+        initializeUser(session);
       } else {
         setUser(null);
         setUserRole("");
