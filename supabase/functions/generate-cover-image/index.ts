@@ -14,10 +14,10 @@ serve(async (req) => {
   try {
     const { imageUrl, title, description, category, product_type, fabric, color } = await req.json();
 
-    // Get OpenAI API key
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    // Get Lovable API key for image editing
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     // Validate image quality before processing
@@ -37,24 +37,39 @@ serve(async (req) => {
     // Create product photoshoot prompt
     const productTypeLabel = product_type === "dress" ? "lehnga" : product_type;
     
-    const prompt = `Transform this into a professional product photoshoot: A faceless mannequin wearing the ${productTypeLabel} standing straight. Pure white background, studio lighting. The ${productTypeLabel} must be exactly the same - same colors, embroidery, patterns, and details. Only replace the person with a mannequin, keep everything else identical. Reference image: ${imageUrl}`;
+    const prompt = `Transform this into a professional product photoshoot: A faceless mannequin wearing the ${productTypeLabel} standing straight. Pure white background, studio lighting. The ${productTypeLabel} must be exactly the same - same colors, embroidery, patterns, and details. Only replace the person with a mannequin, keep everything else identical.`;
 
-    console.log("Generating mannequin image with OpenAI gpt-image-1");
+    console.log("Generating mannequin image with Lovable AI (gemini-2.5-flash-image)");
     console.log("Prompt:", prompt);
+    console.log("Image URL:", imageUrl);
 
-    // Call OpenAI Image Generation API
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
+    // Call Lovable AI for image editing
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: prompt,
-        n: 1,
-        size: "1024x1024",
-        response_format: "b64_json"
+        model: "google/gemini-2.5-flash-image",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        modalities: ["image", "text"]
       }),
     });
 
@@ -74,7 +89,7 @@ serve(async (req) => {
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ 
-            error: "Payment required. Please check your OpenAI credits.",
+            error: "Payment required. Please check your credits.",
             code: "NO_CREDITS"
           }),
           {
@@ -85,22 +100,24 @@ serve(async (req) => {
       }
       
       const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error("Lovable AI API error:", response.status, errorText);
+      throw new Error(`Lovable AI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log("OpenAI response received");
+    console.log("Lovable AI response received");
 
     // Extract the generated image from base64
-    const generatedImageBase64 = data.data?.[0]?.b64_json;
+    const generatedImageBase64 = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
     if (!generatedImageBase64) {
+      console.error("No image in response:", JSON.stringify(data));
       throw new Error("No image generated in response");
     }
 
     // Convert base64 to bytes
-    const imageBytes = Uint8Array.from(atob(generatedImageBase64), c => c.charCodeAt(0));
+    const base64Data = generatedImageBase64.replace(/^data:image\/\w+;base64,/, "");
+    const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
