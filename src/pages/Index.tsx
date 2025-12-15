@@ -1,12 +1,27 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Shield, Sparkles } from "lucide-react";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 import { HomeSearch } from "@/components/HomeSearch";
-import { HomeProducts } from "@/components/HomeProducts";
-import EarningsPromoPopup from "@/components/EarningsPromoPopup";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+
+// Lazy load non-critical components
+const HomeProducts = lazy(() => import("@/components/HomeProducts").then(m => ({ default: m.HomeProducts })));
+const EarningsPromoPopup = lazy(() => import("@/components/EarningsPromoPopup"));
+
+const ProductsSkeleton = () => (
+  <div className="flex gap-6 overflow-hidden px-12">
+    {[...Array(4)].map((_, i) => (
+      <div key={i} className="space-y-3 min-w-[280px]">
+        <Skeleton className="h-[300px] w-full rounded-xl" />
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    ))}
+  </div>
+);
 
 const Index = () => {
   const [userRole, setUserRole] = useState<string>("");
@@ -22,7 +37,9 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <EnhancedHeader />
-      <EarningsPromoPopup userRole={userRole} />
+      <Suspense fallback={null}>
+        <EarningsPromoPopup userRole={userRole} />
+      </Suspense>
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-accent/10" />
@@ -69,7 +86,9 @@ const Index = () => {
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12" style={{ fontFamily: "'Playfair Display', serif" }}>
             Featured Collection
           </h2>
-          <HomeProducts />
+          <Suspense fallback={<ProductsSkeleton />}>
+            <HomeProducts />
+          </Suspense>
         </div>
       </section>
 
