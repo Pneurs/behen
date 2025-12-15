@@ -14,10 +14,10 @@ serve(async (req) => {
   try {
     const { imageUrl, title, description, category, product_type, fabric, color } = await req.json();
 
-    // Get OpenAI API key
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    // Get Lovable API key (auto-provisioned)
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     // Validate image quality before processing
@@ -37,41 +37,45 @@ serve(async (req) => {
     // Create product photoshoot prompt
     const productTypeLabel = product_type === "dress" ? "lehnga" : product_type;
     
-    const prompt = `Transform this into a professional product photoshoot: A faceless mannequin wearing the ${productTypeLabel} standing straight. Pure white background, studio lighting. The ${productTypeLabel} must be exactly the same - same colors, embroidery, patterns, and details. Only replace the person with a mannequin, keep everything else identical.`;
+    const prompt = `Transform this image into a professional product photoshoot. Replace the person with a faceless mannequin standing straight. Keep the ${productTypeLabel} EXACTLY the same - same colors, embroidery, patterns, fabric texture, and all details must be preserved identically. Use a pure white studio background with professional lighting. The mannequin should be in a neutral standing pose to showcase the garment.`;
 
-    console.log("Generating mannequin image with OpenAI gpt-image-1");
+    console.log("Generating mannequin image with Lovable AI (Gemini Flash Image)");
     console.log("Prompt:", prompt);
     console.log("Image URL:", imageUrl);
 
-    // Download the image from URL
-    console.log("Downloading image from URL...");
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`);
-    }
-    const imageBlob = await imageResponse.blob();
-    console.log("Image downloaded, size:", imageBlob.size);
-
-    // Create form data for OpenAI edits endpoint (using dall-e-2 - no org verification required)
-    const formData = new FormData();
-    formData.append("model", "dall-e-2");
-    formData.append("image", imageBlob, "input.png");
-    formData.append("prompt", prompt);
-    formData.append("n", "1");
-    formData.append("size", "1024x1024");
-
-    // Call OpenAI Image Edit API
-    const response = await fetch("https://api.openai.com/v1/images/edits", {
+    // Call Lovable AI Gateway with image editing
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: formData,
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: prompt
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl
+                }
+              }
+            ]
+          }
+        ],
+        modalities: ["image", "text"]
+      }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("OpenAI API error:", response.status, errorText);
+      console.error("Lovable AI API error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -88,7 +92,7 @@ serve(async (req) => {
       if (response.status === 402) {
         return new Response(
           JSON.stringify({ 
-            error: "Payment required. Please check your OpenAI credits.",
+            error: "Payment required. Please add credits to your Lovable workspace.",
             code: "NO_CREDITS"
           }),
           {
@@ -98,66 +102,36 @@ serve(async (req) => {
         );
       }
       
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      throw new Error(`Lovable AI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log("OpenAI response received");
+    console.log("Lovable AI response received");
 
-    // Extract the generated image (base64 format)
-    const generatedImageBase64 = data.data?.[0]?.b64_json;
+    // Extract the generated image from the response
+    const generatedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
-    if (!generatedImageBase64) {
-      // Check if URL format was returned instead
-      const generatedImageUrl = data.data?.[0]?.url;
-      if (generatedImageUrl) {
-        // Download the image from OpenAI's URL
-        console.log("Downloading generated image from OpenAI URL...");
-        const genImageResponse = await fetch(generatedImageUrl);
-        const genImageBlob = await genImageResponse.blob();
-        const genImageBuffer = await genImageBlob.arrayBuffer();
-        const imageBytes = new Uint8Array(genImageBuffer);
-        
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
-        const fileName = `ai-covers/${crypto.randomUUID()}.png`;
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, imageBytes, {
-            contentType: "image/png",
-            upsert: false,
-          });
-
-        if (uploadError) {
-          console.error("Storage upload error:", uploadError);
-          throw uploadError;
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(fileName);
-
-        console.log("Mannequin image uploaded successfully:", publicUrl);
-
-        return new Response(
-          JSON.stringify({ 
-            imageUrl: publicUrl,
-            success: true 
-          }),
-          { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          }
-        );
-      }
-      
+    if (!generatedImageUrl) {
       console.error("No image in response:", JSON.stringify(data));
       throw new Error("No image generated in response");
     }
 
-    // Convert base64 to bytes
-    const imageBytes = Uint8Array.from(atob(generatedImageBase64), c => c.charCodeAt(0));
+    // Check if it's base64 or a URL
+    let imageBytes: Uint8Array;
+    
+    if (generatedImageUrl.startsWith("data:image")) {
+      // Extract base64 data
+      const base64Data = generatedImageUrl.split(",")[1];
+      imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      console.log("Extracted base64 image, size:", imageBytes.length);
+    } else {
+      // Download from URL
+      console.log("Downloading generated image from URL...");
+      const genImageResponse = await fetch(generatedImageUrl);
+      const genImageBuffer = await genImageResponse.arrayBuffer();
+      imageBytes = new Uint8Array(genImageBuffer);
+      console.log("Downloaded image, size:", imageBytes.length);
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
