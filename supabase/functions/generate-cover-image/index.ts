@@ -52,11 +52,12 @@ serve(async (req) => {
     const imageBlob = await imageResponse.blob();
     console.log("Image downloaded, size:", imageBlob.size);
 
-    // Create form data for OpenAI edits endpoint
+    // Create form data for OpenAI edits endpoint (using dall-e-2 - no org verification required)
     const formData = new FormData();
-    formData.append("model", "gpt-image-1");
+    formData.append("model", "dall-e-2");
     formData.append("image", imageBlob, "input.png");
     formData.append("prompt", prompt);
+    formData.append("n", "1");
     formData.append("size", "1024x1024");
 
     // Call OpenAI Image Edit API
