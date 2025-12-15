@@ -7,9 +7,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet, User } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet, User, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
@@ -173,68 +174,86 @@ export const EnhancedHeader = () => {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-3">
-            <HeaderSearchPopup />
-            <Button onClick={() => navigate("/earn-money")} variant="ghost" size="sm" className="text-primary">
-              <Wallet className="mr-2 h-4 w-4" />
-              Earn Money
-            </Button>
-            {user ? (
-              <>
+          <HeaderSearchPopup />
+          <Button onClick={() => navigate("/earn-money")} variant="ghost" size="sm" className="text-primary">
+            <Wallet className="mr-2 h-4 w-4" />
+            Earn Money
+          </Button>
+          
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="relative">
+                  <Menu className="mr-2 h-4 w-4" />
+                  Menu
+                  <ChevronDown className="ml-2 h-3 w-3" />
+                  {(unreadCount > 0 || wishlistCount > 0) && (
+                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                      {(unreadCount + wishlistCount) > 99 ? "99+" : unreadCount + wishlistCount}
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-background border shadow-lg z-50">
                 {userRole === "bari" && (
                   <>
-                    <Button onClick={() => navigate("/list-dress")} variant="default" size="sm">
+                    <DropdownMenuItem onClick={() => navigate("/list-dress")} className="cursor-pointer">
                       <Upload className="mr-2 h-4 w-4" />
                       Upload Product
-                    </Button>
-                    <Button onClick={() => navigate("/dashboard")} variant="outline" size="sm">
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")} className="cursor-pointer">
                       My Products
-                    </Button>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                   </>
                 )}
-                <Button onClick={() => navigate("/my-bookings")} variant="ghost" size="sm">
+                <DropdownMenuItem onClick={() => navigate("/my-bookings")} className="cursor-pointer">
                   <CalendarDays className="mr-2 h-4 w-4" />
                   My Bookings
-                </Button>
-                <Button onClick={() => navigate("/wishlist")} variant="ghost" size="sm" className="relative">
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/wishlist")} className="cursor-pointer">
                   <Heart className="mr-2 h-4 w-4" />
                   Wishlist
                   {wishlistCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                    <Badge className="ml-auto h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
                       {wishlistCount > 99 ? "99+" : wishlistCount}
                     </Badge>
                   )}
-                </Button>
-                <Button onClick={() => { navigate("/chats"); setUnreadCount(0); }} variant="ghost" size="sm" className="relative">
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { navigate("/chats"); setUnreadCount(0); }} className="cursor-pointer">
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Chats
                   {unreadCount > 0 && (
-                    <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                    <Badge className="ml-auto h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </Badge>
                   )}
-                </Button>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {isAdmin && (
-                  <Button onClick={() => navigate("/admin")} variant="secondary" size="sm">
+                  <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
                     <Shield className="mr-2 h-4 w-4" />
                     Admin
-                  </Button>
+                  </DropdownMenuItem>
                 )}
-                <Button onClick={() => navigate("/profile")} variant="ghost" size="sm">
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Profile
-                </Button>
-                <Button onClick={handleSignOut} variant="outline" size="sm">
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
-                </Button>
-              </>
-            ) : (
-              <Button onClick={() => navigate("/auth")} variant="default" size="sm">
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign In
-              </Button>
-            )}
-          </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button onClick={() => navigate("/auth")} variant="default" size="sm">
+              <LogIn className="mr-2 h-4 w-4" />
+              Sign In
+            </Button>
+          )}
+        </div>
         {/* Mobile Navigation */}
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild className="md:hidden">
