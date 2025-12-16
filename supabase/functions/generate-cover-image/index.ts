@@ -33,17 +33,17 @@ serve(async (req) => {
 
     const productTypeLabel = product_type === "dress" ? "lehnga/dress" : (product_type || "dress");
 
-    // Highly specific prompt for preserving exact dress details
+    // Cost-optimized prompt focused on accuracy
     const prompt = [
-      `IMPORTANT: Keep the EXACT same ${productTypeLabel} with ALL its details - same colors, embroidery patterns, fabric texture, beadwork, sequins, and design.`,
-      `Replace ONLY the human model/person with a simple faceless white mannequin in a standing pose.`,
-      `The mannequin should be plain white/off-white, standing straight, arms slightly away from body.`,
-      `Background: clean pure white studio background with soft lighting.`,
-      `DO NOT alter, simplify, or change ANY part of the clothing - every embroidery stitch, pattern, and color must remain identical.`,
-      `The output should look like a professional product photo with the exact same outfit on a mannequin.`,
+      `Place this EXACT ${productTypeLabel} on a standing white mannequin.`,
+      `PRESERVE EXACTLY: dress shape, cuts, sleeves, neckline, length, embroidery, patterns, fabric texture.`,
+      `DO NOT add, remove, or alter any design elements.`,
+      `Mannequin: standing pose, neutral lighting.`,
+      `Background: plain white or light gray.`,
+      `Dress must be centered and fully visible.`,
     ].join(" ");
 
-    console.log("[generate-cover-image] Using OpenAI gpt-image-1");
+    console.log("[generate-cover-image] Using OpenAI gpt-image-1 (cost-optimized)");
     console.log("[generate-cover-image] imageUrl:", imageUrl);
 
     // Download input image
@@ -54,14 +54,14 @@ serve(async (req) => {
     const imageBlob = await imageResponse.blob();
     console.log("[generate-cover-image] Input image size:", imageBlob.size);
 
-    // OpenAI image edit (gpt-image-1)
+    // OpenAI image edit (gpt-image-1) - COST OPTIMIZED
     const formData = new FormData();
     formData.append("model", "gpt-image-1");
     formData.append("image", imageBlob, "input.png");
     formData.append("prompt", prompt);
     formData.append("n", "1");
-    formData.append("size", "1024x1024");
-    formData.append("quality", "high");
+    formData.append("size", "512x512");
+    formData.append("quality", "low");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
