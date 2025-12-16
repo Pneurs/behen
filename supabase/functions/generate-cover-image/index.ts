@@ -33,14 +33,15 @@ serve(async (req) => {
 
     const productTypeLabel = product_type === "dress" ? "lehnga/dress" : (product_type || "dress");
 
-    // Cost-optimized prompt focused on accuracy
+    // Cost-optimized prompt focused on accuracy and full visibility
     const prompt = [
       `Place this EXACT ${productTypeLabel} on a standing white mannequin.`,
-      `PRESERVE EXACTLY: dress shape, cuts, sleeves, neckline, length, embroidery, patterns, fabric texture.`,
+      `CRITICAL: Show the COMPLETE dress from top to bottom - do NOT crop any part. The entire hem/bottom must be visible.`,
+      `PRESERVE EXACTLY: dress shape, cuts, sleeves, neckline, FULL length, embroidery, patterns, fabric texture.`,
       `DO NOT add, remove, or alter any design elements.`,
-      `Mannequin: standing pose, neutral lighting.`,
+      `Mannequin: full-body standing pose, neutral lighting, showing complete outfit from neckline to hem.`,
       `Background: plain white or light gray.`,
-      `Dress must be centered and fully visible.`,
+      `Dress must be centered with adequate margin at top and bottom to show complete garment.`,
     ].join(" ");
 
     console.log("[generate-cover-image] Using OpenAI gpt-image-1 (cost-optimized)");
