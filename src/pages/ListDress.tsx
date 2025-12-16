@@ -56,6 +56,7 @@ const ListDress = () => {
   const [confirmImageError, setConfirmImageError] = useState(false);
   const [aiGenerationAttempts, setAiGenerationAttempts] = useState(0);
   const [aiGenerationError, setAiGenerationError] = useState<string | null>(null);
+  const [currentAIProvider, setCurrentAIProvider] = useState<"lovable" | "openai">("lovable");
   const MAX_AI_GENERATIONS = 3;
   
   // Step 4: Product details
@@ -94,6 +95,27 @@ const ListDress = () => {
     area: "",
     dry_clean_only: false,
   });
+
+  // Fetch current AI model provider
+  useEffect(() => {
+    const fetchAIProvider = async () => {
+      try {
+        const { data } = await supabase
+          .from("app_settings")
+          .select("value")
+          .eq("key", "ai_image_model")
+          .single();
+        
+        const settingValue = data?.value as { provider?: string } | null;
+        if (settingValue?.provider) {
+          setCurrentAIProvider(settingValue.provider as "lovable" | "openai");
+        }
+      } catch (error) {
+        console.log("Using default AI provider");
+      }
+    };
+    fetchAIProvider();
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -733,6 +755,15 @@ const ListDress = () => {
           <p className="text-muted-foreground">
             Please wait 10-15 seconds while AI generates a professional display...
           </p>
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              currentAIProvider === "lovable" 
+                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
+                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+            }`}>
+              {currentAIProvider === "lovable" ? "✨ Powered by Lovable AI" : "🔶 Powered by OpenAI"}
+            </span>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles
 } from "lucide-react";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
@@ -52,6 +52,12 @@ export default function AdminDashboard() {
     review: any;
     response: string;
   }>({ open: false, review: null, response: '' });
+  const [aiModelSetting, setAiModelSetting] = useState<{
+    provider: "lovable" | "openai";
+    model: string;
+    loading: boolean;
+  }>({ provider: "lovable", model: "google/gemini-2.5-flash-image-preview", loading: true });
+  const [updatingAIModel, setUpdatingAIModel] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -314,6 +320,29 @@ export default function AdminDashboard() {
     }));
 
     setAllReviews(reviewsWithDetails);
+
+    // Fetch AI model setting
+    try {
+      const { data: aiSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "ai_image_model")
+        .single();
+      
+      if (aiSetting?.value) {
+        const settingValue = aiSetting.value as { provider?: string; model?: string };
+        setAiModelSetting({
+          provider: (settingValue.provider as "lovable" | "openai") || "lovable",
+          model: settingValue.model || "google/gemini-2.5-flash-image-preview",
+          loading: false,
+        });
+      } else {
+        setAiModelSetting(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.log("Could not fetch AI model setting:", error);
+      setAiModelSetting(prev => ({ ...prev, loading: false }));
+    }
 
     setLoading(false);
   };
@@ -671,6 +700,47 @@ export default function AdminDashboard() {
     fetchData();
   };
 
+  const handleToggleAIModel = async (newProvider: "lovable" | "openai") => {
+    if (currentRole !== "super_admin") {
+      toast({ title: "Access Denied", description: "Only super admins can change AI settings", variant: "destructive" });
+      return;
+    }
+
+    setUpdatingAIModel(true);
+    const newModel = newProvider === "lovable" 
+      ? "google/gemini-2.5-flash-image-preview" 
+      : "gpt-image-1";
+
+    try {
+      const { error } = await supabase
+        .from("app_settings")
+        .update({ 
+          value: { provider: newProvider, model: newModel },
+          updated_at: new Date().toISOString(),
+          updated_by: currentUser?.id
+        })
+        .eq("key", "ai_image_model");
+
+      if (error) throw error;
+
+      setAiModelSetting({
+        provider: newProvider,
+        model: newModel,
+        loading: false
+      });
+
+      toast({ 
+        title: "AI Model Updated", 
+        description: `Now using ${newProvider === "lovable" ? "Lovable AI" : "OpenAI"} for image generation` 
+      });
+    } catch (error: any) {
+      console.error("Error updating AI model:", error);
+      toast({ title: "Error", description: "Failed to update AI model", variant: "destructive" });
+    } finally {
+      setUpdatingAIModel(false);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/admin");
@@ -823,6 +893,12 @@ export default function AdminDashboard() {
                 <TabsTrigger value="roles" className="data-[state=active]:bg-primary">
                   <UserCog className="h-4 w-4 mr-1" />
                   Roles
+                </TabsTrigger>
+              )}
+              {currentRole === "super_admin" && (
+                <TabsTrigger value="settings" className="data-[state=active]:bg-primary">
+                  <Settings className="h-4 w-4 mr-1" />
+                  Settings
                 </TabsTrigger>
               )}
             </TabsList>
@@ -1381,6 +1457,113 @@ export default function AdminDashboard() {
                         ))}
                       </div>
                     </ScrollArea>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Settings Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="settings">
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <Settings className="h-5 w-5" />
+                      AI Image Generation Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {aiModelSetting.loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-4">
+                          <span className="text-slate-300">Current Model:</span>
+                          <Badge className={aiModelSetting.provider === "lovable" 
+                            ? "bg-green-500/20 text-green-400 border-green-500/30" 
+                            : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                          }>
+                            {aiModelSetting.provider === "lovable" ? "✨ Lovable AI" : "🔶 OpenAI"}
+                          </Badge>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4">
+                          {/* Lovable AI Card */}
+                          <Card className={`border-2 transition-colors cursor-pointer ${
+                            aiModelSetting.provider === "lovable" 
+                              ? "border-green-500 bg-green-500/10" 
+                              : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                          }`}
+                          onClick={() => !updatingAIModel && handleToggleAIModel("lovable")}
+                          >
+                            <CardContent className="py-6">
+                              <div className="flex items-center gap-3 mb-3">
+                                <Sparkles className="h-8 w-8 text-green-400" />
+                                <div>
+                                  <h3 className="font-semibold text-white">Lovable AI</h3>
+                                  <p className="text-xs text-slate-400">google/gemini-2.5-flash-image-preview</p>
+                                </div>
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <p className="text-green-400 font-medium">✓ Included in plan</p>
+                                <p className="text-slate-300">Cost-efficient image generation</p>
+                                <p className="text-slate-400">Best for budget optimization</p>
+                              </div>
+                              {aiModelSetting.provider === "lovable" && (
+                                <Badge className="mt-3 bg-green-500 text-white">Active</Badge>
+                              )}
+                            </CardContent>
+                          </Card>
+
+                          {/* OpenAI Card */}
+                          <Card className={`border-2 transition-colors cursor-pointer ${
+                            aiModelSetting.provider === "openai" 
+                              ? "border-amber-500 bg-amber-500/10" 
+                              : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                          }`}
+                          onClick={() => !updatingAIModel && handleToggleAIModel("openai")}
+                          >
+                            <CardContent className="py-6">
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="h-8 w-8 rounded bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                                  AI
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-white">OpenAI</h3>
+                                  <p className="text-xs text-slate-400">gpt-image-1</p>
+                                </div>
+                              </div>
+                              <div className="space-y-2 text-sm">
+                                <p className="text-amber-400 font-medium">~$0.05/image (medium)</p>
+                                <p className="text-slate-300">Higher quality output</p>
+                                <p className="text-slate-400">Best for premium results</p>
+                              </div>
+                              {aiModelSetting.provider === "openai" && (
+                                <Badge className="mt-3 bg-amber-500 text-white">Active</Badge>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {updatingAIModel && (
+                          <div className="flex items-center justify-center gap-2 text-slate-300">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Updating AI model...</span>
+                          </div>
+                        )}
+
+                        <div className="bg-slate-700/50 rounded-lg p-4 mt-4">
+                          <h4 className="font-medium text-white mb-2">ℹ️ About AI Image Generation</h4>
+                          <p className="text-sm text-slate-400">
+                            AI Image Generation creates professional mannequin displays from uploaded dress photos. 
+                            Lovable AI (default) is cost-efficient and included in your plan. OpenAI provides 
+                            higher quality results at ~$0.05 per image. Switch anytime based on your needs.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>
