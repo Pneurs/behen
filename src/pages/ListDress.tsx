@@ -184,47 +184,84 @@ const ListDress = () => {
     }
   }, [editProductId, user, navigate]);
 
-  // STEP 1: Image Upload Handler
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // STEP 1A: Primary image for AI generation (exactly 1)
+  const handlePrimaryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (files.length > 1) {
+      toast.error("Please upload only 1 image for AI generation");
+    }
+
+    const file = files[0];
+
+    // Basic quality check
+    if (file.size < 100000) {
+      toast.error("Image is too small. Please upload a higher quality photo.");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload a valid image file.");
+      return;
+    }
+
+    // Reset step state when replacing the primary image
+    setImageQualityChecked(false);
+    setAiGenerationError(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreviews([reader.result as string]);
+    };
+    reader.readAsDataURL(file);
+
+    setImageFiles([file]);
+  };
+
+  // STEP 1B (Details step): Optional additional real images (up to 5 total)
+  const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
     if (files.length + imageFiles.length > 5) {
       toast.error("Maximum 5 images allowed");
       return;
     }
 
     const newFiles = files.slice(0, 5 - imageFiles.length);
-    
+
     // Basic quality check
     const validFiles: File[] = [];
     const validPreviews: string[] = [];
-    
+
     newFiles.forEach((file) => {
       // Check file size (must be at least 100KB for quality)
       if (file.size < 100000) {
         toast.error(`${file.name} is too small. Please upload higher quality images.`);
         return;
       }
-      
+
       // Check file type
-      if (!file.type.startsWith('image/')) {
+      if (!file.type.startsWith("image/")) {
         toast.error(`${file.name} is not a valid image file.`);
         return;
       }
-      
+
       validFiles.push(file);
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         validPreviews.push(reader.result as string);
         if (validPreviews.length === validFiles.length) {
-          setImagePreviews([...imagePreviews, ...validPreviews]);
+          setImagePreviews((prev) => [...prev, ...validPreviews]);
         }
       };
       reader.readAsDataURL(file);
     });
-    
-    setImageFiles([...imageFiles, ...validFiles]);
+
+    setImageFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeImage = (index: number) => {
@@ -233,11 +270,11 @@ const ListDress = () => {
   };
 
   const validateImageQuality = () => {
-    if (imageFiles.length === 0) {
-      toast.error("Please upload at least 1 image");
+    if (imageFiles.length !== 1) {
+      toast.error("Please upload exactly 1 clear front image");
       return false;
     }
-    
+
     // Additional quality checks can be added here
     setImageQualityChecked(true);
     return true;
@@ -591,9 +628,9 @@ const ListDress = () => {
   const renderUploadStep = () => (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
+        <CardTitle className="text-2xl">Upload Your Dress Photo</CardTitle>
         <CardDescription>
-          Upload 1-3 clear photos of your dress. Front view is mandatory. We'll use AI to create a professional AI Image display.
+          Upload 1 clear front photo of your dress. We'll generate a public AI Image that keeps your real photo private.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -620,40 +657,41 @@ const ListDress = () => {
           </AlertDescription>
         </Alert>
 
+        <Alert>
+          <Check className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Privacy note:</strong> Your public AI Image will look ~98% similar to your real photo, but your real photo stays private so nobody can tell it’s rented or pre-loved.
+          </AlertDescription>
+        </Alert>
+
         <div className="space-y-4">
-          <Label>Upload Images (1-3 photos required)</Label>
+          <Label>Upload Image (1 photo required)</Label>
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <input
               type="file"
               accept="image/jpeg,image/png,image/jpg"
-              multiple
-              onChange={handleImageChange}
+              onChange={handlePrimaryImageChange}
               className="hidden"
               id="image-upload"
-              disabled={imageFiles.length >= 3}
             />
             <label
               htmlFor="image-upload"
               className="cursor-pointer flex flex-col items-center space-y-2"
             >
               <Upload className="h-12 w-12 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Click to upload or drag and drop
-              </span>
-              <span className="text-xs text-muted-foreground">
-                JPG or PNG (max 3 images)
-              </span>
+              <span className="text-sm text-muted-foreground">Click to upload or drag and drop</span>
+              <span className="text-xs text-muted-foreground">JPG or PNG (1 image)</span>
             </label>
           </div>
 
           {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {imagePreviews.map((preview, index) => (
                 <div key={index} className="relative group">
                   <img
                     src={preview}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-40 object-cover rounded-lg"
+                    className="w-full h-56 object-cover rounded-lg"
                   />
                   <button
                     type="button"
@@ -675,7 +713,7 @@ const ListDress = () => {
 
         <Button
           onClick={handleContinueToGeneration}
-          disabled={imageFiles.length === 0}
+          disabled={imageFiles.length !== 1}
           className="w-full"
           size="lg"
         >
@@ -814,7 +852,7 @@ const ListDress = () => {
                   type="file"
                   accept="image/jpeg,image/png,image/jpg"
                   multiple
-                  onChange={handleImageChange}
+                  onChange={handleAdditionalImagesChange}
                   className="hidden"
                   id="additional-image-upload"
                   disabled={imageFiles.length >= 5}
