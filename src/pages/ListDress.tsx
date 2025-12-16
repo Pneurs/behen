@@ -55,6 +55,7 @@ const ListDress = () => {
   const [confirmImageLoading, setConfirmImageLoading] = useState(false);
   const [confirmImageError, setConfirmImageError] = useState(false);
   const [aiGenerationAttempts, setAiGenerationAttempts] = useState(0);
+  const [aiGenerationError, setAiGenerationError] = useState<string | null>(null);
   const MAX_AI_GENERATIONS = 3;
   
   // Step 4: Product details
@@ -245,7 +246,8 @@ const ListDress = () => {
   const handleContinueToGeneration = () => {
     if (!validateImageQuality()) return;
     
-    // Move to generating step and start AI generation
+    // Clear any previous error and move to generating step
+    setAiGenerationError(null);
     setCurrentStep("generating");
     generateAICover();
   };
@@ -259,12 +261,14 @@ const ListDress = () => {
 
     if (aiGenerationAttempts >= MAX_AI_GENERATIONS) {
       toast.error("Maximum AI image generations reached (3).");
+      setAiGenerationError("Maximum AI image generations reached (3). Please try with different images.");
       setCurrentStep("upload");
       return;
     }
 
     setGeneratingCover(true);
     setAiGenerationAttempts(prev => prev + 1);
+    setAiGenerationError(null);
 
     try {
       // First upload the image to get a URL
@@ -298,44 +302,50 @@ const ListDress = () => {
 
       if (error) {
         const status = (error as any)?.context?.status as number | undefined;
+        let errorMsg = error.message || "Unknown error occurred";
 
         if (status === 403) {
-          toast.error(
-            "OpenAI hasn’t enabled gpt-image-1 for this account yet. Please complete OpenAI organization verification and wait ~15 minutes, then try again."
-          );
-          setCurrentStep("upload");
-          return;
+          errorMsg = "OpenAI hasn't enabled gpt-image-1 for this account yet. Please complete OpenAI organization verification and wait ~15 minutes.";
+        } else if (status === 429) {
+          errorMsg = "Rate limit exceeded. Please try again in a moment.";
+        } else if (status === 402) {
+          errorMsg = "OpenAI credits exhausted. Please check your OpenAI billing.";
         }
 
-        if (status === 429) {
-          toast.error("Rate limit exceeded. Please try again in a moment.");
-          setCurrentStep("upload");
-          return;
-        }
-
-        if (status === 402) {
-          toast.error("OpenAI credits exhausted. Please check your OpenAI billing.");
-          setCurrentStep("upload");
-          return;
-        }
-
-        throw error;
+        setAiGenerationError(errorMsg);
+        toast.error(errorMsg);
+        setCurrentStep("upload");
+        return;
       }
 
       if (data?.code === "RATE_LIMIT") {
-        toast.error("Rate limit exceeded. Please try again in a moment.");
+        const errorMsg = "Rate limit exceeded. Please try again in a moment.";
+        setAiGenerationError(errorMsg);
+        toast.error(errorMsg);
         setCurrentStep("upload");
         return;
       }
 
       if (data?.code === "NO_CREDITS") {
-        toast.error("OpenAI credits exhausted. Please check your OpenAI billing.");
+        const errorMsg = "OpenAI credits exhausted. Please check your OpenAI billing.";
+        setAiGenerationError(errorMsg);
+        toast.error(errorMsg);
+        setCurrentStep("upload");
+        return;
+      }
+
+      if (data?.error) {
+        const errorMsg = data.error;
+        setAiGenerationError(errorMsg);
+        toast.error(errorMsg);
         setCurrentStep("upload");
         return;
       }
 
       if (!data?.imageUrl) {
-        throw new Error("No image URL received");
+        const errorMsg = "No image URL received from AI service";
+        setAiGenerationError(errorMsg);
+        throw new Error(errorMsg);
       }
 
       setAiCoverImage(data.imageUrl);
@@ -346,7 +356,9 @@ const ListDress = () => {
 
     } catch (error: any) {
       console.error("AI generation error:", error);
-      toast.error(error.message || "Failed to generate AI Image");
+      const errorMsg = error.message || "Failed to generate AI Image";
+      setAiGenerationError(errorMsg);
+      toast.error(errorMsg);
       setCurrentStep("upload");
     } finally {
       setGeneratingCover(false);
@@ -585,6 +597,15 @@ const ListDress = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        {aiGenerationError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>AI Generation Failed:</strong> {aiGenerationError}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
