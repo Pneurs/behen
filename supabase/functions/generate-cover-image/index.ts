@@ -61,7 +61,7 @@ serve(async (req) => {
     formData.append("prompt", prompt);
     formData.append("n", "1");
     formData.append("size", "1024x1024");
-    formData.append("quality", "low");
+    formData.append("quality", "medium");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
