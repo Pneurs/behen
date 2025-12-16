@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, RefreshCw, MapPin, ChevronRight } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight } from "lucide-react";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import { Header } from "@/components/Header";
@@ -57,7 +57,7 @@ const ListDress = () => {
   const [aiGenerationAttempts, setAiGenerationAttempts] = useState(0);
   const [aiGenerationError, setAiGenerationError] = useState<string | null>(null);
   const [currentAIProvider, setCurrentAIProvider] = useState<"lovable" | "openai">("lovable");
-  const MAX_AI_GENERATIONS = 3;
+  const MAX_AI_GENERATIONS = 1;
   
   // Step 4: Product details
   const [loading, setLoading] = useState(false);
@@ -444,15 +444,14 @@ const ListDress = () => {
     toast.success("Great! Now let's add product details.");
   };
 
-  const handleRegenerateAI = () => {
-    if (aiGenerationAttempts >= MAX_AI_GENERATIONS) {
-      toast.error("Maximum AI image generations reached (3). Please accept the current image or upload new photos.");
-      return;
+  // Skip AI and use real image as main
+  const handleSkipAI = () => {
+    // Use first uploaded image as the cover instead of AI
+    if (imagePreviews.length > 0) {
+      setAiCoverImage(imagePreviews[0]);
+      setCurrentStep("details");
+      toast.success("Using your real image as main product image.");
     }
-    setAiCoverImage("");
-    setConfirmImageError(false);
-    setCurrentStep("generating");
-    generateAICover();
   };
 
   const handleBackToUpload = () => {
@@ -754,8 +753,30 @@ const ListDress = () => {
           className="w-full"
           size="lg"
         >
-          Continue to AI Generation
+          Generate AI Image
         </Button>
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-card px-2 text-muted-foreground">Or</span>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSkipAI}
+          disabled={imageFiles.length < 1}
+          variant="outline"
+          className="w-full"
+          size="lg"
+        >
+          Skip AI - Use My Image
+        </Button>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          If you have a very clear, professional-looking photo with plain background, you can use it directly as your main product image.
+        </p>
       </CardContent>
     </Card>
   );
@@ -846,17 +867,13 @@ const ListDress = () => {
             Accept & Continue
           </Button>
 
-          {aiGenerationAttempts < MAX_AI_GENERATIONS && (
-            <Button
-              onClick={handleRegenerateAI}
-              variant="outline"
-              className="w-full"
-              disabled={generatingCover}
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Generate New Image ({MAX_AI_GENERATIONS - aiGenerationAttempts} attempts left)
-            </Button>
-          )}
+          <Button
+            onClick={handleSkipAI}
+            variant="outline"
+            className="w-full"
+          >
+            Use My Original Image Instead
+          </Button>
 
           <Button
             onClick={handleBackToUpload}
