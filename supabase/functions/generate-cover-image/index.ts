@@ -14,6 +14,11 @@ function json(status: number, body: unknown) {
   });
 }
 
+interface AIModelSetting {
+  provider: "lovable" | "openai";
+  model: string;
+}
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -21,15 +26,32 @@ serve(async (req) => {
   try {
     const { imageUrl, product_type } = await req.json();
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
-
     if (!imageUrl || typeof imageUrl !== "string") {
       return json(400, {
         error: "Please upload at least one clear image of your dress",
         code: "INVALID_IMAGE",
       });
     }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch current AI model setting from app_settings
+    const { data: settingData } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "ai_image_model")
+      .single();
+
+    // Default to Lovable AI for cost efficiency
+    const modelSetting: AIModelSetting = settingData?.value || {
+      provider: "lovable",
+      model: "google/gemini-2.5-flash-image-preview",
+    };
+
+    console.log("[generate-cover-image] Using provider:", modelSetting.provider, "model:", modelSetting.model);
 
     const productTypeLabel = product_type === "dress" ? "lehnga/dress" : (product_type || "dress");
 
@@ -51,72 +73,138 @@ serve(async (req) => {
       `Dress must be centered with adequate margin at top and bottom to show complete garment.`,
     ].join(" ");
 
-    console.log("[generate-cover-image] Using OpenAI gpt-image-1 (cost-optimized)");
-    console.log("[generate-cover-image] size:", outputSize);
-    console.log("[generate-cover-image] imageUrl:", imageUrl);
+    let generatedImageBase64: string | undefined;
 
-    // Download input image
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`);
+    if (modelSetting.provider === "lovable") {
+      // ===== LOVABLE AI (Default - Cost Efficient) =====
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+      console.log("[generate-cover-image] Using Lovable AI Gateway");
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: modelSetting.model,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { type: "image_url", image_url: { url: imageUrl } }
+              ]
+            }
+          ],
+          modalities: ["image", "text"]
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[generate-cover-image] Lovable AI error:", response.status, errorText);
+
+        if (response.status === 429) {
+          return json(429, { error: "Rate limit exceeded. Please try again in a moment.", code: "RATE_LIMIT" });
+        }
+        if (response.status === 402) {
+          return json(402, { error: "AI credits exhausted. Please try again later.", code: "NO_CREDITS" });
+        }
+
+        throw new Error(`Lovable AI error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const generatedImageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+      if (!generatedImageUrl) {
+        console.error("[generate-cover-image] No image in Lovable AI response:", JSON.stringify(data));
+        throw new Error("No image generated in response");
+      }
+
+      // Extract base64 from data URL
+      if (generatedImageUrl.startsWith("data:image")) {
+        const base64Match = generatedImageUrl.match(/base64,(.+)/);
+        if (base64Match) {
+          generatedImageBase64 = base64Match[1];
+        }
+      } else {
+        // If it's a URL, download and convert to base64
+        const imgResponse = await fetch(generatedImageUrl);
+        const imgBuffer = await imgResponse.arrayBuffer();
+        generatedImageBase64 = btoa(String.fromCharCode(...new Uint8Array(imgBuffer)));
+      }
+
+    } else {
+      // ===== OPENAI (Higher quality option) =====
+      const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+      if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+
+      console.log("[generate-cover-image] Using OpenAI gpt-image-1");
+      console.log("[generate-cover-image] size:", outputSize);
+
+      // Download input image for OpenAI
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error(`Failed to download image: ${imageResponse.status}`);
+      }
+      const imageBlob = await imageResponse.blob();
+      console.log("[generate-cover-image] Input image size:", imageBlob.size);
+
+      // OpenAI image edit (gpt-image-1) - COST OPTIMIZED
+      const formData = new FormData();
+      formData.append("model", "gpt-image-1");
+      formData.append("image", imageBlob, "input.png");
+      formData.append("prompt", prompt);
+      formData.append("n", "1");
+      formData.append("size", outputSize);
+      formData.append("quality", "medium");
+
+      const response = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[generate-cover-image] OpenAI error:", response.status, errorText);
+
+        if (response.status === 429) {
+          return json(429, { error: "Rate limit exceeded. Please try again in a moment.", code: "RATE_LIMIT" });
+        }
+        if (response.status === 402) {
+          return json(402, { error: "Payment required. Please check your OpenAI credits.", code: "NO_CREDITS" });
+        }
+        if (response.status === 403) {
+          return json(403, {
+            error: "OpenAI rejected the request (403). Please verify your OpenAI organization.",
+            code: "FORBIDDEN",
+            raw: errorText,
+          });
+        }
+
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      generatedImageBase64 = data?.data?.[0]?.b64_json;
     }
-    const imageBlob = await imageResponse.blob();
-    console.log("[generate-cover-image] Input image size:", imageBlob.size);
-
-    // OpenAI image edit (gpt-image-1) - COST OPTIMIZED
-    const formData = new FormData();
-    formData.append("model", "gpt-image-1");
-    formData.append("image", imageBlob, "input.png");
-    formData.append("prompt", prompt);
-    formData.append("n", "1");
-    formData.append("size", outputSize);
-    formData.append("quality", "medium");
-
-    const response = await fetch("https://api.openai.com/v1/images/edits", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[generate-cover-image] OpenAI error:", response.status, errorText);
-
-      if (response.status === 429) {
-        return json(429, { error: "Rate limit exceeded. Please try again in a moment.", code: "RATE_LIMIT" });
-      }
-      if (response.status === 402) {
-        return json(402, { error: "Payment required. Please check your OpenAI credits.", code: "NO_CREDITS" });
-      }
-      if (response.status === 403) {
-        return json(403, {
-          error: "OpenAI rejected the request (403). Please verify your OpenAI organization at platform.openai.com and wait ~15 minutes.",
-          code: "FORBIDDEN",
-          raw: errorText,
-        });
-      }
-
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    const generatedImageBase64: string | undefined = data?.data?.[0]?.b64_json;
 
     if (!generatedImageBase64) {
-      console.error("[generate-cover-image] No b64_json in response:", JSON.stringify(data));
+      console.error("[generate-cover-image] No base64 image generated");
       throw new Error("No image generated in response");
     }
 
     const imageBytes = Uint8Array.from(atob(generatedImageBase64), (c) => c.charCodeAt(0));
     console.log("[generate-cover-image] Generated bytes:", imageBytes.length);
 
-    // Upload to storage (1024x1024 - no resizing to avoid WASM issues)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
+    // Upload to storage
     const fileName = `ai-covers/${crypto.randomUUID()}.png`;
     const { error: uploadError } = await supabase.storage
       .from("product-images")
@@ -130,7 +218,11 @@ serve(async (req) => {
     const { data: publicData } = supabase.storage.from("product-images").getPublicUrl(fileName);
     console.log("[generate-cover-image] Uploaded:", publicData.publicUrl);
 
-    return json(200, { imageUrl: publicData.publicUrl, success: true });
+    return json(200, { 
+      imageUrl: publicData.publicUrl, 
+      success: true,
+      provider: modelSetting.provider 
+    });
   } catch (error) {
     console.error("Error in generate-cover-image function:", error);
     return json(500, {
