@@ -206,39 +206,53 @@ const ListDress = () => {
     }
   }, [editProductId, user, navigate]);
 
-  // STEP 1A: Primary image for AI generation (exactly 1)
+  // STEP 1A: Primary images for AI generation (1-3 images)
   const handlePrimaryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    if (files.length > 1) {
-      toast.error("Please upload only 1 image for AI generation");
-    }
-
-    const file = files[0];
-
-    // Basic quality check
-    if (file.size < 100000) {
-      toast.error("Image is too small. Please upload a higher quality photo.");
+    if (files.length > 3) {
+      toast.error("Please upload maximum 3 images for AI generation");
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload a valid image file.");
-      return;
+    const validFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    for (const file of files.slice(0, 3)) {
+      // Basic quality check
+      if (file.size < 100000) {
+        toast.error(`${file.name} is too small. Please upload a higher quality photo.`);
+        continue;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast.error(`${file.name} is not a valid image file.`);
+        continue;
+      }
+
+      validFiles.push(file);
     }
 
-    // Reset step state when replacing the primary image
+    if (validFiles.length === 0) return;
+
+    // Reset step state when replacing primary images
     setImageQualityChecked(false);
     setAiGenerationError(null);
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreviews([reader.result as string]);
-    };
-    reader.readAsDataURL(file);
+    // Create previews for valid files
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        newPreviews.push(reader.result as string);
+        if (newPreviews.length === validFiles.length) {
+          setImagePreviews(newPreviews);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
 
-    setImageFiles([file]);
+    setImageFiles(validFiles);
   };
 
   // STEP 1B (Details step): Optional additional real images (up to 5 total)
@@ -292,8 +306,8 @@ const ListDress = () => {
   };
 
   const validateImageQuality = () => {
-    if (imageFiles.length !== 1) {
-      toast.error("Please upload exactly 1 clear front image");
+    if (imageFiles.length < 1 || imageFiles.length > 3) {
+      toast.error("Please upload 1-3 clear images of your dress");
       return false;
     }
 
@@ -650,9 +664,9 @@ const ListDress = () => {
   const renderUploadStep = () => (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl">Upload Your Dress Photo</CardTitle>
+        <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
         <CardDescription>
-          Upload 1 clear front photo of your dress. We'll generate a public AI Image that keeps your real photo private.
+          Upload 1-3 clear photos of your dress. We'll generate a public AI Image that keeps your real photos private.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -687,7 +701,7 @@ const ListDress = () => {
         </Alert>
 
         <div className="space-y-4">
-          <Label>Upload Image (1 photo required)</Label>
+          <Label>Upload Images (1-3 photos)</Label>
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <input
               type="file"
@@ -695,6 +709,7 @@ const ListDress = () => {
               onChange={handlePrimaryImageChange}
               className="hidden"
               id="image-upload"
+              multiple
             />
             <label
               htmlFor="image-upload"
@@ -702,18 +717,18 @@ const ListDress = () => {
             >
               <Upload className="h-12 w-12 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Click to upload or drag and drop</span>
-              <span className="text-xs text-muted-foreground">JPG or PNG (1 image)</span>
+              <span className="text-xs text-muted-foreground">JPG or PNG (up to 3 images)</span>
             </label>
           </div>
 
           {imagePreviews.length > 0 && (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {imagePreviews.map((preview, index) => (
                 <div key={index} className="relative group">
                   <img
                     src={preview}
                     alt={`Preview ${index + 1}`}
-                    className="w-full h-56 object-cover rounded-lg"
+                    className="w-full h-32 object-cover rounded-lg"
                   />
                   <button
                     type="button"
@@ -724,7 +739,7 @@ const ListDress = () => {
                   </button>
                   {index === 0 && (
                     <span className="absolute bottom-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded">
-                      Front View
+                      Primary
                     </span>
                   )}
                 </div>
@@ -735,7 +750,7 @@ const ListDress = () => {
 
         <Button
           onClick={handleContinueToGeneration}
-          disabled={imageFiles.length !== 1}
+          disabled={imageFiles.length < 1 || imageFiles.length > 3}
           className="w-full"
           size="lg"
         >
@@ -755,15 +770,9 @@ const ListDress = () => {
           <p className="text-muted-foreground">
             Please wait 10-15 seconds while AI generates a professional display...
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              currentAIProvider === "lovable" 
-                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
-                : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-            }`}>
-              {currentAIProvider === "lovable" ? "✨ Powered by Lovable AI" : "🔶 Powered by OpenAI"}
-            </span>
-          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            AI is processing your image...
+          </p>
         </div>
       </CardContent>
     </Card>

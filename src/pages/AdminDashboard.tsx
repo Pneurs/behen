@@ -1502,8 +1502,8 @@ export default function AdminDashboard() {
                               <div className="flex items-center gap-3 mb-3">
                                 <Sparkles className="h-8 w-8 text-green-400" />
                                 <div>
-                                  <h3 className="font-semibold text-white">Lovable AI</h3>
-                                  <p className="text-xs text-slate-400">google/gemini-2.5-flash-image-preview</p>
+                                  <h3 className="font-semibold text-white">Our Own AI</h3>
+                                  <p className="text-xs text-slate-400">Advanced Image Generation</p>
                                 </div>
                               </div>
                               <div className="space-y-2 text-sm">

@@ -61,16 +61,16 @@ serve(async (req) => {
         ? "1024x1536"
         : "1024x1024";
 
-    // Cost-optimized prompt focused on accuracy and full visibility
+    // Enhanced prompt focused on EXACT dress preservation and full body coverage
     const prompt = [
-      `Place this EXACT ${productTypeLabel} on a standing white mannequin.`,
-      `CRITICAL: Show the COMPLETE dress from top to bottom - do NOT crop any part. The entire hem/bottom must be visible.`,
-      `CRITICAL: Zoom OUT / make mannequin smaller in frame with generous padding (especially bottom margin). Include mannequin feet and empty space below the hem.`,
-      `PRESERVE EXACTLY: dress shape, cuts, sleeves, neckline, FULL length, embroidery, patterns, fabric texture.`,
-      `DO NOT add, remove, or alter any design elements.`,
-      `Mannequin: full-body standing pose, neutral lighting, showing complete outfit from neckline to hem.`,
-      `Background: plain white or light gray.`,
-      `Dress must be centered with adequate margin at top and bottom to show complete garment.`,
+      `IMPORTANT: Create a professional product photo of this EXACT ${productTypeLabel} on a faceless white mannequin.`,
+      `CRITICAL REQUIREMENT 1: PRESERVE THE DRESS DESIGN EXACTLY AS IS - same neckline, same sleeves, same length, same embroidery patterns, same fabric texture, same colors. DO NOT modify, add, remove, or change ANY design element.`,
+      `CRITICAL REQUIREMENT 2: Show the COMPLETE dress from top to bottom with FULL BODY COVERAGE - the mannequin must be wearing the dress EXACTLY as shown including all coverage. If the original shows a full-length dress covering the belly/torso, the mannequin must show the same coverage. DO NOT expose any mannequin body parts that are covered by the dress in the original image.`,
+      `CRITICAL REQUIREMENT 3: Zoom OUT significantly - show the ENTIRE outfit from neckline to hem with generous padding at top and bottom. The full dress length including hem/bottom must be clearly visible - NEVER crop or cut off any part.`,
+      `CRITICAL REQUIREMENT 4: If the original dress has dupatta/shawl/stole, include it in the same style and draping.`,
+      `Mannequin: Full-body standing pose, faceless, neutral lighting, centered in frame.`,
+      `Background: Clean plain white or very light gray.`,
+      `Output: A professional e-commerce style product photo that shows the EXACT same dress design and coverage as the input image.`,
     ].join(" ");
 
     let generatedImageBase64: string | undefined;
