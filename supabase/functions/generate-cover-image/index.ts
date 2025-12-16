@@ -33,10 +33,17 @@ serve(async (req) => {
 
     const productTypeLabel = product_type === "dress" ? "lehnga/dress" : (product_type || "dress");
 
+    // Use portrait output for dresses to reduce bottom-cropping risk
+    const outputSize =
+      typeof product_type === "string" && /dress|lehng|gown|maxi/i.test(product_type)
+        ? "1024x1536"
+        : "1024x1024";
+
     // Cost-optimized prompt focused on accuracy and full visibility
     const prompt = [
       `Place this EXACT ${productTypeLabel} on a standing white mannequin.`,
       `CRITICAL: Show the COMPLETE dress from top to bottom - do NOT crop any part. The entire hem/bottom must be visible.`,
+      `CRITICAL: Zoom OUT / make mannequin smaller in frame with generous padding (especially bottom margin). Include mannequin feet and empty space below the hem.`,
       `PRESERVE EXACTLY: dress shape, cuts, sleeves, neckline, FULL length, embroidery, patterns, fabric texture.`,
       `DO NOT add, remove, or alter any design elements.`,
       `Mannequin: full-body standing pose, neutral lighting, showing complete outfit from neckline to hem.`,
@@ -45,6 +52,7 @@ serve(async (req) => {
     ].join(" ");
 
     console.log("[generate-cover-image] Using OpenAI gpt-image-1 (cost-optimized)");
+    console.log("[generate-cover-image] size:", outputSize);
     console.log("[generate-cover-image] imageUrl:", imageUrl);
 
     // Download input image
@@ -61,7 +69,7 @@ serve(async (req) => {
     formData.append("image", imageBlob, "input.png");
     formData.append("prompt", prompt);
     formData.append("n", "1");
-    formData.append("size", "1024x1024");
+    formData.append("size", outputSize);
     formData.append("quality", "medium");
 
     const response = await fetch("https://api.openai.com/v1/images/edits", {
