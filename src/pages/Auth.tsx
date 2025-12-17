@@ -36,17 +36,7 @@ const Auth = () => {
   const [pendingEmail, setPendingEmail] = useState("");
 
   useEffect(() => {
-    // Check for email verification token in URL
-    const urlToken = searchParams.get("token");
-    const urlEmail = searchParams.get("email");
-    const urlType = searchParams.get("type");
-    
-    if (urlToken && urlEmail && urlType === "signup") {
-      handleVerifyFromLink(urlToken, urlEmail);
-      return;
-    }
-    
-    // Check for password reset or email verification in URL hash
+    // Check for password reset in URL hash
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get("type");
     
@@ -62,9 +52,10 @@ const Auth = () => {
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (handles email verification callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
+        toast.success("Email verified! Welcome to Behen.pk!");
         handlePostLoginRedirect();
       }
     });
@@ -72,58 +63,6 @@ const Auth = () => {
     return () => subscription.unsubscribe();
   }, [navigate, searchParams]);
   
-  const handleVerifyFromLink = async (token: string, email: string) => {
-    setLoading(true);
-    try {
-      // Check stored token
-      const storedData = localStorage.getItem("pending_verification");
-      if (!storedData) {
-        toast.error("Verification session expired. Please sign up again.");
-        setMode("signup");
-        setLoading(false);
-        return;
-      }
-      
-      const { token: storedToken, email: storedEmail, password, expiry } = JSON.parse(storedData);
-      
-      if (Date.now() > expiry) {
-        localStorage.removeItem("pending_verification");
-        toast.error("Verification link expired. Please sign up again.");
-        setMode("signup");
-        setLoading(false);
-        return;
-      }
-      
-      if (storedEmail !== email || storedToken !== token) {
-        toast.error("Invalid verification link");
-        setMode("signup");
-        setLoading(false);
-        return;
-      }
-      
-      // Token is valid - sign in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: storedEmail,
-        password,
-      });
-      
-      if (signInError) {
-        toast.error("Verification failed. Please try signing up again.");
-        setMode("signup");
-        setLoading(false);
-        return;
-      }
-      
-      localStorage.removeItem("pending_verification");
-      toast.success("Email verified! Welcome to Behen.pk!");
-    } catch (error: any) {
-      toast.error("Verification failed. Please try again.");
-      setMode("signup");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handlePostLoginRedirect = () => {
     const redirectTo = localStorage.getItem("auth_redirect");
     const redirectProductId = localStorage.getItem("auth_redirect_product");
@@ -142,36 +81,20 @@ const Auth = () => {
 
   const [emailError, setEmailError] = useState("");
 
-  // Helper function to send verification email via custom edge function
-  const sendVerificationEmail = async (emailAddress: string, password: string) => {
-    // Generate a secure token
-    const token = crypto.randomUUID();
-    
-    // Store token in localStorage for verification
-    const tokenData = {
-      token,
+  // Resend Supabase's built-in confirmation email
+  const resendConfirmationEmail = async (emailAddress: string) => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
       email: emailAddress,
-      password,
-      expiry: Date.now() + 3600000, // 1 hour expiry
-    };
-    localStorage.setItem("pending_verification", JSON.stringify(tokenData));
-    
-    // Send verification email via custom edge function
-    const { error } = await supabase.functions.invoke("send-otp-email", {
-      body: { 
-        email: emailAddress, 
-        token,
-        redirectUrl: `${window.location.origin}/auth`,
-        type: "signup"
-      },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth`,
+      }
     });
     
     if (error) {
-      console.error("Error sending verification email:", error);
-      throw new Error("Failed to send verification email");
+      console.error("Error resending verification email:", error);
+      throw new Error("Failed to resend verification email");
     }
-    
-    return token;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -271,20 +194,21 @@ const Auth = () => {
 
       // Check if user exists but email not confirmed (identities array is empty)
       if (data?.user?.identities?.length === 0) {
-        // Send verification email for existing unverified user
+        // Resend verification email for existing unverified user
         try {
-          await sendVerificationEmail(email, password);
+          await resendConfirmationEmail(email);
           setPendingEmail(email);
           setMode("check-email");
           toast.success("Verification email resent! Please check your email.");
         } catch (err) {
           toast.error("Failed to resend verification email. Please try again.");
         }
+        setLoading(false);
         return;
       }
 
-      // Send verification email for new user
-      await sendVerificationEmail(email, password);
+      // For new users, Supabase automatically sends confirmation email
+      // when enable_confirmations is true in config
       setPendingEmail(email);
       setMode("check-email");
       toast.success("Signup successful! Please check your email for the verification link.");
@@ -296,17 +220,16 @@ const Auth = () => {
   };
 
   const handleResendEmail = async () => {
+    if (!pendingEmail) {
+      toast.error("Please sign up again.");
+      setMode("signup");
+      return;
+    }
+    
     setLoading(true);
     try {
-      const storedData = localStorage.getItem("pending_verification");
-      if (storedData) {
-        const { password } = JSON.parse(storedData);
-        await sendVerificationEmail(pendingEmail, password);
-        toast.success("Verification email resent!");
-      } else {
-        toast.error("Please sign up again.");
-        setMode("signup");
-      }
+      await resendConfirmationEmail(pendingEmail);
+      toast.success("Verification email resent! Check your inbox and spam folder.");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend email");
     } finally {
