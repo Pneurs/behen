@@ -71,14 +71,14 @@ export const HomeSearch = () => {
         {/* All elements in one row */}
         <div className="flex flex-col lg:flex-row gap-3">
           {/* Keyword Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               type="text"
               placeholder="Search dresses, designers..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              className="pl-10 h-12 bg-background border-input"
+              className="!pl-10 h-12 bg-background border-input w-full"
             />
           </div>
 
