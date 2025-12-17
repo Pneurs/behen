@@ -236,7 +236,7 @@ export default function Chat() {
     } else {
       setNewMessage("");
       
-      // Send email notification to recipient
+      // Send notification to recipient
       try {
         const recipientId = user.id === conversation.owner_id 
           ? conversation.renter_id 
@@ -248,17 +248,34 @@ export default function Chat() {
           .eq("user_id", recipientId)
           .single();
 
-        const chatLink = `${window.location.origin}/chat?product=${productId}`;
+        const { data: senderProfile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("user_id", user.id)
+          .single();
+
+        const chatLink = `/chat?product=${productId}`;
+        const truncatedMessage = newMessage.length > 50 ? newMessage.substring(0, 50) + "..." : newMessage;
         
+        // Create in-app notification
+        await supabase.from("notifications").insert({
+          user_id: recipientId,
+          type: "message",
+          title: "New Message",
+          message: `${senderProfile?.name || "Someone"}: ${truncatedMessage}`,
+          link: chatLink,
+        });
+
+        // Send email notification
         await sendEmailNotification({
           type: "new_message",
-          recipientEmail: "", // Edge function will fetch this
+          recipientEmail: "",
           recipientName: recipientProfile?.name || "User",
           data: {
-            senderName: "Someone",
+            senderName: senderProfile?.name || "Someone",
             productTitle: product?.title,
             message: newMessage.length > 100 ? newMessage.substring(0, 100) + "..." : newMessage,
-            chatLink,
+            chatLink: `${window.location.origin}${chatLink}`,
             recipientId,
           },
         });

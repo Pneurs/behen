@@ -158,26 +158,28 @@ export default function OfferCard({
             .eq("user_id", buyerId)
             .single();
 
-          const { data: authData } = await supabase.auth.admin?.getUserById?.(buyerId) || {};
-          const buyerEmail = authData?.user?.email;
+          const chatLink = `/chat?product=${productId}`;
+          
+          // Create in-app notification
+          await supabase.from("notifications").insert({
+            user_id: buyerId,
+            type: "offer",
+            title: "Offer Not Accepted",
+            message: `Your offer for "${product?.title}" was not accepted. Try sending a new offer!`,
+            link: chatLink,
+          });
 
-          // If admin API not available, try to get from a different approach
-          if (!buyerEmail) {
-            // Fetch conversation to get product details for notification
-            const chatLink = `${window.location.origin}/chat?product=${productId}`;
-            
-            // Send notification via edge function which has admin access
-            await sendEmailNotification({
-              type: "offer_rejected",
-              recipientEmail: "", // Edge function will fetch this
-              recipientName: buyerProfile?.name || "Choti Behen",
-              data: {
-                productTitle: product?.title,
-                chatLink,
-                buyerId,
-              },
-            });
-          }
+          // Send email notification
+          await sendEmailNotification({
+            type: "offer_rejected",
+            recipientEmail: "",
+            recipientName: buyerProfile?.name || "Choti Behen",
+            data: {
+              productTitle: product?.title,
+              chatLink: `${window.location.origin}${chatLink}`,
+              buyerId,
+            },
+          });
         } catch (notifError) {
           console.error("Failed to send rejection notification:", notifError);
         }

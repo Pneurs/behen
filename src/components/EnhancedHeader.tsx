@@ -14,6 +14,7 @@ import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
+import { NotificationBell } from "./NotificationBell";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
@@ -181,7 +182,9 @@ export const EnhancedHeader = () => {
           </Button>
           
           {user ? (
-            <DropdownMenu>
+            <>
+              <NotificationBell userId={user.id} />
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="relative">
                   <Menu className="mr-2 h-4 w-4" />
@@ -247,6 +250,7 @@ export const EnhancedHeader = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <Button onClick={() => navigate("/auth")} variant="default" size="sm">
               <LogIn className="mr-2 h-4 w-4" />
