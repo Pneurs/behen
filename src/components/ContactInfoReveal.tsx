@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Phone, Mail, User, CheckCircle, Loader2, MapPin } from "lucide-react";
+import { Phone, User, CheckCircle, Loader2, MapPin } from "lucide-react";
 
 interface ContactInfoRevealProps {
   booking: any;
   userId: string;
+  product?: any;
 }
 
 interface UserProfile {
@@ -16,15 +17,14 @@ interface UserProfile {
   area: string | null;
 }
 
-export default function ContactInfoReveal({ booking, userId }: ContactInfoRevealProps) {
+export default function ContactInfoReveal({ booking, userId, product }: ContactInfoRevealProps) {
   const [loading, setLoading] = useState(true);
   const [ownerProfile, setOwnerProfile] = useState<UserProfile | null>(null);
   const [renterProfile, setRenterProfile] = useState<UserProfile | null>(null);
-  const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
-  const [renterEmail, setRenterEmail] = useState<string | null>(null);
 
   const isOwner = userId === booking.owner_id;
   const isPaymentVerified = booking.payment_status === "verified";
+  const isSaleProduct = product?.listing_type === "sale";
 
   useEffect(() => {
     if (isPaymentVerified) {
@@ -53,11 +53,6 @@ export default function ContactInfoReveal({ booking, userId }: ContactInfoReveal
 
       if (ownerRes.data) setOwnerProfile(ownerRes.data);
       if (renterRes.data) setRenterProfile(renterRes.data);
-
-      // For now, we'll show a placeholder for email since we can't access auth.users directly
-      // In a real implementation, you'd fetch this via an edge function
-      setOwnerEmail("Contact via app");
-      setRenterEmail("Contact via app");
     } catch (error) {
       console.error("Failed to fetch contact info:", error);
     } finally {
@@ -103,7 +98,7 @@ export default function ContactInfoReveal({ booking, userId }: ContactInfoReveal
   }
 
   const otherProfile = isOwner ? renterProfile : ownerProfile;
-  const otherLabel = isOwner ? "Choti Behen (Renter)" : "Bari Behen (Owner)";
+  const otherLabel = isOwner ? "Choti Behen (Buyer)" : "Bari Behen (Seller)";
 
   return (
     <Card className="border-green-500/30 bg-green-500/5">
@@ -120,7 +115,7 @@ export default function ContactInfoReveal({ booking, userId }: ContactInfoReveal
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-green-600 font-medium">
-          ✓ Payment verified. You may coordinate pickup now.
+          ✓ Payment verified. You may coordinate {isSaleProduct ? "pickup" : "pickup/return"} now.
         </p>
 
         <div className="bg-background p-4 rounded-lg border space-y-3">
@@ -158,8 +153,45 @@ export default function ContactInfoReveal({ booking, userId }: ContactInfoReveal
           </div>
         </div>
 
+        {product && (product.pickup_location || product.dropoff_location || product.contact_phone) && (
+          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3">
+            <h4 className="font-semibold flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {isSaleProduct ? "Pickup Details" : "Pickup & Dropoff Locations"}
+            </h4>
+
+            <div className="space-y-2">
+              {isSaleProduct && product.contact_phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground w-20">Contact:</span>
+                  <a href={`tel:${product.contact_phone}`} className="text-primary hover:underline">
+                    {product.contact_phone}
+                  </a>
+                </div>
+              )}
+
+              {product.pickup_location && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <span className="text-xs font-medium text-muted-foreground w-20">Pickup:</span>
+                  <span>{product.pickup_location}</span>
+                </div>
+              )}
+
+              {!isSaleProduct && product.dropoff_location && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                  <span className="text-xs font-medium text-muted-foreground w-20">Dropoff:</span>
+                  <span>{product.dropoff_location}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground text-center">
-          Please coordinate pickup time and location directly with {isOwner ? "Choti Behen" : "Bari Behen"}.
+          Please coordinate {isSaleProduct ? "pickup" : "pickup time and return"} directly with {isOwner ? "Choti Behen" : "Bari Behen"}.
         </p>
       </CardContent>
     </Card>

@@ -345,9 +345,11 @@ export type Database = {
           city: string
           color: string | null
           condition: string
+          contact_phone: string | null
           created_at: string
           description: string | null
           designer: string | null
+          dropoff_location: string | null
           dry_clean_only: boolean | null
           extra_day_rate: number | null
           fabric: string | null
@@ -363,6 +365,7 @@ export type Database = {
           longitude: number | null
           original_price: number | null
           owner_id: string
+          pickup_location: string | null
           product_type: string | null
           real_images: string[] | null
           rental_price_4days: number | null
@@ -391,9 +394,11 @@ export type Database = {
           city?: string
           color?: string | null
           condition: string
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           designer?: string | null
+          dropoff_location?: string | null
           dry_clean_only?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
@@ -409,6 +414,7 @@ export type Database = {
           longitude?: number | null
           original_price?: number | null
           owner_id: string
+          pickup_location?: string | null
           product_type?: string | null
           real_images?: string[] | null
           rental_price_4days?: number | null
@@ -437,9 +443,11 @@ export type Database = {
           city?: string
           color?: string | null
           condition?: string
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           designer?: string | null
+          dropoff_location?: string | null
           dry_clean_only?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
@@ -455,6 +463,7 @@ export type Database = {
           longitude?: number | null
           original_price?: number | null
           owner_id?: string
+          pickup_location?: string | null
           product_type?: string | null
           real_images?: string[] | null
           rental_price_4days?: number | null
@@ -707,6 +716,7 @@ export type Database = {
         | "pending_acceptance_video"
         | "completed"
         | "closed"
+        | "ready_for_pickup"
       payment_status: "pending" | "submitted" | "verified" | "rejected"
     }
     CompositeTypes: {
@@ -859,6 +869,7 @@ export const Constants = {
         "pending_acceptance_video",
         "completed",
         "closed",
+        "ready_for_pickup",
       ],
       payment_status: ["pending", "submitted", "verified", "rejected"],
     },
