@@ -11,7 +11,7 @@ const SEOBottomContent = ({ content }: SEOBottomContentProps) => {
         <div 
           className="prose prose-slate dark:prose-invert max-w-none
             prose-headings:font-serif prose-headings:text-foreground
-            prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-4
+            prose-h2:text-2xl prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-4
             prose-h3:text-lg prose-h3:font-medium prose-h3:mt-6 prose-h3:mb-3
             prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-4
             prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium
