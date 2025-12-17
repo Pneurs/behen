@@ -21,6 +21,7 @@ interface SEOContent {
   description: string | null;
   meta_description: string | null;
   meta_keywords: string | null;
+  bottom_content: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +57,7 @@ export default function SEOContentManager() {
     description: "",
     meta_description: "",
     meta_keywords: "",
+    bottom_content: "",
   });
 
   useEffect(() => {
@@ -88,6 +90,7 @@ export default function SEOContentManager() {
         description: content.description || "",
         meta_description: content.meta_description || "",
         meta_keywords: content.meta_keywords || "",
+        bottom_content: content.bottom_content || "",
       });
     } else {
       setEditingContent(null);
@@ -99,6 +102,7 @@ export default function SEOContentManager() {
         description: "",
         meta_description: "",
         meta_keywords: "",
+        bottom_content: "",
       });
     }
     setDialogOpen(true);
@@ -120,6 +124,7 @@ export default function SEOContentManager() {
       description: formData.description || null,
       meta_description: formData.meta_description || null,
       meta_keywords: formData.meta_keywords || null,
+      bottom_content: formData.bottom_content || null,
     };
 
     let error;
@@ -419,6 +424,20 @@ export default function SEOContentManager() {
                 placeholder="comma, separated, keywords"
                 className="bg-slate-700 border-slate-600 text-white"
               />
+            </div>
+
+            <div>
+              <label className="text-sm text-slate-300 mb-1 block">Bottom Content (Rich HTML)</label>
+              <Textarea
+                value={formData.bottom_content}
+                onChange={(e) => setFormData(prev => ({ ...prev, bottom_content: e.target.value }))}
+                placeholder="<h2>Why Rent Here?</h2><p>Your content with <a href='/browse?city=Lahore'>internal links</a>...</p>"
+                className="bg-slate-700 border-slate-600 text-white font-mono text-sm"
+                rows={8}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Supported tags: &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;a href="..."&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;. Use internal links for SEO.
+              </p>
             </div>
 
             <div className="flex gap-3 pt-4">

@@ -13,6 +13,7 @@ import AvailabilityCalendarFlatpickr from "@/components/AvailabilityCalendarFlat
 import BrowseFilters from "@/components/BrowseFilters";
 import MapView from "@/components/MapView";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
+import SEOBottomContent from "@/components/SEOBottomContent";
 import { format, isWithinInterval } from "date-fns";
 
 interface DateRange {
@@ -25,6 +26,7 @@ interface SEOContent {
   description: string | null;
   meta_description: string | null;
   meta_keywords: string | null;
+  bottom_content: string | null;
 }
 
 const CATEGORY_NAMES: Record<string, string> = {
@@ -123,7 +125,7 @@ const Browse = () => {
     ];
 
     for (const q of queries) {
-      let query = supabase.from("page_seo_content").select("heading, description, meta_description, meta_keywords");
+      let query = supabase.from("page_seo_content").select("heading, description, meta_description, meta_keywords, bottom_content");
       
       if (q.city) query = query.eq("city", q.city);
       else query = query.is("city", null);
@@ -485,6 +487,11 @@ const Browse = () => {
               ))}
             </div>
           </>
+        )}
+
+        {/* SEO Bottom Content Section */}
+        {seoContent?.bottom_content && (
+          <SEOBottomContent content={seoContent.bottom_content} />
         )}
       </main>
     </div>
