@@ -399,6 +399,7 @@ export type Database = {
       page_seo_content: {
         Row: {
           area: string | null
+          bottom_content: string | null
           category: string | null
           city: string | null
           created_at: string | null
@@ -412,6 +413,7 @@ export type Database = {
         }
         Insert: {
           area?: string | null
+          bottom_content?: string | null
           category?: string | null
           city?: string | null
           created_at?: string | null
@@ -425,6 +427,7 @@ export type Database = {
         }
         Update: {
           area?: string | null
+          bottom_content?: string | null
           category?: string | null
           city?: string | null
           created_at?: string | null
