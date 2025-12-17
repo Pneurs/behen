@@ -44,8 +44,8 @@ export default function SEOContentManager() {
   const [saving, setSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<SEOContent | null>(null);
-  const [filterCity, setFilterCity] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
+  const [filterCity, setFilterCity] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
 
   // Form state
   const [formData, setFormData] = useState({
@@ -81,9 +81,9 @@ export default function SEOContentManager() {
     if (content) {
       setEditingContent(content);
       setFormData({
-        city: content.city || "",
-        area: content.area || "",
-        category: content.category || "",
+        city: content.city || "none",
+        area: content.area || "none",
+        category: content.category || "none",
         heading: content.heading,
         description: content.description || "",
         meta_description: content.meta_description || "",
@@ -92,9 +92,9 @@ export default function SEOContentManager() {
     } else {
       setEditingContent(null);
       setFormData({
-        city: "",
-        area: "",
-        category: "",
+        city: "none",
+        area: "none",
+        category: "none",
         heading: "",
         description: "",
         meta_description: "",
@@ -113,9 +113,9 @@ export default function SEOContentManager() {
     setSaving(true);
 
     const payload = {
-      city: formData.city || null,
-      area: formData.area || null,
-      category: formData.category || null,
+      city: formData.city === "none" ? null : formData.city || null,
+      area: formData.area === "none" ? null : formData.area || null,
+      category: formData.category === "none" ? null : formData.category || null,
       heading: formData.heading,
       description: formData.description || null,
       meta_description: formData.meta_description || null,
@@ -178,12 +178,12 @@ export default function SEOContentManager() {
   };
 
   const filteredContents = seoContents.filter((content) => {
-    const matchesCity = !filterCity || content.city === filterCity;
-    const matchesCategory = !filterCategory || content.category === filterCategory;
+    const matchesCity = filterCity === "all" || content.city === filterCity;
+    const matchesCategory = filterCategory === "all" || content.category === filterCategory;
     return matchesCity && matchesCategory;
   });
 
-  const availableAreas = formData.city ? getAreasForCity(formData.city) : [];
+  const availableAreas = formData.city && formData.city !== "none" ? getAreasForCity(formData.city) : [];
 
   if (loading) {
     return (
@@ -213,7 +213,7 @@ export default function SEOContentManager() {
               <SelectValue placeholder="Filter by City" />
             </SelectTrigger>
             <SelectContent className="bg-slate-700 border-slate-600">
-              <SelectItem value="" className="text-white">All Cities</SelectItem>
+              <SelectItem value="all" className="text-white">All Cities</SelectItem>
               {CITIES.map((city) => (
                 <SelectItem key={city} value={city} className="text-white">{city}</SelectItem>
               ))}
@@ -225,7 +225,7 @@ export default function SEOContentManager() {
               <SelectValue placeholder="Filter by Category" />
             </SelectTrigger>
             <SelectContent className="bg-slate-700 border-slate-600">
-              <SelectItem value="" className="text-white">All Categories</SelectItem>
+              <SelectItem value="all" className="text-white">All Categories</SelectItem>
               {CATEGORIES.map((cat) => (
                 <SelectItem key={cat.value} value={cat.value} className="text-white">{cat.label}</SelectItem>
               ))}
@@ -326,13 +326,13 @@ export default function SEOContentManager() {
                 <label className="text-sm text-slate-300 mb-1 block">City (optional)</label>
                 <Select 
                   value={formData.city} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, area: "" }))}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, area: "none" }))}
                 >
                   <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                     <SelectValue placeholder="Select City" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600 max-h-60">
-                    <SelectItem value="" className="text-white">Any City</SelectItem>
+                    <SelectItem value="none" className="text-white">Any City</SelectItem>
                     {CITIES.map((city) => (
                       <SelectItem key={city} value={city} className="text-white">{city}</SelectItem>
                     ))}
@@ -345,13 +345,13 @@ export default function SEOContentManager() {
                 <Select 
                   value={formData.area} 
                   onValueChange={(value) => setFormData(prev => ({ ...prev, area: value }))}
-                  disabled={!formData.city}
+                  disabled={!formData.city || formData.city === "none"}
                 >
                   <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
-                    <SelectValue placeholder={formData.city ? "Select Area" : "Select city first"} />
+                    <SelectValue placeholder={formData.city && formData.city !== "none" ? "Select Area" : "Select city first"} />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-700 border-slate-600 max-h-60">
-                    <SelectItem value="" className="text-white">Any Area</SelectItem>
+                    <SelectItem value="none" className="text-white">Any Area</SelectItem>
                     {availableAreas.map((area) => (
                       <SelectItem key={area} value={area} className="text-white">{area}</SelectItem>
                     ))}
@@ -370,7 +370,7 @@ export default function SEOContentManager() {
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-700 border-slate-600">
-                  <SelectItem value="" className="text-white">Any Category</SelectItem>
+                  <SelectItem value="none" className="text-white">Any Category</SelectItem>
                   {CATEGORIES.map((cat) => (
                     <SelectItem key={cat.value} value={cat.value} className="text-white">{cat.label}</SelectItem>
                   ))}
