@@ -20,6 +20,8 @@ import {
   Play,
   Loader2,
   CreditCard,
+  MapPin,
+  Phone,
 } from "lucide-react";
 
 interface OrderStageViewProps {
@@ -32,7 +34,8 @@ const RETURN_WINDOW_DAYS = 4;
 const LATE_FEE_PER_DAY = 1550;
 const MAX_LATE_DAYS = 3;
 
-const STAGES = [
+// RENTAL flow stages (3 videos: packing, return, acceptance)
+const RENTAL_STAGES = [
   { key: "payment_pending", label: "Payment", icon: CreditCard },
   { key: "pending_packing_video", label: "Packing Video", icon: Package },
   { key: "pending_pickup", label: "Product Pickup", icon: Truck },
@@ -42,12 +45,38 @@ const STAGES = [
   { key: "completed", label: "Completed", icon: CheckCircle },
 ];
 
+// SALE flow stages (1 video: packing only)
+const SALE_STAGES = [
+  { key: "payment_pending", label: "Payment", icon: CreditCard },
+  { key: "pending_packing_video", label: "Packing Video", icon: Package },
+  { key: "ready_for_pickup", label: "Ready for Pickup", icon: Truck },
+  { key: "completed", label: "Completed", icon: CheckCircle },
+];
+
 export default function OrderStageView({ booking, userId, onRefresh }: OrderStageViewProps) {
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState<string>("");
+  const [product, setProduct] = useState<any>(null);
 
   const isOwner = userId === booking.owner_id;
   const isRenter = userId === booking.renter_id;
+  
+  // Fetch product to determine if sale or rental
+  useEffect(() => {
+    const fetchProduct = async () => {
+      const { data } = await supabase
+        .from("products")
+        .select("listing_type, contact_phone, pickup_location, dropoff_location")
+        .eq("id", booking.product_id)
+        .single();
+      
+      if (data) setProduct(data);
+    };
+    fetchProduct();
+  }, [booking.product_id]);
+
+  const isSaleProduct = product?.listing_type === "sale";
+  const STAGES = isSaleProduct ? SALE_STAGES : RENTAL_STAGES;
   
   // Determine current stage - payment takes precedence if not verified
   const isPaymentPending = booking.payment_status !== "verified";
@@ -56,8 +85,9 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
   const currentStageIndex = STAGES.findIndex(s => s.key === currentStage);
   const progressPercent = ((currentStageIndex + 1) / STAGES.length) * 100;
 
-  // Countdown timer for return window
+  // Countdown timer for return window (rental only)
   useEffect(() => {
+    if (isSaleProduct) return;
     if (currentStage !== "in_rental_period" && currentStage !== "pending_return_video") return;
     if (!booking.return_deadline) return;
 
@@ -77,29 +107,36 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentStage, booking.return_deadline]);
+  }, [currentStage, booking.return_deadline, isSaleProduct]);
 
   const handleVideoUploaded = async (videoType: string, videoUrl: string) => {
     setLoading(true);
     try {
       let updateData: any = {};
-      let nextStage = currentStage;
       const now = new Date().toISOString();
 
       if (videoType === "packing") {
-        updateData = {
-          packing_video_url: videoUrl,
-          packing_video_uploaded_at: now,
-          order_stage: "pending_pickup",
-        };
-        nextStage = "pending_pickup";
+        if (isSaleProduct) {
+          // For sale: go directly to ready_for_pickup
+          updateData = {
+            packing_video_url: videoUrl,
+            packing_video_uploaded_at: now,
+            order_stage: "ready_for_pickup",
+          };
+        } else {
+          // For rental: go to pending_pickup
+          updateData = {
+            packing_video_url: videoUrl,
+            packing_video_uploaded_at: now,
+            order_stage: "pending_pickup",
+          };
+        }
       } else if (videoType === "return") {
         updateData = {
           return_video_url: videoUrl,
           return_video_uploaded_at: now,
           order_stage: "pending_acceptance_video",
         };
-        nextStage = "pending_acceptance_video";
       } else if (videoType === "acceptance") {
         const deleteAfter = addDays(new Date(), 7).toISOString();
         updateData = {
@@ -110,7 +147,6 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
           completed_at: now,
           videos_delete_after: deleteAfter,
         };
-        nextStage = "completed";
       }
 
       const { error } = await supabase
@@ -129,6 +165,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     }
   };
 
+  // For RENTAL: Mark as picked (starts rental period)
   const handleMarkAsPicked = async () => {
     setLoading(true);
     try {
@@ -156,6 +193,35 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     }
   };
 
+  // For SALE: Mark as delivered/picked (completes order)
+  const handleMarkAsDelivered = async () => {
+    setLoading(true);
+    try {
+      const deleteAfter = addDays(new Date(), 7).toISOString();
+      
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          order_stage: "completed",
+          booking_status: "completed",
+          picked_at: new Date().toISOString(),
+          picked_by_user_id: userId,
+          completed_at: new Date().toISOString(),
+          videos_delete_after: deleteAfter,
+        })
+        .eq("id", booking.id);
+
+      if (error) throw error;
+
+      toast.success("Order completed! Product delivered.");
+      onRefresh();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update order");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getPickedByName = () => {
     if (!booking.picked_by_user_id) return null;
     return booking.picked_by_user_id === booking.owner_id ? "Bari Behen" : "Choti Behen";
@@ -168,21 +234,26 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         <CardContent className="pt-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium">Order Progress</span>
-            <Badge variant={currentStage === "completed" ? "default" : "secondary"}>
-              {STAGES.find(s => s.key === currentStage)?.label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {isSaleProduct && (
+                <Badge variant="outline" className="text-xs">Sale</Badge>
+              )}
+              <Badge variant={currentStage === "completed" ? "default" : "secondary"}>
+                {STAGES.find(s => s.key === currentStage)?.label}
+              </Badge>
+            </div>
           </div>
           <Progress value={progressPercent} className="h-2" />
           
           {/* Stage indicators */}
           <div className="flex justify-between mt-4 overflow-x-auto pb-2">
-            {STAGES.slice(0, 6).map((stage, index) => {
+            {STAGES.map((stage, index) => {
               const StageIcon = stage.icon;
               const isComplete = index < currentStageIndex;
               const isCurrent = index === currentStageIndex;
               
               return (
-                <div key={stage.key} className="flex flex-col items-center">
+                <div key={stage.key} className="flex flex-col items-center min-w-[60px]">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                     isComplete ? "bg-green-500 text-white" :
                     isCurrent ? "bg-primary text-white" :
@@ -209,7 +280,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
 
       {/* Contact Info - Only visible after payment verified */}
       {booking.payment_status === "verified" && (
-        <ContactInfoReveal booking={booking} userId={userId} />
+        <ContactInfoReveal booking={booking} userId={userId} product={product} />
       )}
 
       {/* Stage-specific content - Only show if payment is verified */}
@@ -218,7 +289,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Stage 1: Packing Video
+              {isSaleProduct ? "Packing Video" : "Stage 1: Packing Video"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -240,7 +311,64 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </Card>
       )}
 
-      {currentStage === "pending_pickup" && !isPaymentPending && (
+      {/* SALE: Ready for Pickup stage */}
+      {isSaleProduct && currentStage === "ready_for_pickup" && !isPaymentPending && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" />
+              Ready for Pickup
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {booking.packing_video_url && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Packing Video:</p>
+                <video
+                  src={booking.packing_video_url}
+                  controls
+                  className="w-full rounded-lg max-h-[300px]"
+                />
+              </div>
+            )}
+
+            {/* Show pickup details from product */}
+            {product && (
+              <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Pickup Details
+                </h4>
+                {product.contact_phone && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <a href={`tel:${product.contact_phone}`} className="text-primary hover:underline">
+                      {product.contact_phone}
+                    </a>
+                  </div>
+                )}
+                {product.pickup_location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{product.pickup_location}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="bg-muted p-4 rounded-lg text-center">
+              <p className="mb-4">Product is packed and ready! Coordinate pickup with the seller.</p>
+              <Button onClick={handleMarkAsDelivered} disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                Mark as Picked Up / Delivered
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* RENTAL: Pending Pickup stage */}
+      {!isSaleProduct && currentStage === "pending_pickup" && !isPaymentPending && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -259,6 +387,28 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
                 />
               </div>
             )}
+
+            {/* Show pickup/dropoff details from product */}
+            {product && (product.pickup_location || product.dropoff_location) && (
+              <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg space-y-3">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Location Details
+                </h4>
+                {product.pickup_location && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-medium text-muted-foreground w-16">Pickup:</span>
+                    <span>{product.pickup_location}</span>
+                  </div>
+                )}
+                {product.dropoff_location && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-medium text-muted-foreground w-16">Dropoff:</span>
+                    <span>{product.dropoff_location}</span>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="bg-muted p-4 rounded-lg text-center">
               <p className="mb-4">Product is ready! Either party can mark as picked up.</p>
@@ -271,7 +421,8 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </Card>
       )}
 
-      {(currentStage === "in_rental_period" || currentStage === "pending_return_video") && (
+      {/* RENTAL: Return Window / Return Video stages */}
+      {!isSaleProduct && (currentStage === "in_rental_period" || currentStage === "pending_return_video") && (
         <Card className={countdown.includes("OVERDUE") ? "border-destructive" : ""}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -295,6 +446,16 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 Picked up by {getPickedByName()} on {format(new Date(booking.picked_at), "MMM dd, yyyy HH:mm")}
+              </div>
+            )}
+
+            {/* Dropoff location reminder */}
+            {product?.dropoff_location && (
+              <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="h-4 w-4" />
+                  <span><strong>Dropoff Location:</strong> {product.dropoff_location}</span>
+                </div>
               </div>
             )}
 
@@ -332,7 +493,8 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </Card>
       )}
 
-      {currentStage === "pending_acceptance_video" && (
+      {/* RENTAL: Acceptance Video stage */}
+      {!isSaleProduct && currentStage === "pending_acceptance_video" && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -369,6 +531,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
         </Card>
       )}
 
+      {/* Completed state */}
       {currentStage === "completed" && (
         <Card className="border-green-500/50 bg-green-500/5">
           <CardContent className="pt-6 text-center">

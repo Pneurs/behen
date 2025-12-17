@@ -94,7 +94,11 @@ const ListDress = () => {
     city: "",
     area: "",
     dry_clean_only: false,
+    contact_phone: "",
+    pickup_location: "",
+    dropoff_location: "",
   });
+  const [sameAsPickup, setSameAsPickup] = useState(false);
 
   // Fetch current AI model provider
   useEffect(() => {
@@ -180,6 +184,9 @@ const ListDress = () => {
               city: product.city || "",
               area: product.area || "",
               dry_clean_only: product.dry_clean_only || false,
+              contact_phone: product.contact_phone || "",
+              pickup_location: product.pickup_location || "",
+              dropoff_location: product.dropoff_location || "",
             });
 
             setIncludedAccessories(Array.isArray(product.included_accessories) ? product.included_accessories as string[] : []);
@@ -551,6 +558,9 @@ const ListDress = () => {
         availability_data: availabilityData,
         dry_clean_only: formData.dry_clean_only,
         included_accessories: includedAccessories,
+        contact_phone: formData.contact_phone || null,
+        pickup_location: formData.pickup_location || null,
+        dropoff_location: formData.dropoff_location || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -1399,6 +1409,96 @@ const ListDress = () => {
               Your exact location will remain private until booking confirmation
             </p>
           </div>
+
+          {/* Pickup & Contact Details - Conditional based on listing type */}
+          {formData.listing_type && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                {formData.listing_type === "sale" ? "Contact & Pickup Details *" : "Pickup & Dropoff Details *"}
+              </h3>
+              
+              {formData.listing_type === "sale" ? (
+                // Sale: Show contact phone + pickup location
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contact_phone">Contact Phone *</Label>
+                    <Input
+                      id="contact_phone"
+                      value={formData.contact_phone}
+                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      placeholder="e.g., 03xx-xxxxxxx"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This will be shared with buyer after payment verification
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="pickup_location">Pickup Location *</Label>
+                    <Input
+                      id="pickup_location"
+                      value={formData.pickup_location}
+                      onChange={(e) => setFormData({ ...formData, pickup_location: e.target.value })}
+                      placeholder="e.g., DHA Phase 5, near Park"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Where buyer will collect the product
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                // Rent: Show pickup + dropoff locations
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="pickup_location">Pickup Location *</Label>
+                      <Input
+                        id="pickup_location"
+                        value={formData.pickup_location}
+                        onChange={(e) => setFormData({ ...formData, pickup_location: e.target.value })}
+                        placeholder="e.g., DHA Phase 5, near Park"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Where renter will collect the product
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="dropoff_location">Dropoff Location *</Label>
+                      <Input
+                        id="dropoff_location"
+                        value={sameAsPickup ? formData.pickup_location : formData.dropoff_location}
+                        onChange={(e) => setFormData({ ...formData, dropoff_location: e.target.value })}
+                        placeholder="e.g., Same as pickup"
+                        disabled={sameAsPickup}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Where renter will return the product
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="same_as_pickup"
+                      checked={sameAsPickup}
+                      onCheckedChange={(checked) => {
+                        setSameAsPickup(checked as boolean);
+                        if (checked) {
+                          setFormData({ ...formData, dropoff_location: formData.pickup_location });
+                        }
+                      }}
+                    />
+                    <Label htmlFor="same_as_pickup" className="cursor-pointer text-sm">
+                      Dropoff location is same as pickup
+                    </Label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Availability Calendar (only for rentals) */}
           {formData.listing_type === "rent" && (
