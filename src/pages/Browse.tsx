@@ -110,10 +110,12 @@ const Browse = () => {
 
     // Try exact match first, then fallback to more generic matches
     const queries = [
-      // Exact match
+      // Exact match: City + Area + Category
       { city, area, category },
       // City + Category (no area)
       { city, area: null, category },
+      // City + Area (no category)
+      { city, area, category: null },
       // City only
       { city, area: null, category: null },
       // Category only
@@ -160,10 +162,10 @@ const Browse = () => {
     const area = areaFilter || null;
 
     if (city && category) {
-      return `${category} for Rent in ${area ? area + ", " : ""}${city}`;
+      return `${category} for Rent & Sale in ${area ? area + ", " : ""}${city}`;
     }
     if (city) {
-      return `Dresses for Rent in ${area ? area + ", " : ""}${city}`;
+      return `Dresses for Rent & Sale in ${area ? area + ", " : ""}${city}`;
     }
     if (category) {
       return `${category} Collection`;
