@@ -270,6 +270,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_verification_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          password_hash: string
+          token: string
+          user_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          password_hash: string
+          token: string
+          user_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          password_hash?: string
+          token?: string
+          user_data?: Json | null
+        }
+        Relationships: []
+      }
       offers: {
         Row: {
           conversation_id: string
@@ -488,6 +518,7 @@ export type Database = {
           area: string | null
           city: string | null
           created_at: string
+          email_verified: boolean | null
           id: string
           name: string
           phone: string | null
@@ -499,6 +530,7 @@ export type Database = {
           area?: string | null
           city?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           name: string
           phone?: string | null
@@ -510,6 +542,7 @@ export type Database = {
           area?: string | null
           city?: string | null
           created_at?: string
+          email_verified?: boolean | null
           id?: string
           name?: string
           phone?: string | null
