@@ -396,6 +396,48 @@ export type Database = {
           },
         ]
       }
+      page_seo_content: {
+        Row: {
+          area: string | null
+          category: string | null
+          city: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          heading: string
+          id: string
+          meta_description: string | null
+          meta_keywords: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          area?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          heading: string
+          id?: string
+          meta_description?: string | null
+          meta_keywords?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          area?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          heading?: string
+          id?: string
+          meta_description?: string | null
+          meta_keywords?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           ai_cover_image: string | null
