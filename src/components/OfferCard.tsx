@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, X, Loader2, Calendar, DollarSign, Shield } from "lucide-react";
 import FlatpickrCalendar from "@/components/ui/flatpickr-calendar";
+import { sendEmailNotification } from "@/lib/emailNotifications";
 
 interface OfferCardProps {
   conversationId: string;
@@ -147,6 +148,39 @@ export default function OfferCard({
           .eq("id", offerId);
 
         if (updateError) throw updateError;
+
+        // Send rejection notification to the buyer
+        try {
+          const buyerId = offer.sender_id;
+          const { data: buyerProfile } = await supabase
+            .from("profiles")
+            .select("name")
+            .eq("user_id", buyerId)
+            .single();
+
+          const { data: authData } = await supabase.auth.admin?.getUserById?.(buyerId) || {};
+          const buyerEmail = authData?.user?.email;
+
+          // If admin API not available, try to get from a different approach
+          if (!buyerEmail) {
+            // Fetch conversation to get product details for notification
+            const chatLink = `${window.location.origin}/chat?product=${productId}`;
+            
+            // Send notification via edge function which has admin access
+            await sendEmailNotification({
+              type: "offer_rejected",
+              recipientEmail: "", // Edge function will fetch this
+              recipientName: buyerProfile?.name || "Choti Behen",
+              data: {
+                productTitle: product?.title,
+                chatLink,
+                buyerId,
+              },
+            });
+          }
+        } catch (notifError) {
+          console.error("Failed to send rejection notification:", notifError);
+        }
 
         toast.info("Offer rejected");
         onOfferCreated();

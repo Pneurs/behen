@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmailNotification {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit";
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "offer_rejected";
   recipientEmail: string;
   recipientName: string;
   data: any;

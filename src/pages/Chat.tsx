@@ -11,6 +11,7 @@ import { Send, AlertCircle, ExternalLink, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import OfferCard from "@/components/OfferCard";
+import { sendEmailNotification } from "@/lib/emailNotifications";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
@@ -234,6 +235,36 @@ export default function Chat() {
       });
     } else {
       setNewMessage("");
+      
+      // Send email notification to recipient
+      try {
+        const recipientId = user.id === conversation.owner_id 
+          ? conversation.renter_id 
+          : conversation.owner_id;
+        
+        const { data: recipientProfile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("user_id", recipientId)
+          .single();
+
+        const chatLink = `${window.location.origin}/chat?product=${productId}`;
+        
+        await sendEmailNotification({
+          type: "new_message",
+          recipientEmail: "", // Edge function will fetch this
+          recipientName: recipientProfile?.name || "User",
+          data: {
+            senderName: "Someone",
+            productTitle: product?.title,
+            message: newMessage.length > 100 ? newMessage.substring(0, 100) + "..." : newMessage,
+            chatLink,
+            recipientId,
+          },
+        });
+      } catch (notifError) {
+        console.error("Failed to send message notification:", notifError);
+      }
     }
 
     setLoading(false);
