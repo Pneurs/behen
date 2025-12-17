@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText
 } from "lucide-react";
+import SEOContentManager from "@/components/admin/SEOContentManager";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 
@@ -901,6 +902,12 @@ export default function AdminDashboard() {
                   Settings
                 </TabsTrigger>
               )}
+              {currentRole === "super_admin" && (
+                <TabsTrigger value="seo" className="data-[state=active]:bg-primary">
+                  <FileText className="h-4 w-4 mr-1" />
+                  SEO
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* Pending Payments Tab */}
@@ -1566,6 +1573,13 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+            )}
+
+            {/* SEO Content Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="seo">
+                <SEOContentManager />
               </TabsContent>
             )}
           </Tabs>

@@ -20,6 +20,25 @@ interface DateRange {
   to?: Date;
 }
 
+interface SEOContent {
+  heading: string;
+  description: string | null;
+  meta_description: string | null;
+  meta_keywords: string | null;
+}
+
+const CATEGORY_NAMES: Record<string, string> = {
+  bridal: "Bridal Dresses",
+  barat: "Barat Dresses",
+  walima: "Walima Dresses",
+  formal: "Formal Dresses",
+  party_wear: "Party Wear",
+  footwear: "Footwear",
+  accessories: "Accessories",
+  jewelry: "Jewelry",
+  bags: "Bags",
+};
+
 const Browse = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,7 +49,7 @@ const Browse = () => {
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
   const [listingTypeFilter, setListingTypeFilter] = useState("all");
   const [cityFilter, setCityFilter] = useState(searchParams.get("city") || "");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState(searchParams.get("area") || "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showMap, setShowMap] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -38,6 +57,7 @@ const Browse = () => {
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [alterationFilter, setAlterationFilter] = useState(false);
+  const [seoContent, setSeoContent] = useState<SEOContent | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -79,7 +99,77 @@ const Browse = () => {
   useEffect(() => {
     loadProducts();
     loadBookings();
+    loadSEOContent();
   }, [categoryFilter, listingTypeFilter, cityFilter, areaFilter]);
+
+  // Load SEO content based on URL params
+  const loadSEOContent = async () => {
+    const city = searchParams.get("city") || null;
+    const area = searchParams.get("area") || null;
+    const category = searchParams.get("category") || null;
+
+    // Try exact match first, then fallback to more generic matches
+    const queries = [
+      // Exact match
+      { city, area, category },
+      // City + Category (no area)
+      { city, area: null, category },
+      // City only
+      { city, area: null, category: null },
+      // Category only
+      { city: null, area: null, category },
+    ];
+
+    for (const q of queries) {
+      let query = supabase.from("page_seo_content").select("heading, description, meta_description, meta_keywords");
+      
+      if (q.city) query = query.eq("city", q.city);
+      else query = query.is("city", null);
+      
+      if (q.area) query = query.eq("area", q.area);
+      else query = query.is("area", null);
+      
+      if (q.category) query = query.eq("category", q.category);
+      else query = query.is("category", null);
+
+      const { data } = await query.maybeSingle();
+      
+      if (data) {
+        setSeoContent(data);
+        // Update document meta tags
+        if (data.meta_description) {
+          document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta_description);
+        }
+        if (data.heading) {
+          document.title = `${data.heading} | Behen.pk`;
+        }
+        return;
+      }
+    }
+
+    // No custom SEO content found, use default
+    setSeoContent(null);
+  };
+
+  // Generate default heading based on filters
+  const getPageHeading = () => {
+    if (seoContent?.heading) return seoContent.heading;
+    
+    const category = categoryFilter !== "all" ? CATEGORY_NAMES[categoryFilter] || categoryFilter : null;
+    const city = cityFilter || null;
+    const area = areaFilter || null;
+
+    if (city && category) {
+      return `${category} for Rent in ${area ? area + ", " : ""}${city}`;
+    }
+    if (city) {
+      return `Dresses for Rent in ${area ? area + ", " : ""}${city}`;
+    }
+    if (category) {
+      return `${category} Collection`;
+    }
+    return "Browse Collection";
+  };
 
   const loadBookings = async () => {
     try {
@@ -249,12 +339,17 @@ const Browse = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <EarningsPromoPopup userRole={userRole} />
-      {/* Page Title - Static */}
+      {/* Page Title - Dynamic SEO */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Browse Collection
+            {getPageHeading()}
           </h1>
+          {seoContent?.description && (
+            <p className="text-muted-foreground mt-2 max-w-3xl">
+              {seoContent.description}
+            </p>
+          )}
         </div>
       </div>
 
