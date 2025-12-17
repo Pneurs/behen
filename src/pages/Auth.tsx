@@ -72,7 +72,7 @@ const Auth = () => {
     return response.data;
   };
 
-  // Handle verification link from email - uses database tokens (works across devices)
+  // Handle verification link from email - creates account and signs in user
   const handleVerifyFromLink = async () => {
     const urlToken = searchParams.get("token");
     const urlEmail = searchParams.get("email");
@@ -100,7 +100,7 @@ const Auth = () => {
         return;
       }
 
-      // Token is valid - sign in the user
+      // Token is valid - NOW create the user account
       const userData = tokenData.user_data as { password: string; name: string; phone: string; role: string; referred_by: string | null } | null;
       
       if (!userData?.password) {
@@ -111,15 +111,40 @@ const Auth = () => {
         return;
       }
 
-      // Sign in with the stored credentials
+      // Create the user account now that email is verified
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: urlEmail,
+        password: userData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+            referred_by: userData.referred_by,
+          },
+        },
+      });
+
+      if (signUpError) {
+        console.error("Signup error during verification:", signUpError);
+        toast.error("Failed to create account. Please try signing up again.");
+        setMode("signup");
+        setLoading(false);
+        setVerifying(false);
+        return;
+      }
+
+      // Sign in the user
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: urlEmail,
         password: userData.password,
       });
 
       if (signInError) {
-        toast.error("Verification failed. Please sign up again.");
-        setMode("signup");
+        console.error("Sign in error after verification:", signInError);
+        toast.error("Account created! Please login with your credentials.");
+        setMode("login");
         setLoading(false);
         setVerifying(false);
         return;
@@ -253,97 +278,68 @@ const Auth = () => {
         referrerId = referralData.user_id;
       }
 
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name,
-            phone,
-            role,
-            referred_by: referrerId,
+      // Check if email already exists in profiles (user already has an account)
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("user_id", (await supabase.auth.getUser()).data.user?.id || "")
+        .single();
+
+      // Check if user already registered via auth
+      const { data: existingUsers } = await supabase.rpc('get_user_role_by_email', { user_email: email });
+      
+      if (existingUsers) {
+        let accountType = "";
+        if (existingUsers === "bari") {
+          accountType = " as a Bari Behen";
+        } else if (existingUsers === "choti") {
+          accountType = " as a Choti Behen";
+        }
+        
+        const errorMessage = `You already have an account${accountType}! Please login instead.`;
+        setEmailError(errorMessage);
+        toast.error(errorMessage, {
+          action: {
+            label: "Go to Login",
+            onClick: () => setMode("login"),
           },
-        },
-      });
-
-      // Check if user already exists
-      if (signUpError) {
-        // If user already registered, show friendly message with account type
-        if (signUpError.message?.includes("already registered") || 
-            signUpError.message?.includes("already been registered") ||
-            signUpError.message?.includes("User already registered")) {
-          
-          // Try to get the user's role
-          let accountType = "";
-          try {
-            const { data: roleData } = await supabase.rpc('get_user_role_by_email', { user_email: email });
-            if (roleData === "bari") {
-              accountType = " as a Bari Behen";
-            } else if (roleData === "choti") {
-              accountType = " as a Choti Behen";
-            }
-          } catch (err) {
-            // Ignore error, just show generic message
-          }
-          
-          const errorMessage = `You already have an account${accountType}! Please login instead.`;
-          setEmailError(errorMessage);
-          toast.error(errorMessage, {
-            action: {
-              label: "Go to Login",
-              onClick: () => setMode("login"),
-            },
-          });
-          setLoading(false);
-          return;
-        }
-        throw signUpError;
-      }
-
-      // Check if user exists but email not confirmed (identities array is empty)
-      if (data?.user?.identities?.length === 0) {
-        // Resend verification email for existing unverified user
-        try {
-          const token = generateToken();
-          
-          // Delete old tokens for this email
-          await supabase
-            .from("email_verification_tokens")
-            .delete()
-            .eq("email", email);
-          
-          // Store new token in database with user data
-          await supabase
-            .from("email_verification_tokens")
-            .insert({
-              email,
-              token,
-              password_hash: simpleHash(password),
-              user_data: { password, name, phone, role, referred_by: referrerId },
-            });
-          
-          await sendVerificationEmail(email, token, "signup");
-          setPendingEmail(email);
-          setMode("check-email");
-          toast.success("Verification email resent! Please check your email.");
-        } catch (err) {
-          toast.error("Failed to resend verification email. Please try again.");
-        }
+        });
         setLoading(false);
         return;
       }
 
-      // For new users, generate token and store in database (works across devices)
+      // Check if there's a pending verification for this email
+      const { data: existingToken } = await supabase
+        .from("email_verification_tokens")
+        .select("email")
+        .eq("email", email)
+        .single();
+
+      if (existingToken) {
+        // Token exists - resend verification email
+        const token = generateToken();
+        
+        await supabase
+          .from("email_verification_tokens")
+          .update({ 
+            token, 
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            password_hash: simpleHash(password),
+            user_data: { password, name, phone, role, referred_by: referrerId },
+          })
+          .eq("email", email);
+        
+        await sendVerificationEmail(email, token, "signup");
+        setPendingEmail(email);
+        setMode("check-email");
+        toast.success("Verification email resent! Please check your email.");
+        setLoading(false);
+        return;
+      }
+
+      // New user - store credentials in database (NO account created yet)
       const token = generateToken();
       
-      // Delete any existing tokens for this email
-      await supabase
-        .from("email_verification_tokens")
-        .delete()
-        .eq("email", email);
-      
-      // Store token in database with user credentials
       await supabase
         .from("email_verification_tokens")
         .insert({
@@ -357,9 +353,9 @@ const Auth = () => {
       
       setPendingEmail(email);
       setMode("check-email");
-      toast.success("Signup successful! Please check your email for the verification link.");
+      toast.success("Please check your email to verify your account.");
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account");
+      toast.error(error.message || "Failed to process signup");
     } finally {
       setLoading(false);
     }
