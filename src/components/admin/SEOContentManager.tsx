@@ -38,6 +38,50 @@ const CATEGORIES = [
   { value: "bags", label: "Bags" },
 ];
 
+// Generate default SEO content based on selections
+const generateDefaultSEO = (city: string, area: string, category: string) => {
+  const cityName = city !== "none" ? city : null;
+  const areaName = area !== "none" ? area : null;
+  const categoryLabel = CATEGORIES.find(c => c.value === category)?.label || null;
+  
+  let locationStr = "";
+  if (cityName && areaName) {
+    locationStr = `in ${areaName}, ${cityName}`;
+  } else if (cityName) {
+    locationStr = `in ${cityName}`;
+  } else {
+    locationStr = "in Pakistan";
+  }
+  
+  const itemType = categoryLabel ? `${categoryLabel} Dresses` : "Dresses";
+  
+  const heading = `${itemType} for Rent & Sale ${locationStr}`;
+  const description = `Discover stunning ${itemType.toLowerCase()} available for rent and sale ${locationStr}. Browse designer outfits, bridal wear & formal dresses at affordable prices on Behen.pk.`;
+  const metaDesc = `Rent or buy beautiful ${itemType.toLowerCase()} ${locationStr}. Browse designer outfits at affordable prices on Behen.pk. Book now!`;
+  const keywords = `${itemType.toLowerCase()} ${cityName || ""}, rent dress, buy dress, bridal wear, formal dresses`.trim().replace(/\s+/g, " ");
+  
+  // Generate internal links
+  const cityLinks = cityName 
+    ? `<p>Find more dresses in <a href="/browse?city=${cityName}&category=bridal">Bridal</a>, <a href="/browse?city=${cityName}&category=walima">Walima</a>, <a href="/browse?city=${cityName}&category=formal">Formal</a>.</p>`
+    : `<p>Find dresses in <a href="/browse?city=Lahore">Lahore</a>, <a href="/browse?city=Karachi">Karachi</a>, <a href="/browse?city=Islamabad">Islamabad</a>.</p>`;
+  
+  const bottomContent = `<h2>Why Rent ${itemType} ${locationStr}?</h2>
+<p>Renting ${itemType.toLowerCase()} is the smart choice for modern fashion lovers. At Behen.pk, find designer outfits at a fraction of the purchase price.</p>
+
+<h2>Popular Categories</h2>
+<ul>
+<li><a href="/browse?category=bridal">Bridal Dresses</a></li>
+<li><a href="/browse?category=barat">Barat Dresses</a></li>
+<li><a href="/browse?category=walima">Walima Dresses</a></li>
+<li><a href="/browse?category=formal">Formal Dresses</a></li>
+</ul>
+
+<h2>Explore More</h2>
+${cityLinks}`;
+
+  return { heading, description, metaDesc, keywords, bottomContent };
+};
+
 export default function SEOContentManager() {
   const { toast } = useToast();
   const [seoContents, setSeoContents] = useState<SEOContent[]>([]);
@@ -94,15 +138,28 @@ export default function SEOContentManager() {
       });
     } else {
       setEditingContent(null);
+      // Pre-fill with default SEO-friendly values
       setFormData({
         city: "none",
         area: "none",
         category: "none",
-        heading: "",
-        description: "",
-        meta_description: "",
-        meta_keywords: "",
-        bottom_content: "",
+        heading: "Dresses for Rent & Sale in Pakistan",
+        description: "Discover stunning dresses available for rent and sale. Browse designer outfits, bridal wear & formal dresses at affordable prices on Behen.pk.",
+        meta_description: "Rent or buy beautiful dresses in Pakistan. Browse designer outfits, bridal wear & formal dresses at affordable prices on Behen.pk. Book now!",
+        meta_keywords: "rent dress pakistan, buy dress, bridal wear, formal dresses, wedding outfits",
+        bottom_content: `<h2>Why Choose Behen.pk?</h2>
+<p>Behen.pk is Pakistan's premier platform for renting and buying bridal and formal wear. Save money while looking stunning on your special day.</p>
+
+<h2>Popular Categories</h2>
+<ul>
+<li><a href="/browse?category=bridal">Bridal Dresses</a></li>
+<li><a href="/browse?category=barat">Barat Dresses</a></li>
+<li><a href="/browse?category=walima">Walima Dresses</a></li>
+<li><a href="/browse?category=formal">Formal Dresses</a></li>
+</ul>
+
+<h2>Browse by City</h2>
+<p>Find dresses in <a href="/browse?city=Lahore">Lahore</a>, <a href="/browse?city=Karachi">Karachi</a>, <a href="/browse?city=Islamabad">Islamabad</a>, and more cities across Pakistan.</p>`,
       });
     }
     setDialogOpen(true);
@@ -331,7 +388,23 @@ export default function SEOContentManager() {
                 <label className="text-sm text-slate-300 mb-1 block">City (optional)</label>
                 <Select 
                   value={formData.city} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, area: "none" }))}
+                  onValueChange={(value) => {
+                    if (!editingContent) {
+                      const defaults = generateDefaultSEO(value, "none", formData.category);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        city: value, 
+                        area: "none",
+                        heading: defaults.heading,
+                        description: defaults.description,
+                        meta_description: defaults.metaDesc,
+                        meta_keywords: defaults.keywords,
+                        bottom_content: defaults.bottomContent,
+                      }));
+                    } else {
+                      setFormData(prev => ({ ...prev, city: value, area: "none" }));
+                    }
+                  }}
                 >
                   <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                     <SelectValue placeholder="Select City" />
@@ -349,7 +422,22 @@ export default function SEOContentManager() {
                 <label className="text-sm text-slate-300 mb-1 block">Area (optional)</label>
                 <Select 
                   value={formData.area} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, area: value }))}
+                  onValueChange={(value) => {
+                    if (!editingContent) {
+                      const defaults = generateDefaultSEO(formData.city, value, formData.category);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        area: value,
+                        heading: defaults.heading,
+                        description: defaults.description,
+                        meta_description: defaults.metaDesc,
+                        meta_keywords: defaults.keywords,
+                        bottom_content: defaults.bottomContent,
+                      }));
+                    } else {
+                      setFormData(prev => ({ ...prev, area: value }));
+                    }
+                  }}
                   disabled={!formData.city || formData.city === "none"}
                 >
                   <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
@@ -369,7 +457,22 @@ export default function SEOContentManager() {
               <label className="text-sm text-slate-300 mb-1 block">Category (optional)</label>
               <Select 
                 value={formData.category} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+                onValueChange={(value) => {
+                  if (!editingContent) {
+                    const defaults = generateDefaultSEO(formData.city, formData.area, value);
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      category: value,
+                      heading: defaults.heading,
+                      description: defaults.description,
+                      meta_description: defaults.metaDesc,
+                      meta_keywords: defaults.keywords,
+                      bottom_content: defaults.bottomContent,
+                    }));
+                  } else {
+                    setFormData(prev => ({ ...prev, category: value }));
+                  }
+                }}
               >
                 <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
                   <SelectValue placeholder="Select Category" />
