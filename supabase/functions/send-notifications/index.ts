@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "referral_bonus";
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "referral_bonus" | "offer_rejected";
   recipientEmail?: string;
   recipientName?: string;
   data?: any;
@@ -155,10 +155,29 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Handle other notification types
-    const { recipientEmail, recipientName, data } = requestData;
+    let { recipientEmail, recipientName, data } = requestData;
     
-    if (!recipientEmail || !recipientName) {
-      throw new Error("Missing recipientEmail or recipientName");
+    // For notifications that need to fetch email from user ID
+    if (!recipientEmail && data?.recipientId) {
+      const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: authData } = await supabase.auth.admin.getUserById(data.recipientId);
+      recipientEmail = authData?.user?.email;
+      console.log(`Fetched email for user ${data.recipientId}: ${recipientEmail}`);
+    }
+    
+    if (!recipientEmail && data?.buyerId) {
+      const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: authData } = await supabase.auth.admin.getUserById(data.buyerId);
+      recipientEmail = authData?.user?.email;
+      console.log(`Fetched email for buyer ${data.buyerId}: ${recipientEmail}`);
+    }
+    
+    if (!recipientEmail) {
+      console.log("No recipient email found, skipping notification");
+      return new Response(JSON.stringify({ success: false, error: "No recipient email" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     console.log(`Sending ${type} notification to ${recipientEmail}`);
@@ -339,6 +358,27 @@ const handler = async (req: Request): Promise<Response> => {
               ${data.notes ? `<p style="margin: 10px 0;"><strong>Notes:</strong> ${data.notes}</p>` : ''}
             </div>
             <p><a href="https://behen.pk/my-bookings" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View Details</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        break;
+
+      case "offer_rejected":
+        subject = "Offer Update - Behen.pk";
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #f59e0b;">Your Offer Was Not Accepted</h1>
+            <p>Hi ${recipientName || 'Choti Behen'},</p>
+            <p>The seller has not accepted your offer for <strong>${data?.productTitle || 'the product'}</strong>.</p>
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+              <p style="margin: 0;">Don't worry! You can:</p>
+              <ul style="margin: 10px 0 0 0;">
+                <li>Send a new offer with adjusted terms</li>
+                <li>Continue chatting to negotiate</li>
+                <li>Browse other similar products</li>
+              </ul>
+            </div>
+            <p><a href="${data?.chatLink || 'https://behen.pk/all-chats'}" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Continue Chat</a></p>
             <p>Best regards,<br>Behen.pk Team</p>
           </div>
         `;
