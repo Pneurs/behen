@@ -13,6 +13,7 @@ import { format, differenceInDays, differenceInHours, differenceInMinutes } from
 import ReviewForm from "@/components/ReviewForm";
 import OrderStageView from "@/components/OrderStageView";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
+import PaymentInfoCard from "@/components/PaymentInfoCard";
 
 export default function MyBookings() {
   const navigate = useNavigate();
@@ -47,7 +48,7 @@ export default function MyBookings() {
         .from("bookings")
         .select(`
           *,
-          products (title, ai_cover_image, rental_price_per_day),
+          products (title, ai_cover_image, rental_price_per_day, listing_type, product_type),
           reviews (id)
         `)
         .or(`renter_id.eq.${userId},owner_id.eq.${userId}`)
@@ -419,6 +420,13 @@ function BookingsList({
                         </div>
                       </div>
                     )}
+
+                    {/* Payment Info */}
+                    <PaymentInfoCard 
+                      booking={booking} 
+                      isOwner={isOwner} 
+                      isRenter={isRenter} 
+                    />
 
                     {/* Action buttons */}
                     <div className="flex gap-2 mt-4">
