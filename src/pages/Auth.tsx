@@ -34,9 +34,9 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-
   const [pendingPassword, setPendingPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [verifyEmailRequired, setVerifyEmailRequired] = useState(false);
 
   // Generate random token for email verification
   const generateToken = () => {
@@ -407,6 +407,7 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setVerifyEmailRequired(false);
 
     try {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -425,9 +426,12 @@ const Auth = () => {
           .single();
         
         if (profile && !profile.email_verified) {
-          // Sign out user and prompt to verify email
+          // Sign out user and prompt to verify email with resend option
           await supabase.auth.signOut();
-          toast.error("Please verify your email first. Check your inbox for the verification link.");
+          setPendingEmail(email);
+          setPendingPassword(password);
+          setVerifyEmailRequired(true);
+          toast.error("Please verify your email first.");
           setLoading(false);
           return;
         }
@@ -436,6 +440,56 @@ const Auth = () => {
       toast.success("Welcome back!");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle resend verification for existing users who haven't verified yet
+  const handleResendVerificationForExistingUser = async () => {
+    if (!pendingEmail) {
+      toast.error("Please enter your email and try logging in again.");
+      setVerifyEmailRequired(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Check if token already exists for this email
+      const { data: existingToken } = await supabase
+        .from("email_verification_tokens")
+        .select("*")
+        .eq("email", pendingEmail)
+        .single();
+
+      const token = generateToken();
+
+      if (existingToken) {
+        // Update existing token
+        await supabase
+          .from("email_verification_tokens")
+          .update({ 
+            token, 
+            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          })
+          .eq("email", pendingEmail);
+      } else {
+        // Create new token entry for existing user (minimal data - account already exists)
+        await supabase
+          .from("email_verification_tokens")
+          .insert({
+            email: pendingEmail,
+            token,
+            password_hash: simpleHash(pendingPassword || "existing-user"),
+            user_data: { existing_user: true },
+          });
+      }
+
+      await sendVerificationEmail(pendingEmail, token, "signup");
+      toast.success("Verification email sent! Please check your inbox.");
+    } catch (error: any) {
+      console.error("Error resending verification:", error);
+      toast.error(error.message || "Failed to resend verification email");
     } finally {
       setLoading(false);
     }
@@ -636,55 +690,92 @@ const Auth = () => {
             </TabsList>
 
             <TabsContent value="login">
-              <form onSubmit={handleSignIn} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-base sm:text-sm">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-base sm:text-sm">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+              {verifyEmailRequired ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <h3 className="font-semibold text-amber-800">Email Verification Required</h3>
+                    </div>
+                    <p className="text-sm text-amber-700 mb-2">
+                      Please verify your email to continue. We'll send a verification link to:
+                    </p>
+                    <p className="font-medium text-amber-900">{pendingEmail}</p>
                   </div>
+                  <Button 
+                    type="button"
+                    className="w-full"
+                    onClick={handleResendVerificationForExistingUser}
+                    disabled={loading}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Resend Verification Email
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full text-sm text-muted-foreground"
+                    onClick={() => {
+                      setVerifyEmailRequired(false);
+                      setPendingEmail("");
+                    }}
+                  >
+                    ← Back to login
+                  </Button>
                 </div>
-                <Button type="submit" className="w-full h-12 sm:h-10 text-base sm:text-sm mt-2" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="link" 
-                  className="w-full text-sm text-muted-foreground"
-                  onClick={handleForgotPassword}
-                  disabled={loading}
-                >
-                  Forgot password?
-                </Button>
-              </form>
+              ) : (
+                <form onSubmit={handleSignIn} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-base sm:text-sm">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-base sm:text-sm">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full h-12 sm:h-10 text-base sm:text-sm mt-2" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign In
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="link" 
+                    className="w-full text-sm text-muted-foreground"
+                    onClick={handleForgotPassword}
+                    disabled={loading}
+                  >
+                    Forgot password?
+                  </Button>
+                </form>
+              )}
             </TabsContent>
 
             <TabsContent value="signup">
