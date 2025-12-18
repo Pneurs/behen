@@ -82,6 +82,28 @@ serve(async (req) => {
       );
     }
 
+    // Prevent deleting super_admin users
+    const { data: targetUserRoles, error: targetRolesError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'super_admin');
+
+    if (targetRolesError) {
+      console.error('Error checking target user roles:', targetRolesError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to verify user roles' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (targetUserRoles && targetUserRoles.length > 0) {
+      return new Response(
+        JSON.stringify({ error: 'Super admin accounts cannot be deleted' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log(`Deleting user: ${userId}`);
 
     // Delete user from auth.users (cascades to profiles due to ON DELETE CASCADE)
