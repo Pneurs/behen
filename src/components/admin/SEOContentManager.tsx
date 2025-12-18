@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, FileText, ExternalLink, Loader2, Zap } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, ExternalLink, Loader2, Zap, MapPin } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
 
 interface SEOContent {
@@ -94,6 +95,9 @@ export default function SEOContentManager() {
   const [filterCategory, setFilterCategory] = useState("all");
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, created: 0, skipped: 0 });
+  const [areaBulkDialogOpen, setAreaBulkDialogOpen] = useState(false);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -312,6 +316,120 @@ export default function SEOContentManager() {
     fetchSEOContent();
   };
 
+  // Open area bulk dialog with default selections
+  const openAreaBulkDialog = () => {
+    setSelectedCities([]);
+    setSelectedCategories([]);
+    setAreaBulkDialogOpen(true);
+  };
+
+  // Toggle city selection
+  const toggleCity = (city: string) => {
+    setSelectedCities(prev => 
+      prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city]
+    );
+  };
+
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
+    );
+  };
+
+  // Select/deselect all cities
+  const toggleAllCities = () => {
+    setSelectedCities(prev => prev.length === CITIES.length ? [] : [...CITIES]);
+  };
+
+  // Select/deselect all categories
+  const toggleAllCategories = () => {
+    setSelectedCategories(prev => prev.length === CATEGORIES.length ? [] : CATEGORIES.map(c => c.value));
+  };
+
+  // Calculate total combinations for area-level
+  const calculateAreaCombinations = () => {
+    let total = 0;
+    for (const city of selectedCities) {
+      const areas = getAreasForCity(city);
+      total += areas.length * selectedCategories.length;
+    }
+    return total;
+  };
+
+  // Bulk generate area-level SEO content
+  const handleAreaBulkGenerate = async () => {
+    if (selectedCities.length === 0 || selectedCategories.length === 0) {
+      toast({ title: "Error", description: "Please select at least one city and one category", variant: "destructive" });
+      return;
+    }
+
+    const totalCombinations = calculateAreaCombinations();
+    if (!confirm(`This will generate SEO content for ${totalCombinations} area-level combinations. Existing entries will be skipped. Continue?`)) {
+      return;
+    }
+
+    setAreaBulkDialogOpen(false);
+    setBulkGenerating(true);
+
+    const combinations: { city: string; area: string; category: string }[] = [];
+    
+    // Generate all city/area/category combinations
+    for (const city of selectedCities) {
+      const areas = getAreasForCity(city);
+      for (const area of areas) {
+        for (const category of selectedCategories) {
+          combinations.push({ city, area, category });
+        }
+      }
+    }
+
+    setBulkProgress({ current: 0, total: combinations.length, created: 0, skipped: 0 });
+
+    let created = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < combinations.length; i++) {
+      const { city, area, category } = combinations[i];
+      
+      // Check if entry already exists
+      const exists = seoContents.some(
+        (c) => c.city === city && c.area === area && c.category === category
+      );
+
+      if (exists) {
+        skipped++;
+      } else {
+        const defaults = generateDefaultSEO(city, area, category);
+        const { error } = await supabase.from("page_seo_content").insert({
+          city,
+          area,
+          category,
+          heading: defaults.heading,
+          description: defaults.description,
+          meta_description: defaults.metaDesc,
+          meta_keywords: defaults.keywords,
+          bottom_content: defaults.bottomContent,
+        });
+
+        if (!error) {
+          created++;
+        } else {
+          skipped++;
+        }
+      }
+
+      setBulkProgress({ current: i + 1, total: combinations.length, created, skipped });
+    }
+
+    setBulkGenerating(false);
+    toast({
+      title: "Area Bulk Generation Complete",
+      description: `Created ${created} entries, skipped ${skipped} (already exist or errors)`,
+    });
+    fetchSEOContent();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -327,7 +445,7 @@ export default function SEOContentManager() {
           <FileText className="h-5 w-5" />
           SEO Content Management
         </CardTitle>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button 
             onClick={handleBulkGenerate} 
             size="sm" 
@@ -340,11 +458,21 @@ export default function SEOContentManager() {
             ) : (
               <Zap className="h-4 w-4 mr-2" />
             )}
-            Bulk Generate
+            City Level
+          </Button>
+          <Button 
+            onClick={openAreaBulkDialog} 
+            size="sm" 
+            variant="outline"
+            disabled={bulkGenerating}
+            className="border-slate-600 text-slate-300 hover:text-white"
+          >
+            <MapPin className="h-4 w-4 mr-2" />
+            Area Level
           </Button>
           <Button onClick={() => handleOpenDialog()} size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add SEO Content
+            Add
           </Button>
         </div>
       </CardHeader>
@@ -679,6 +807,132 @@ export default function SEOContentManager() {
               <Button onClick={handleSave} disabled={saving} className="flex-1">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 {editingContent ? "Update" : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Area Bulk Generation Dialog */}
+      <Dialog open={areaBulkDialogOpen} onOpenChange={setAreaBulkDialogOpen}>
+        <DialogContent className="bg-slate-800 border-slate-700 max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Area-Level Bulk Generation
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">
+              Select cities and categories to generate SEO content for all area combinations.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Cities Selection */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-300">
+                  Select Cities ({selectedCities.length}/{CITIES.length})
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleAllCities}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  {selectedCities.length === CITIES.length ? "Deselect All" : "Select All"}
+                </Button>
+              </div>
+              <ScrollArea className="h-40 border border-slate-600 rounded-lg p-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {CITIES.map((city) => (
+                    <div key={city} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`city-${city}`}
+                        checked={selectedCities.includes(city)}
+                        onCheckedChange={() => toggleCity(city)}
+                        className="border-slate-500"
+                      />
+                      <label
+                        htmlFor={`city-${city}`}
+                        className="text-sm text-slate-300 cursor-pointer truncate"
+                      >
+                        {city}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+
+            {/* Categories Selection */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-medium text-slate-300">
+                  Select Categories ({selectedCategories.length}/{CATEGORIES.length})
+                </label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleAllCategories}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  {selectedCategories.length === CATEGORIES.length ? "Deselect All" : "Select All"}
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2 p-3 border border-slate-600 rounded-lg">
+                {CATEGORIES.map((cat) => (
+                  <div key={cat.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`cat-${cat.value}`}
+                      checked={selectedCategories.includes(cat.value)}
+                      onCheckedChange={() => toggleCategory(cat.value)}
+                      className="border-slate-500"
+                    />
+                    <label
+                      htmlFor={`cat-${cat.value}`}
+                      className="text-sm text-slate-300 cursor-pointer"
+                    >
+                      {cat.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-300">
+                    Total combinations to generate:
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {selectedCities.length} cities × areas × {selectedCategories.length} categories
+                  </p>
+                </div>
+                <span className="text-2xl font-bold text-primary">
+                  {calculateAreaCombinations()}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setAreaBulkDialogOpen(false)}
+                className="flex-1 border-slate-600 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAreaBulkGenerate}
+                disabled={selectedCities.length === 0 || selectedCategories.length === 0}
+                className="flex-1"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Generate {calculateAreaCombinations()} Entries
               </Button>
             </div>
           </div>
