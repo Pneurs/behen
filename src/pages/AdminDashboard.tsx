@@ -59,6 +59,8 @@ export default function AdminDashboard() {
     loading: boolean;
   }>({ provider: "lovable", model: "google/gemini-2.5-flash-image-preview", loading: true });
   const [updatingAIModel, setUpdatingAIModel] = useState(false);
+  const [chatSystemEnabled, setChatSystemEnabled] = useState(true);
+  const [updatingChatSystem, setUpdatingChatSystem] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -343,6 +345,22 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log("Could not fetch AI model setting:", error);
       setAiModelSetting(prev => ({ ...prev, loading: false }));
+    }
+
+    // Fetch chat system setting
+    try {
+      const { data: chatSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "chat_system_enabled")
+        .single();
+      
+      if (chatSetting?.value) {
+        const settingValue = chatSetting.value as { enabled?: boolean };
+        setChatSystemEnabled(settingValue.enabled !== false);
+      }
+    } catch (error) {
+      console.log("Could not fetch chat system setting:", error);
     }
 
     setLoading(false);
@@ -1472,6 +1490,67 @@ export default function AdminDashboard() {
             {/* Settings Tab - Super Admin Only */}
             {currentRole === "super_admin" && (
               <TabsContent value="settings">
+                {/* Chat System Toggle */}
+                <Card className="bg-slate-800/50 border-slate-700 mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <MessageSquare className="h-5 w-5" />
+                      Chat System
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-slate-300">Enable Chat System</p>
+                        <p className="text-sm text-slate-400">
+                          When disabled, users cannot contact each other via chat
+                        </p>
+                      </div>
+                      <Button
+                        variant={chatSystemEnabled ? "default" : "outline"}
+                        onClick={async () => {
+                          setUpdatingChatSystem(true);
+                          const newValue = !chatSystemEnabled;
+                          
+                          const { error } = await supabase
+                            .from("app_settings")
+                            .upsert({
+                              key: "chat_system_enabled",
+                              value: { enabled: newValue },
+                              updated_at: new Date().toISOString(),
+                              updated_by: currentUser?.id,
+                            }, { onConflict: "key" });
+                          
+                          if (error) {
+                            toast({
+                              title: "Error",
+                              description: "Failed to update chat system setting",
+                              variant: "destructive",
+                            });
+                          } else {
+                            setChatSystemEnabled(newValue);
+                            toast({
+                              title: newValue ? "Chat Enabled" : "Chat Disabled",
+                              description: newValue 
+                                ? "Users can now contact each other via chat" 
+                                : "Chat system has been disabled for all users",
+                            });
+                          }
+                          setUpdatingChatSystem(false);
+                        }}
+                        disabled={updatingChatSystem}
+                        className="min-w-[100px]"
+                      >
+                        {updatingChatSystem ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          chatSystemEnabled ? "Enabled" : "Disabled"
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-white">

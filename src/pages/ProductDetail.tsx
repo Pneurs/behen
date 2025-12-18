@@ -11,6 +11,7 @@ import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabilityCalendarFlatpickr";
 import RealImagesViewer from "@/components/RealImagesViewer";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -43,6 +44,7 @@ const ProductDetail = () => {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
+  const { chatEnabled } = useChatEnabled();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -390,15 +392,17 @@ const ProductDetail = () => {
                     </div>
                     
                     {/* Contact Seller */}
-                    <Button 
-                      size="lg" 
-                      variant="outline"
-                      onClick={handleContactSeller}
-                      className="w-full"
-                    >
-                      <MessageCircle className="mr-2 h-5 w-5" />
-                      Chat to Negotiate
-                    </Button>
+                    {chatEnabled && (
+                      <Button 
+                        size="lg" 
+                        variant="outline"
+                        onClick={handleContactSeller}
+                        className="w-full"
+                      >
+                        <MessageCircle className="mr-2 h-5 w-5" />
+                        Chat to Negotiate
+                      </Button>
+                    )}
                     
                     {/* Secondary Action Buttons */}
                     <div className="flex gap-3">

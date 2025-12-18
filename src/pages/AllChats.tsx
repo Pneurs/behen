@@ -5,8 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, MessageCircleOff } from "lucide-react";
 import { format } from "date-fns";
+import { useChatEnabled } from "@/hooks/useChatEnabled";
 
 export default function AllChats() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function AllChats() {
   const [conversations, setConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const { chatEnabled, loading: chatStatusLoading } = useChatEnabled();
 
   useEffect(() => {
     checkAuth();
@@ -105,7 +107,27 @@ export default function AllChats() {
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (loading || chatStatusLoading) return <div>Loading...</div>;
+
+  // Show disabled message if chat system is turned off
+  if (!chatEnabled) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <MessageCircleOff className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Chat System Unavailable</p>
+                <p className="text-sm mt-2">The chat system is currently disabled by the administrator.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

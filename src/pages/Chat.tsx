@@ -7,11 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, AlertCircle, ExternalLink, CheckCircle } from "lucide-react";
+import { Send, AlertCircle, ExternalLink, CheckCircle, MessageCircleOff } from "lucide-react";
 import { format } from "date-fns";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import OfferCard from "@/components/OfferCard";
 import { sendEmailNotification } from "@/lib/emailNotifications";
+import { useChatEnabled } from "@/hooks/useChatEnabled";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
@@ -26,6 +27,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false);
   const [offers, setOffers] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { chatEnabled, loading: chatStatusLoading } = useChatEnabled();
 
   useEffect(() => {
     initChat();
@@ -331,7 +333,27 @@ export default function Chat() {
     });
   };
 
-  if (!conversation || !product) return <div>Loading...</div>;
+  if (chatStatusLoading || !conversation || !product) return <div>Loading...</div>;
+
+  // Show disabled message if chat system is turned off
+  if (!chatEnabled) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <MessageCircleOff className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">Chat System Unavailable</p>
+                <p className="text-sm mt-2">The chat system is currently disabled by the administrator.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isOwner = user?.id === product?.owner_id;
 
