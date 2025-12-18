@@ -486,6 +486,39 @@ export default function SEOContentManager() {
               </Select>
             </div>
 
+            {/* Landing Page URL Preview */}
+            {(() => {
+              const params = new URLSearchParams();
+              if (formData.city && formData.city !== "none") params.set("city", formData.city);
+              if (formData.area && formData.area !== "none") params.set("area", formData.area);
+              if (formData.category && formData.category !== "none") params.set("category", formData.category);
+              const queryString = params.toString();
+              const previewPath = queryString ? `/browse?${queryString}` : "/browse";
+              
+              return (
+                <div className="p-3 bg-slate-700/70 rounded-lg border border-slate-600">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-slate-400 mb-1">This content will appear on:</p>
+                      <p className="text-sm text-primary font-medium truncate">
+                        https://behen.pk{previewPath}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(previewPath, "_blank")}
+                      className="flex-shrink-0 border-slate-600 text-slate-300 hover:text-white"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Preview
+                    </Button>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div>
               <label className="text-sm text-slate-300 mb-1 block">Page Heading (H1) *</label>
               <Input
