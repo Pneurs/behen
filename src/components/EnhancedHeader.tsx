@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
 import { NotificationBell } from "./NotificationBell";
+import { useChatEnabled } from "@/hooks/useChatEnabled";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export const EnhancedHeader = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
+  const { chatEnabled } = useChatEnabled();
 
   useEffect(() => {
     const initializeUser = async (session: any) => {
@@ -223,15 +225,17 @@ export const EnhancedHeader = () => {
                     </Badge>
                   )}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { navigate("/chats"); setUnreadCount(0); }} className="cursor-pointer">
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Chats
-                  {unreadCount > 0 && (
-                    <Badge className="ml-auto h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
-                      {unreadCount > 99 ? "99+" : unreadCount}
-                    </Badge>
-                  )}
-                </DropdownMenuItem>
+                {chatEnabled && (
+                  <DropdownMenuItem onClick={() => { navigate("/chats"); setUnreadCount(0); }} className="cursor-pointer">
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Chats
+                    {unreadCount > 0 && (
+                      <Badge className="ml-auto h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </Badge>
+                    )}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 {isAdmin && (
                   <DropdownMenuItem onClick={() => navigate("/admin")} className="cursor-pointer">
@@ -332,23 +336,25 @@ export const EnhancedHeader = () => {
                         </Badge>
                       )}
                     </Button>
-                    <Button
-                      onClick={() => {
-                        navigate("/chats");
-                        setMobileOpen(false);
-                        setUnreadCount(0);
-                      }}
-                      variant="outline"
-                      className="w-full relative"
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Chats
-                      {unreadCount > 0 && (
-                        <Badge className="ml-2 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
-                          {unreadCount > 99 ? "99+" : unreadCount}
-                        </Badge>
-                      )}
-                    </Button>
+                    {chatEnabled && (
+                      <Button
+                        onClick={() => {
+                          navigate("/chats");
+                          setMobileOpen(false);
+                          setUnreadCount(0);
+                        }}
+                        variant="outline"
+                        className="w-full relative"
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Chats
+                        {unreadCount > 0 && (
+                          <Badge className="ml-2 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </Badge>
+                        )}
+                      </Button>
+                    )}
                     {isAdmin && (
                       <Button
                         onClick={() => {
