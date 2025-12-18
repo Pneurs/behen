@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, ExternalLink, Loader2, Zap } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
 
 interface SEOContent {
@@ -91,6 +92,8 @@ export default function SEOContentManager() {
   const [editingContent, setEditingContent] = useState<SEOContent | null>(null);
   const [filterCity, setFilterCity] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, created: 0, skipped: 0 });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -247,6 +250,68 @@ export default function SEOContentManager() {
 
   const availableAreas = formData.city && formData.city !== "none" ? getAreasForCity(formData.city) : [];
 
+  // Bulk generate SEO content for all city/category combinations
+  const handleBulkGenerate = async () => {
+    if (!confirm(`This will generate SEO content for all ${CITIES.length} cities × ${CATEGORIES.length} categories = ${CITIES.length * CATEGORIES.length} combinations. Existing entries will be skipped. Continue?`)) {
+      return;
+    }
+
+    setBulkGenerating(true);
+    const combinations: { city: string; category: string }[] = [];
+    
+    // Generate all city/category combinations
+    for (const city of CITIES) {
+      for (const cat of CATEGORIES) {
+        combinations.push({ city, category: cat.value });
+      }
+    }
+
+    setBulkProgress({ current: 0, total: combinations.length, created: 0, skipped: 0 });
+
+    let created = 0;
+    let skipped = 0;
+
+    for (let i = 0; i < combinations.length; i++) {
+      const { city, category } = combinations[i];
+      
+      // Check if entry already exists
+      const exists = seoContents.some(
+        (c) => c.city === city && c.category === category && !c.area
+      );
+
+      if (exists) {
+        skipped++;
+      } else {
+        const defaults = generateDefaultSEO(city, "none", category);
+        const { error } = await supabase.from("page_seo_content").insert({
+          city,
+          area: null,
+          category,
+          heading: defaults.heading,
+          description: defaults.description,
+          meta_description: defaults.metaDesc,
+          meta_keywords: defaults.keywords,
+          bottom_content: defaults.bottomContent,
+        });
+
+        if (!error) {
+          created++;
+        } else {
+          skipped++; // Count errors as skipped
+        }
+      }
+
+      setBulkProgress({ current: i + 1, total: combinations.length, created, skipped });
+    }
+
+    setBulkGenerating(false);
+    toast({
+      title: "Bulk Generation Complete",
+      description: `Created ${created} entries, skipped ${skipped} (already exist or errors)`,
+    });
+    fetchSEOContent();
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -257,17 +322,48 @@ export default function SEOContentManager() {
 
   return (
     <Card className="bg-slate-800/50 border-slate-700">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
         <CardTitle className="flex items-center gap-2 text-white">
           <FileText className="h-5 w-5" />
           SEO Content Management
         </CardTitle>
-        <Button onClick={() => handleOpenDialog()} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add SEO Content
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleBulkGenerate} 
+            size="sm" 
+            variant="outline"
+            disabled={bulkGenerating}
+            className="border-slate-600 text-slate-300 hover:text-white"
+          >
+            {bulkGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4 mr-2" />
+            )}
+            Bulk Generate
+          </Button>
+          <Button onClick={() => handleOpenDialog()} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Add SEO Content
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
+        {/* Bulk Generation Progress */}
+        {bulkGenerating && (
+          <div className="mb-4 p-4 bg-slate-700/50 rounded-lg border border-slate-600">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-300">
+                Generating SEO content... ({bulkProgress.current}/{bulkProgress.total})
+              </span>
+              <span className="text-xs text-slate-400">
+                Created: {bulkProgress.created} | Skipped: {bulkProgress.skipped}
+              </span>
+            </div>
+            <Progress value={(bulkProgress.current / bulkProgress.total) * 100} className="h-2" />
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex gap-3 mb-4">
           <Select value={filterCity} onValueChange={setFilterCity}>
