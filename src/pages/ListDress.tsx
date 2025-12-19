@@ -141,12 +141,26 @@ const ListDress = () => {
     if (editProductId && user) {
       const loadProductData = async () => {
         try {
-          const { data: product, error } = await supabase
+          // Check if user is super admin
+          const { data: roles } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("role", "super_admin");
+          
+          const isSuperAdmin = roles && roles.length > 0;
+
+          // Super admins can edit any product, regular users can only edit their own
+          let query = supabase
             .from("products")
             .select("*")
-            .eq("id", editProductId)
-            .eq("owner_id", user.id)
-            .single();
+            .eq("id", editProductId);
+          
+          if (!isSuperAdmin) {
+            query = query.eq("owner_id", user.id);
+          }
+
+          const { data: product, error } = await query.single();
 
           if (error) throw error;
 
