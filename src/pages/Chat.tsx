@@ -68,6 +68,17 @@ export default function Chat() {
       .eq("id", productId)
       .single();
     
+    // Check if negotiation is allowed for this product
+    if (productData && productData.negotiation_allowed === false) {
+      toast({
+        title: "Negotiation Not Available",
+        description: "This product has a fixed price and doesn't allow chat negotiation.",
+        variant: "destructive",
+      });
+      navigate(`/product/${productId}`);
+      return;
+    }
+    
     setProduct(productData);
 
     let { data: existingConv } = await supabase
