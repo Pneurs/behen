@@ -1,11 +1,9 @@
+import { memo, useState } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapPin, Tag, Star, Heart } from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import LocationDistancePopup from "./LocationDistancePopup";
-import ProductMiniAvailabilityCalendarFlatpickr from "./ProductMiniAvailabilityCalendarFlatpickr";
 import { useWishlist } from "@/hooks/useWishlist";
 
 interface ProductCardProps {
@@ -28,30 +26,20 @@ interface ProductCardProps {
   };
   blackoutDates?: Date[];
   onClick?: () => void;
+  // Pre-fetched rating data to avoid N+1 queries
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
-const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
-  const [averageRating, setAverageRating] = useState<number | null>(null);
-  const [reviewCount, setReviewCount] = useState(0);
+const ProductCard = memo(({ 
+  product, 
+  blackoutDates, 
+  onClick,
+  averageRating = null,
+  reviewCount = 0,
+}: ProductCardProps) => {
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(product.id);
-
-  useEffect(() => {
-    fetchRating();
-  }, [product.id]);
-
-  const fetchRating = async () => {
-    const { data } = await supabase
-      .from("reviews")
-      .select("product_rating")
-      .eq("product_id", product.id);
-
-    if (data && data.length > 0) {
-      const avg = data.reduce((sum, r) => sum + r.product_rating, 0) / data.length;
-      setAverageRating(avg);
-      setReviewCount(data.length);
-    }
-  };
 
   const getCategoryLabel = (category: string) => {
     return category.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -79,6 +67,8 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
             <img
               src={product.ai_cover_image}
               alt={product.title}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute top-2 right-2 flex gap-2">
@@ -109,6 +99,8 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
           <img
             src={product.real_images[0]}
             alt={product.title}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
@@ -202,7 +194,7 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
                 <p className="text-lg font-bold text-primary">
                   PKR {product.sale_price?.toLocaleString()}
                 </p>
-                {product.original_price && product.original_price > product.sale_price && (
+                {product.original_price && product.original_price > (product.sale_price || 0) && (
                   <p className="text-sm text-muted-foreground line-through">
                     PKR {product.original_price.toLocaleString()}
                   </p>
@@ -232,6 +224,8 @@ const ProductCard = ({ product, blackoutDates, onClick }: ProductCardProps) => {
       />
     </Card>
   );
-};
+});
+
+ProductCard.displayName = "ProductCard";
 
 export default ProductCard;

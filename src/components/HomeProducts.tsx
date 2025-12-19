@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import ProductCard from "@/components/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -10,50 +9,23 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-
-interface Product {
-  id: string;
-  title: string;
-  category: string;
-  condition: string;
-  rental_price_per_day: number;
-  rental_price_4days: number;
-  sale_price: number;
-  listing_type: string;
-  ai_cover_image: string;
-  city: string;
-  area: string;
-  original_price?: number;
-}
+import { useHomeProducts } from "@/hooks/useProducts";
+import { useProductRatings } from "@/hooks/useProductRatings";
 
 export const HomeProducts = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: products, isLoading } = useHomeProducts();
+  
+  // Get all product IDs for batch rating fetch
+  const productIds = useMemo(() => 
+    products?.map(p => p.id) || [], 
+    [products]
+  );
+  
+  // Batch fetch all ratings in one query
+  const { data: ratingsMap } = useProductRatings(productIds);
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("status", "published")
-        .limit(8)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error) {
-      console.error("Error loading products:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex gap-6 overflow-hidden">
         {[...Array(4)].map((_, i) => (
@@ -67,7 +39,7 @@ export const HomeProducts = () => {
     );
   }
 
-  if (products.length === 0) {
+  if (!products || products.length === 0) {
     return null;
   }
 
@@ -81,14 +53,19 @@ export const HomeProducts = () => {
         className="w-full"
       >
         <CarouselContent className="-ml-4">
-          {products.map((product) => (
-            <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-              <ProductCard 
-                product={product} 
-                onClick={() => navigate(`/product/${product.id}`)}
-              />
-            </CarouselItem>
-          ))}
+          {products.map((product) => {
+            const rating = ratingsMap?.[product.id];
+            return (
+              <CarouselItem key={product.id} className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                <ProductCard 
+                  product={product} 
+                  onClick={() => navigate(`/product/${product.id}`)}
+                  averageRating={rating?.averageRating}
+                  reviewCount={rating?.reviewCount || 0}
+                />
+              </CarouselItem>
+            );
+          })}
         </CarouselContent>
         <CarouselPrevious className="-left-4 md:-left-6" />
         <CarouselNext className="-right-4 md:-right-6" />
@@ -96,3 +73,5 @@ export const HomeProducts = () => {
     </div>
   );
 };
+
+export default HomeProducts;
