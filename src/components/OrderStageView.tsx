@@ -9,6 +9,9 @@ import { format, differenceInDays, differenceInHours, differenceInMinutes, addDa
 import VideoRecorder from "./VideoRecorder";
 import PaymentUploadSection from "./PaymentUploadSection";
 import ContactInfoReveal from "./ContactInfoReveal";
+import OrderStickerGenerator from "./OrderStickerGenerator";
+import InstructionPageGenerator from "./InstructionPageGenerator";
+import PackingChecklist from "./PackingChecklist";
 import {
   Package,
   Truck,
@@ -22,6 +25,7 @@ import {
   CreditCard,
   MapPin,
   Phone,
+  PackageOpen,
 } from "lucide-react";
 
 interface OrderStageViewProps {
@@ -34,22 +38,24 @@ const RETURN_WINDOW_DAYS = 4;
 const LATE_FEE_PER_DAY = 1550;
 const MAX_LATE_DAYS = 3;
 
-// RENTAL flow stages (3 videos: packing, return, acceptance)
+// RENTAL flow stages (4 videos: packing, opening, return, acceptance)
 const RENTAL_STAGES = [
   { key: "payment_pending", label: "Payment", icon: CreditCard },
   { key: "pending_packing_video", label: "Packing Video", icon: Package },
-  { key: "pending_pickup", label: "Product Pickup", icon: Truck },
+  { key: "pending_pickup", label: "Pickup", icon: Truck },
+  { key: "pending_opening_video", label: "Opening Video", icon: PackageOpen },
   { key: "in_rental_period", label: "Rental Period", icon: Clock },
   { key: "pending_return_video", label: "Return Video", icon: Video },
-  { key: "pending_acceptance_video", label: "Acceptance Video", icon: CheckCircle },
+  { key: "pending_acceptance_video", label: "Acceptance", icon: CheckCircle },
   { key: "completed", label: "Completed", icon: CheckCircle },
 ];
 
-// SALE flow stages (1 video: packing only)
+// SALE flow stages (2 videos: packing + opening)
 const SALE_STAGES = [
   { key: "payment_pending", label: "Payment", icon: CreditCard },
   { key: "pending_packing_video", label: "Packing Video", icon: Package },
-  { key: "ready_for_pickup", label: "Ready for Pickup", icon: Truck },
+  { key: "ready_for_pickup", label: "Pickup", icon: Truck },
+  { key: "pending_opening_video", label: "Opening Video", icon: PackageOpen },
   { key: "completed", label: "Completed", icon: CheckCircle },
 ];
 
@@ -57,6 +63,9 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState<string>("");
   const [product, setProduct] = useState<any>(null);
+  const [checklistComplete, setChecklistComplete] = useState(false);
+  const [stickersDownloaded, setStickersDownloaded] = useState(booking.stickers_downloaded || false);
+  const [instructionPageDownloaded, setInstructionPageDownloaded] = useState(booking.instruction_page_downloaded || false);
 
   const isOwner = userId === booking.owner_id;
   const isRenter = userId === booking.renter_id;
@@ -66,7 +75,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     const fetchProduct = async () => {
       const { data } = await supabase
         .from("products")
-        .select("listing_type, contact_phone, pickup_location, dropoff_location")
+        .select("listing_type, contact_phone, pickup_location, dropoff_location, dry_cleaned, alterations_allowed, title")
         .eq("id", booking.product_id)
         .single();
       
@@ -122,6 +131,7 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
             packing_video_url: videoUrl,
             packing_video_uploaded_at: now,
             order_stage: "ready_for_pickup",
+            packing_checklist_completed: true,
           };
         } else {
           // For rental: go to pending_pickup
@@ -129,6 +139,30 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
             packing_video_url: videoUrl,
             packing_video_uploaded_at: now,
             order_stage: "pending_pickup",
+            packing_checklist_completed: true,
+          };
+        }
+      } else if (videoType === "opening") {
+        if (isSaleProduct) {
+          // For sale: complete the order after opening video
+          const deleteAfter = addDays(new Date(), 7).toISOString();
+          updateData = {
+            opening_video_url: videoUrl,
+            opening_video_uploaded_at: now,
+            order_stage: "completed",
+            booking_status: "completed",
+            completed_at: now,
+            videos_delete_after: deleteAfter,
+          };
+        } else {
+          // For rental: go to in_rental_period
+          const returnDeadline = addDays(new Date(), RETURN_WINDOW_DAYS).toISOString();
+          updateData = {
+            opening_video_url: videoUrl,
+            opening_video_uploaded_at: now,
+            order_stage: "in_rental_period",
+            booking_status: "active",
+            return_deadline: returnDeadline,
           };
         }
       } else if (videoType === "return") {
@@ -165,26 +199,22 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     }
   };
 
-  // For RENTAL: Mark as picked (starts rental period)
+  // For RENTAL: Mark as picked (moves to opening video stage)
   const handleMarkAsPicked = async () => {
     setLoading(true);
     try {
-      const returnDeadline = addDays(new Date(), RETURN_WINDOW_DAYS).toISOString();
-      
       const { error } = await supabase
         .from("bookings")
         .update({
-          order_stage: "in_rental_period",
-          booking_status: "active",
+          order_stage: "pending_opening_video",
           picked_at: new Date().toISOString(),
           picked_by_user_id: userId,
-          return_deadline: returnDeadline,
         })
         .eq("id", booking.id);
 
       if (error) throw error;
 
-      toast.success("Product marked as picked up!");
+      toast.success("Product marked as picked up! Choti Behen must now record opening video.");
       onRefresh();
     } catch (error: any) {
       toast.error(error.message || "Failed to update order");
@@ -193,32 +223,53 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
     }
   };
 
-  // For SALE: Mark as delivered/picked (completes order)
+  // For SALE: Mark as delivered/picked (moves to opening video stage)
   const handleMarkAsDelivered = async () => {
     setLoading(true);
     try {
-      const deleteAfter = addDays(new Date(), 7).toISOString();
-      
       const { error } = await supabase
         .from("bookings")
         .update({
-          order_stage: "completed",
-          booking_status: "completed",
+          order_stage: "pending_opening_video",
           picked_at: new Date().toISOString(),
           picked_by_user_id: userId,
-          completed_at: new Date().toISOString(),
-          videos_delete_after: deleteAfter,
         })
         .eq("id", booking.id);
 
       if (error) throw error;
 
-      toast.success("Order completed! Product delivered.");
+      toast.success("Product picked up! Choti Behen must now record opening video.");
       onRefresh();
     } catch (error: any) {
       toast.error(error.message || "Failed to update order");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle stickers download
+  const handleStickersDownload = async () => {
+    try {
+      await supabase
+        .from("bookings")
+        .update({ stickers_downloaded: true })
+        .eq("id", booking.id);
+      setStickersDownloaded(true);
+    } catch (error) {
+      console.error("Failed to update stickers_downloaded:", error);
+    }
+  };
+
+  // Handle instruction page download
+  const handleInstructionPageDownload = async () => {
+    try {
+      await supabase
+        .from("bookings")
+        .update({ instruction_page_downloaded: true })
+        .eq("id", booking.id);
+      setInstructionPageDownloaded(true);
+    } catch (error) {
+      console.error("Failed to update instruction_page_downloaded:", error);
     }
   };
 
@@ -285,26 +336,109 @@ export default function OrderStageView({ booking, userId, onRefresh }: OrderStag
 
       {/* Stage-specific content - Only show if payment is verified */}
       {currentStage === "pending_packing_video" && !isPaymentPending && (
-        <Card>
+        <div className="space-y-4">
+          {isOwner ? (
+            <>
+              {/* Stickers and Instructions */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <OrderStickerGenerator
+                  orderId={booking.id}
+                  dressId={booking.product_id}
+                  dressTitle={product?.title || "Dress"}
+                  isSale={isSaleProduct}
+                  onDownload={handleStickersDownload}
+                />
+                {!isSaleProduct && (
+                  <InstructionPageGenerator
+                    orderId={booking.id}
+                    dressTitle={product?.title || "Dress"}
+                    dryCleaned={product?.dry_cleaned || false}
+                    alterationsAllowed={product?.alterations_allowed || false}
+                    onDownload={handleInstructionPageDownload}
+                  />
+                )}
+              </div>
+
+              {/* Packing Checklist */}
+              <PackingChecklist
+                isSale={isSaleProduct}
+                stickersDownloaded={stickersDownloaded}
+                instructionPageDownloaded={isSaleProduct ? true : instructionPageDownloaded}
+                onChecklistComplete={setChecklistComplete}
+              />
+
+              {/* Video Recorder - only show after checklist complete */}
+              {checklistComplete && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      {isSaleProduct ? "Packing Video" : "Stage 1: Packing Video"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <VideoRecorder
+                      bookingId={booking.id}
+                      videoType="packing"
+                      onUploadComplete={(url) => handleVideoUploaded("packing", url)}
+                      disabled={loading}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center py-8 text-muted-foreground">
+                  <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Bari Behen is preparing and packing your product...</p>
+                  <p className="text-sm mt-2">You'll be notified when ready for pickup.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Opening Video Stage - MANDATORY for both rentals and sales */}
+      {currentStage === "pending_opening_video" && !isPaymentPending && (
+        <Card className="border-amber-500/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              {isSaleProduct ? "Packing Video" : "Stage 1: Packing Video"}
+              <PackageOpen className="h-5 w-5" />
+              {isSaleProduct ? "Opening Video (Mandatory)" : "Stage 3: Opening Video (Mandatory)"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            {isOwner ? (
+          <CardContent className="space-y-4">
+            {booking.packing_video_url && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Packing Video (for reference):</p>
+                <video
+                  src={booking.packing_video_url}
+                  controls
+                  className="w-full rounded-lg max-h-[200px]"
+                />
+              </div>
+            )}
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-4 rounded-lg">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                ⚠️ You MUST record an opening video before proceeding. Start recording BEFORE breaking the seal!
+              </p>
+            </div>
+
+            {isRenter ? (
               <VideoRecorder
                 bookingId={booking.id}
-                videoType="packing"
-                onUploadComplete={(url) => handleVideoUploaded("packing", url)}
+                videoType="opening"
+                onUploadComplete={(url) => handleVideoUploaded("opening", url)}
                 disabled={loading}
               />
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Bari Behen is preparing and packing your product...</p>
-                <p className="text-sm mt-2">You'll be notified when ready for pickup.</p>
+              <div className="text-center py-4 text-muted-foreground">
+                <PackageOpen className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Waiting for Choti Behen to record opening video...</p>
               </div>
             )}
           </CardContent>
