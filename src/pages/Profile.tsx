@@ -6,16 +6,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Phone, MapPin, Mail, Save } from "lucide-react";
+import { Loader2, User, Phone, MapPin, Mail, Save, Camera, Info } from "lucide-react";
 import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
 
 export default function Profile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPic, setUploadingPic] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [profile, setProfile] = useState({
     name: "",
     phone: "",
@@ -59,11 +62,73 @@ export default function Profile() {
           area: data.area || "",
           role: data.role || "",
         });
+
+        // Load profile picture if exists
+        if (data.profile_picture) {
+          const { data: signedData } = await supabase.storage
+            .from('profile-pictures')
+            .createSignedUrl(data.profile_picture, 60 * 60 * 24); // 24 hours
+          
+          if (signedData?.signedUrl) {
+            setProfilePicture(signedData.signedUrl);
+          }
+        }
       }
     } catch (error: any) {
       console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    setUploadingPic(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/profile.${fileExt}`;
+
+      // Upload to private bucket
+      const { error: uploadError } = await supabase.storage
+        .from('profile-pictures')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Update profile with the path
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_picture: filePath })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // Get signed URL for display
+      const { data: signedData } = await supabase.storage
+        .from('profile-pictures')
+        .createSignedUrl(filePath, 60 * 60 * 24);
+
+      setProfilePicture(signedData?.signedUrl || null);
+      toast.success("Profile picture updated!");
+    } catch (error: any) {
+      console.error("Error uploading picture:", error);
+      toast.error("Failed to upload picture");
+    } finally {
+      setUploadingPic(false);
     }
   };
 
@@ -131,6 +196,54 @@ export default function Profile() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Profile Picture Section */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="relative">
+                {/* Avatar Circle */}
+                <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center overflow-hidden border-2 border-primary/20">
+                  {uploadingPic ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : profilePicture ? (
+                    <img src={profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <Camera className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+                
+                {/* Upload button overlay */}
+                <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors">
+                  <Camera className="h-4 w-4" />
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    onChange={handlePictureUpload}
+                    disabled={uploadingPic}
+                  />
+                </label>
+                
+                {/* Info tooltip */}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="absolute -top-1 -right-1 bg-background border rounded-full p-1 hover:bg-muted transition-colors">
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[250px] text-center">
+                      <p className="text-xs">
+                        Upload your real photo. This will remain <strong>private</strong> unless you engage in fraudulent activity on our platform.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <p className="text-sm text-muted-foreground text-center">
+                Profile Photo (Private)
+              </p>
+            </div>
+
             {/* Role Badge */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Account Type:</span>

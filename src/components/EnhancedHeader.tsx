@@ -20,6 +20,7 @@ import { useChatEnabled } from "@/hooks/useChatEnabled";
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [userName, setUserName] = useState<string>("");
   const [userRole, setUserRole] = useState<string>("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -36,7 +37,8 @@ export const EnhancedHeader = () => {
         Promise.all([
           checkAdminRole(session.user.id),
           fetchUnreadCount(session.user.id),
-          fetchWishlistCount(session.user.id)
+          fetchWishlistCount(session.user.id),
+          fetchUserName(session.user.id)
         ]);
       }
     };
@@ -50,6 +52,7 @@ export const EnhancedHeader = () => {
         initializeUser(session);
       } else {
         setUser(null);
+        setUserName("");
         setUserRole("");
         setIsAdmin(false);
         setUnreadCount(0);
@@ -59,6 +62,19 @@ export const EnhancedHeader = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserName = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("name")
+        .eq("user_id", userId)
+        .single();
+      setUserName(data?.name || "");
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+    }
+  };
 
   // Subscribe to new messages for unread count
   useEffect(() => {
@@ -188,10 +204,12 @@ export const EnhancedHeader = () => {
               <NotificationBell userId={user.id} />
               <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="relative">
-                  <Menu className="mr-2 h-4 w-4" />
-                  Menu
-                  <ChevronDown className="ml-2 h-3 w-3" />
+                <Button variant="outline" size="sm" className="relative gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="max-w-[100px] truncate">
+                    {userName || user.email?.split('@')[0] || "Account"}
+                  </span>
+                  <ChevronDown className="h-3 w-3" />
                   {(unreadCount > 0 || wishlistCount > 0) && (
                     <Badge className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-xs bg-primary text-primary-foreground">
                       {(unreadCount + wishlistCount) > 99 ? "99+" : unreadCount + wishlistCount}
@@ -200,6 +218,11 @@ export const EnhancedHeader = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-background border shadow-lg z-50">
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
+                  <User className="mr-2 h-4 w-4" />
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {userRole === "bari" && (
                   <>
                     <DropdownMenuItem onClick={() => navigate("/list-dress")} className="cursor-pointer">
@@ -243,11 +266,6 @@ export const EnhancedHeader = () => {
                     Admin
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
@@ -271,7 +289,36 @@ export const EnhancedHeader = () => {
           </SheetTrigger>
           <SheetContent side="right" className="w-[300px]">
             <div className="flex flex-col gap-4 mt-8">
+              {/* User Info at top */}
+              {user && (
+                <div className="flex items-center gap-3 pb-4 border-b">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {userName || user.email?.split('@')[0] || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                  </div>
+                </div>
+              )}
+              
               <div className="space-y-2">
+                {user && (
+                  <Button
+                    onClick={() => {
+                      navigate("/profile");
+                      setMobileOpen(false);
+                    }}
+                    variant="default"
+                    className="w-full"
+                  >
+                    <User className="mr-2 h-4 w-4" />
+                    View Profile
+                  </Button>
+                )}
+                
                 <Button
                   onClick={() => {
                     navigate("/earn-money");
@@ -368,17 +415,6 @@ export const EnhancedHeader = () => {
                         Admin
                       </Button>
                     )}
-                    <Button
-                      onClick={() => {
-                        navigate("/profile");
-                        setMobileOpen(false);
-                      }}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Button>
                     <Button
                       onClick={handleSignOut}
                       variant="outline"
