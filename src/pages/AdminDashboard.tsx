@@ -62,6 +62,7 @@ export default function AdminDashboard() {
   const [chatSystemEnabled, setChatSystemEnabled] = useState(true);
   const [updatingChatSystem, setUpdatingChatSystem] = useState(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [productSearchQuery, setProductSearchQuery] = useState("");
 
   useEffect(() => {
     checkAdminAccess();
@@ -1172,15 +1173,37 @@ export default function AdminDashboard() {
               <TabsContent value="all-products">
                 <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-white">
-                      <Package className="h-5 w-5" />
-                      All Products ({allProducts.length})
-                    </CardTitle>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <Package className="h-5 w-5" />
+                        All Products ({allProducts.length})
+                      </CardTitle>
+                      <div className="relative w-full sm:w-72">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          type="text"
+                          placeholder="Search by title, owner, city..."
+                          value={productSearchQuery}
+                          onChange={(e) => setProductSearchQuery(e.target.value)}
+                          className="pl-9 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <ScrollArea className="h-[500px]">
                       <div className="space-y-3">
-                        {allProducts.map((product) => (
+                        {allProducts
+                          .filter(product => {
+                            if (!productSearchQuery.trim()) return true;
+                            const query = productSearchQuery.toLowerCase();
+                            const title = product.title?.toLowerCase() || "";
+                            const owner = product.owner_name?.toLowerCase() || "";
+                            const city = product.city?.toLowerCase() || "";
+                            const category = product.category?.toLowerCase() || "";
+                            return title.includes(query) || owner.includes(query) || city.includes(query) || category.includes(query);
+                          })
+                          .map((product) => (
                           <Card key={product.id} className="bg-slate-700/50 border-slate-600">
                             <CardContent className="py-4">
                               <div className="flex items-center gap-4">
