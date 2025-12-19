@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 interface VideoRecorderProps {
   bookingId: string;
-  videoType: "packing" | "return" | "acceptance";
+  videoType: "packing" | "return" | "acceptance" | "opening";
   onUploadComplete: (videoUrl: string) => void;
   disabled?: boolean;
   maxDurationSeconds?: number;
@@ -221,6 +221,7 @@ export default function VideoRecorder({
       case "packing": return "Record Packing Video";
       case "return": return "Record Return Video";
       case "acceptance": return "Record Acceptance Video";
+      case "opening": return "Record Opening Video";
       default: return "Record Video";
     }
   };
@@ -230,9 +231,11 @@ export default function VideoRecorder({
       case "packing":
         return "Show the product being packed with all accessories visible. Include the dress condition clearly.";
       case "return":
-        return "Record yourself returning the product, showing its current condition.";
+        return "Record yourself returning the product, showing its current condition. Apply the return seal provided inside the parcel.";
       case "acceptance":
         return "Record receiving the product back and verify its condition.";
+      case "opening":
+        return "⚠️ MANDATORY: Start recording BEFORE breaking the seal. Show the seal clearly, then open the parcel and verify contents. Without this video, damage claims will NOT be accepted.";
       default:
         return "";
     }

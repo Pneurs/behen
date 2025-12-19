@@ -50,10 +50,14 @@ export type Database = {
           daily_rate: number
           end_date: string
           id: string
+          instruction_page_downloaded: boolean | null
           late_days: number | null
           late_fee_total: number | null
+          opening_video_uploaded_at: string | null
+          opening_video_url: string | null
           order_stage: Database["public"]["Enums"]["order_stage"] | null
           owner_id: string
+          packing_checklist_completed: boolean | null
           packing_video_uploaded_at: string | null
           packing_video_url: string | null
           payment_notes: string | null
@@ -68,6 +72,7 @@ export type Database = {
           return_video_url: string | null
           security_deposit: number
           start_date: string
+          stickers_downloaded: boolean | null
           total_days: number
           total_price: number
           updated_at: string
@@ -84,10 +89,14 @@ export type Database = {
           daily_rate: number
           end_date: string
           id?: string
+          instruction_page_downloaded?: boolean | null
           late_days?: number | null
           late_fee_total?: number | null
+          opening_video_uploaded_at?: string | null
+          opening_video_url?: string | null
           order_stage?: Database["public"]["Enums"]["order_stage"] | null
           owner_id: string
+          packing_checklist_completed?: boolean | null
           packing_video_uploaded_at?: string | null
           packing_video_url?: string | null
           payment_notes?: string | null
@@ -102,6 +111,7 @@ export type Database = {
           return_video_url?: string | null
           security_deposit: number
           start_date: string
+          stickers_downloaded?: boolean | null
           total_days: number
           total_price: number
           updated_at?: string
@@ -118,10 +128,14 @@ export type Database = {
           daily_rate?: number
           end_date?: string
           id?: string
+          instruction_page_downloaded?: boolean | null
           late_days?: number | null
           late_fee_total?: number | null
+          opening_video_uploaded_at?: string | null
+          opening_video_url?: string | null
           order_stage?: Database["public"]["Enums"]["order_stage"] | null
           owner_id?: string
+          packing_checklist_completed?: boolean | null
           packing_video_uploaded_at?: string | null
           packing_video_url?: string | null
           payment_notes?: string | null
@@ -136,6 +150,7 @@ export type Database = {
           return_video_url?: string | null
           security_deposit?: number
           start_date?: string
+          stickers_downloaded?: boolean | null
           total_days?: number
           total_price?: number
           updated_at?: string
@@ -446,6 +461,7 @@ export type Database = {
           ai_cover_image: string | null
           ai_generation_attempts: number | null
           alteration_possible: boolean | null
+          alterations_allowed: boolean | null
           area: string
           availability_data: Json | null
           category: string
@@ -459,6 +475,7 @@ export type Database = {
           designer: string | null
           dropoff_location: string | null
           dry_clean_only: boolean | null
+          dry_cleaned: boolean | null
           extra_day_rate: number | null
           fabric: string | null
           height_range: string | null
@@ -495,6 +512,7 @@ export type Database = {
           ai_cover_image?: string | null
           ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
+          alterations_allowed?: boolean | null
           area?: string
           availability_data?: Json | null
           category: string
@@ -508,6 +526,7 @@ export type Database = {
           designer?: string | null
           dropoff_location?: string | null
           dry_clean_only?: boolean | null
+          dry_cleaned?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
@@ -544,6 +563,7 @@ export type Database = {
           ai_cover_image?: string | null
           ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
+          alterations_allowed?: boolean | null
           area?: string
           availability_data?: Json | null
           category?: string
@@ -557,6 +577,7 @@ export type Database = {
           designer?: string | null
           dropoff_location?: string | null
           dry_clean_only?: boolean | null
+          dry_cleaned?: boolean | null
           extra_day_rate?: number | null
           fabric?: string | null
           height_range?: string | null
@@ -828,6 +849,7 @@ export type Database = {
       order_stage:
         | "pending_packing_video"
         | "pending_pickup"
+        | "pending_opening_video"
         | "in_rental_period"
         | "pending_return_video"
         | "pending_acceptance_video"
@@ -981,6 +1003,7 @@ export const Constants = {
       order_stage: [
         "pending_packing_video",
         "pending_pickup",
+        "pending_opening_video",
         "in_rental_period",
         "pending_return_video",
         "pending_acceptance_video",
