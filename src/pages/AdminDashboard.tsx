@@ -1734,7 +1734,12 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* User Profile Modal */}
-      <Dialog open={!!selectedUser} onOpenChange={() => setSelectedUser(null)}>
+      <Dialog open={!!selectedUser} onOpenChange={(open) => {
+        if (!open) {
+          setSelectedUser(null);
+          setUserProducts([]);
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto bg-slate-800 border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-white">User Profile: {selectedUser?.name}</DialogTitle>
@@ -1772,10 +1777,10 @@ export default function AdminDashboard() {
                         <p className="text-sm text-slate-300">PKR {product.rental_price_4days}/4 days</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => navigate(`/product/${product.id}`)} className="text-slate-300">
+                        <Button size="sm" variant="ghost" onClick={() => { setSelectedUser(null); setUserProducts([]); navigate(`/product/${product.id}`); }} className="text-slate-300">
                           <ExternalLink className="h-4 w-4" />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => handleEditProduct(product.id)} className="text-slate-300">
+                        <Button size="sm" variant="ghost" onClick={() => { setSelectedUser(null); setUserProducts([]); handleEditProduct(product.id); }} className="text-slate-300">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => handleDeleteProduct(product.id)} className="text-red-400">
