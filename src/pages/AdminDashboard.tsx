@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search
 } from "lucide-react";
 import SEOContentManager from "@/components/admin/SEOContentManager";
 import { format } from "date-fns";
@@ -61,6 +61,7 @@ export default function AdminDashboard() {
   const [updatingAIModel, setUpdatingAIModel] = useState(false);
   const [chatSystemEnabled, setChatSystemEnabled] = useState(true);
   const [updatingChatSystem, setUpdatingChatSystem] = useState(false);
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
 
   useEffect(() => {
     checkAdminAccess();
@@ -243,6 +244,12 @@ export default function AdminDashboard() {
       .order("created_at", { ascending: false });
 
     // Fetch auth users to get emails (super admin can see this)
+    // Build product count map
+    const productCountByUser = (allProductsData || []).reduce((acc: Record<string, number>, product: any) => {
+      acc[product.owner_id] = (acc[product.owner_id] || 0) + 1;
+      return acc;
+    }, {});
+
     const usersWithRolesAndEmails = await Promise.all((allUsers || []).map(async (user) => {
       const { data: userRoles } = await supabase
         .from("user_roles")
@@ -253,6 +260,7 @@ export default function AdminDashboard() {
         ...user,
         roles: userRoles?.map(r => r.role) || [],
         email: null as string | null,
+        product_count: productCountByUser[user.user_id] || 0,
       };
     }));
 
@@ -1034,15 +1042,36 @@ export default function AdminDashboard() {
             <TabsContent value="rentals">
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <ShoppingBag className="h-5 w-5" />
-                    Rental Holdings & Completed Rentals
-                  </CardTitle>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <ShoppingBag className="h-5 w-5" />
+                      Rental Holdings & Completed Rentals
+                    </CardTitle>
+                    <div className="relative w-full sm:w-72">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search by product, owner or renter..."
+                        value={orderSearchQuery}
+                        onChange={(e) => setOrderSearchQuery(e.target.value)}
+                        className="pl-9 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[500px]">
                     <div className="space-y-3">
-                      {allBookings.map((booking) => (
+                      {allBookings
+                        .filter(booking => {
+                          if (!orderSearchQuery.trim()) return true;
+                          const query = orderSearchQuery.toLowerCase();
+                          const productTitle = booking.products?.title?.toLowerCase() || "";
+                          const ownerName = booking.owner_name?.toLowerCase() || "";
+                          const renterName = booking.renter_name?.toLowerCase() || "";
+                          return productTitle.includes(query) || ownerName.includes(query) || renterName.includes(query);
+                        })
+                        .map((booking) => (
                         <Card key={booking.id} className="bg-slate-700/50 border-slate-600">
                           <CardContent className="py-4">
                             <div className="flex items-center gap-4">
@@ -1261,7 +1290,13 @@ export default function AdminDashboard() {
                                     {user.email}
                                   </p>
                                 )}
-                                <p className="text-sm text-slate-400">{user.phone || "No phone"} • {user.city || "No city"}</p>
+                                <div className="flex items-center gap-3 text-sm text-slate-400">
+                                  <span>{user.phone || "No phone"} • {user.city || "No city"}</span>
+                                  <span className="flex items-center gap-1 text-purple-400">
+                                    <Package className="h-3 w-3" />
+                                    {user.product_count} products
+                                  </span>
+                                </div>
                                 <p className="text-xs text-slate-500">Joined: {format(new Date(user.created_at), "MMM dd, yyyy")}</p>
                               </div>
                               

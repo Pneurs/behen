@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import {
   Select,
@@ -42,6 +42,7 @@ export default function BariBehenDashboard() {
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
 
   useEffect(() => {
@@ -349,39 +350,59 @@ export default function BariBehenDashboard() {
           {/* My Orders Section */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingBag className="h-5 w-5" />
-                My Orders (Incoming)
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingBag className="h-5 w-5" />
+                  My Orders (Incoming)
+                </CardTitle>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search by product or renter..."
+                    value={orderSearchQuery}
+                    onChange={(e) => setOrderSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-sm rounded-md border border-input bg-background"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {ordersLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
-              ) : orders.length === 0 ? (
+              ) : (() => {
+                const filteredOrders = orders.filter(order => {
+                  if (!orderSearchQuery.trim()) return true;
+                  const query = orderSearchQuery.toLowerCase();
+                  const productTitle = order.products?.title?.toLowerCase() || "";
+                  const renterName = order.renter?.name?.toLowerCase() || "";
+                  return productTitle.includes(query) || renterName.includes(query);
+                });
+                return filteredOrders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>No orders yet. Orders will appear here when customers book your products.</p>
+                  <p>{orderSearchQuery ? "No orders match your search." : "No orders yet. Orders will appear here when customers book your products."}</p>
                 </div>
               ) : (
                 <Tabs defaultValue="active" className="w-full">
                   <TabsList className="w-full grid grid-cols-3 mb-4">
                     <TabsTrigger value="active" className="text-xs sm:text-sm">
-                      Active ({orders.filter(o => 
+                      Active ({filteredOrders.filter(o => 
                         o.booking_status === "confirmed" || 
                         o.booking_status === "active" ||
                         o.booking_status === "payment_verified"
                       ).length})
                     </TabsTrigger>
                     <TabsTrigger value="pending" className="text-xs sm:text-sm">
-                      Pending ({orders.filter(o => 
+                      Pending ({filteredOrders.filter(o => 
                         o.booking_status === "pending_payment" || 
                         o.booking_status === "payment_submitted"
                       ).length})
                     </TabsTrigger>
                     <TabsTrigger value="completed" className="text-xs sm:text-sm">
-                      Completed ({orders.filter(o => 
+                      Completed ({filteredOrders.filter(o => 
                         o.booking_status === "completed" || 
                         o.booking_status === "cancelled"
                       ).length})
@@ -390,7 +411,7 @@ export default function BariBehenDashboard() {
 
                   {["active", "pending", "completed"].map((tabValue) => (
                     <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-                      {orders
+                      {filteredOrders
                         .filter(order => {
                           if (tabValue === "active") {
                             return order.booking_status === "confirmed" || 
@@ -503,7 +524,7 @@ export default function BariBehenDashboard() {
                             </Card>
                           );
                         })}
-                      {orders.filter(order => {
+                      {filteredOrders.filter(order => {
                         if (tabValue === "active") {
                           return order.booking_status === "confirmed" || 
                                  order.booking_status === "active" ||
@@ -523,7 +544,8 @@ export default function BariBehenDashboard() {
                     </TabsContent>
                   ))}
                 </Tabs>
-              )}
+              );
+              })()}
             </CardContent>
           </Card>
 
