@@ -1,20 +1,25 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Filter, Loader2, X } from "lucide-react";
-import { toast } from "sonner";
 import ProductCard from "@/components/ProductCard";
 import LocationFilter from "@/components/LocationFilter";
 import AvailabilityCalendarFlatpickr from "@/components/AvailabilityCalendarFlatpickr";
 import BrowseFilters from "@/components/BrowseFilters";
-import MapView from "@/components/MapView";
-import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import SEOBottomContent from "@/components/SEOBottomContent";
 import { format, isWithinInterval } from "date-fns";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBrowseProducts, useAllBookings } from "@/hooks/useProducts";
+import { useProductRatings } from "@/hooks/useProductRatings";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+// Lazy load heavy components
+const MapView = lazy(() => import("@/components/MapView"));
+const EarningsPromoPopup = lazy(() => import("@/components/EarningsPromoPopup"));
 
 interface DateRange {
   from?: Date;
@@ -44,9 +49,9 @@ const CATEGORY_NAMES: Record<string, string> = {
 const Browse = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [user, setUser] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, userRole } = useAuth();
+  
+  // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
   const [listingTypeFilter, setListingTypeFilter] = useState("all");
@@ -54,109 +59,71 @@ const Browse = () => {
   const [areaFilter, setAreaFilter] = useState(searchParams.get("area") || "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showMap, setShowMap] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [allBookings, setAllBookings] = useState<any[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [alterationFilter, setAlterationFilter] = useState(false);
-  const [seoContent, setSeoContent] = useState<SEOContent | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      checkAdminRole();
-    }
-  }, [user]);
+  // React Query for products
+  const { data: products = [], isLoading: loading } = useBrowseProducts({
+    category: categoryFilter,
+    listingType: listingTypeFilter,
+    city: cityFilter,
+  });
 
-  const checkAdminRole = async () => {
-    if (!user) return;
-    
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "super_admin")
-      .single();
-    
-    setIsAdmin(!!data);
-  };
+  // React Query for bookings
+  const { data: allBookings = [] } = useAllBookings();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser(session.user);
-      }
-    });
+  // Batch fetch ratings for all products
+  const productIds = useMemo(() => products.map(p => p.id), [products]);
+  const { data: ratingsMap } = useProductRatings(productIds);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-      }
-    });
+  // SEO Content query
+  const { data: seoContent } = useQuery({
+    queryKey: ["seo-content", searchParams.get("city"), searchParams.get("area"), searchParams.get("category")],
+    queryFn: async () => {
+      const city = searchParams.get("city") || null;
+      const area = searchParams.get("area") || null;
+      const category = searchParams.get("category") || null;
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+      const queries = [
+        { city, area, category },
+        { city, area: null, category },
+        { city, area, category: null },
+        { city, area: null, category: null },
+        { city: null, area: null, category },
+      ];
 
-  useEffect(() => {
-    loadProducts();
-    loadBookings();
-    loadSEOContent();
-  }, [categoryFilter, listingTypeFilter, cityFilter, areaFilter]);
+      for (const q of queries) {
+        let query = supabase.from("page_seo_content").select("heading, description, meta_description, meta_keywords, bottom_content");
+        
+        if (q.city) query = query.eq("city", q.city);
+        else query = query.is("city", null);
+        
+        if (q.area) query = query.eq("area", q.area);
+        else query = query.is("area", null);
+        
+        if (q.category) query = query.eq("category", q.category);
+        else query = query.is("category", null);
 
-  // Load SEO content based on URL params
-  const loadSEOContent = async () => {
-    const city = searchParams.get("city") || null;
-    const area = searchParams.get("area") || null;
-    const category = searchParams.get("category") || null;
-
-    // Try exact match first, then fallback to more generic matches
-    const queries = [
-      // Exact match: City + Area + Category
-      { city, area, category },
-      // City + Category (no area)
-      { city, area: null, category },
-      // City + Area (no category)
-      { city, area, category: null },
-      // City only
-      { city, area: null, category: null },
-      // Category only
-      { city: null, area: null, category },
-    ];
-
-    for (const q of queries) {
-      let query = supabase.from("page_seo_content").select("heading, description, meta_description, meta_keywords, bottom_content");
-      
-      if (q.city) query = query.eq("city", q.city);
-      else query = query.is("city", null);
-      
-      if (q.area) query = query.eq("area", q.area);
-      else query = query.is("area", null);
-      
-      if (q.category) query = query.eq("category", q.category);
-      else query = query.is("category", null);
-
-      const { data } = await query.maybeSingle();
-      
-      if (data) {
-        setSeoContent(data);
-        // Update document meta tags
-        if (data.meta_description) {
-          document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta_description);
+        const { data } = await query.maybeSingle();
+        
+        if (data) {
+          if (data.meta_description) {
+            document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta_description);
+          }
+          if (data.heading) {
+            document.title = `${data.heading} | Behen.pk`;
+          }
+          return data as SEOContent;
         }
-        if (data.heading) {
-          document.title = `${data.heading} | Behen.pk`;
-        }
-        return;
       }
-    }
+      return null;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-    // No custom SEO content found, use default
-    setSeoContent(null);
-  };
-
-  // Generate default heading based on filters
-  const getPageHeading = () => {
+  // Memoized page heading
+  const getPageHeading = useCallback(() => {
     if (seoContent?.heading) return seoContent.heading;
     
     const category = categoryFilter !== "all" ? CATEGORY_NAMES[categoryFilter] || categoryFilter : null;
@@ -173,72 +140,17 @@ const Browse = () => {
       return `${category} Collection`;
     }
     return "Browse Collection";
-  };
+  }, [seoContent, categoryFilter, cityFilter, areaFilter]);
 
-  const loadBookings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("product_id, start_date, end_date, booking_status")
-        .in("booking_status", ["confirmed", "payment_submitted", "pending_payment"]);
-
-      if (error) throw error;
-      setAllBookings(data || []);
-    } catch (error: any) {
-      console.error("Failed to load bookings:", error);
-    }
-  };
-
-  const loadProducts = async () => {
-    setLoading(true);
-    try {
-      let query = supabase
-        .from("products")
-        .select("*")
-        .eq("status", "published")
-        .order("created_at", { ascending: false });
-
-      if (categoryFilter !== "all") {
-        query = query.eq("category", categoryFilter);
-      }
-
-      if (listingTypeFilter !== "all") {
-        if (listingTypeFilter === "rent" || listingTypeFilter === "sale") {
-          query = query.or(`listing_type.eq.${listingTypeFilter},listing_type.eq.both`);
-        }
-      }
-
-      if (cityFilter) {
-        query = query.eq("city", cityFilter);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setProducts(data || []);
-    } catch (error: any) {
-      toast.error("Failed to load products");
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Area filter for query
-  useEffect(() => {
-    // If area filter changes, update products
-  }, [areaFilter]);
-
-  const isProductAvailableForDates = (product: any, dateRange: DateRange | undefined) => {
+  // Memoized availability check
+  const isProductAvailableForDates = useCallback((product: any, dateRange: DateRange | undefined) => {
     if (!dateRange?.from || !dateRange?.to) return true;
 
     const selectedStart = dateRange.from;
     const selectedEnd = dateRange.to;
 
-    // Check blackout dates from product availability_data
     if (product.availability_data?.blackout_dates) {
       const blackoutDates = product.availability_data.blackout_dates;
-
       for (const blackoutDate of blackoutDates) {
         const blackout = new Date(blackoutDate);
         if (isWithinInterval(blackout, { start: selectedStart, end: selectedEnd })) {
@@ -247,23 +159,19 @@ const Browse = () => {
       }
     }
 
-    // Check for overlapping bookings
     const productBookings = allBookings.filter((b) => b.product_id === product.id);
-
     for (const booking of productBookings) {
       const bookingStart = new Date(booking.start_date);
       const bookingEnd = new Date(booking.end_date);
-
-      // Check for overlap: (booking_start <= selected_end) AND (booking_end >= selected_start)
       if (bookingStart <= selectedEnd && bookingEnd >= selectedStart) {
-        return false; // Booking overlaps with selected dates
+        return false;
       }
     }
-
     return true;
-  };
+  }, [allBookings]);
 
-  const getProductBlackoutDates = (product: any): Date[] => {
+  // Memoized blackout dates calculation
+  const getProductBlackoutDates = useCallback((product: any): Date[] => {
     const dates: Date[] = [];
 
     if (product.availability_data?.blackout_dates) {
@@ -279,53 +187,48 @@ const Browse = () => {
     productBookings.forEach((booking) => {
       const start = new Date(booking.start_date);
       const end = new Date(booking.end_date);
-
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
         dates.push(new Date(d));
       }
     });
 
     return dates;
-  };
+  }, [allBookings]);
 
-  // Get max price for filter
+  // Memoized max price
   const maxPrice = useMemo(() => {
     if (products.length === 0) return 500000;
     const prices = products.map(p => p.rental_price_4days || p.sale_price || 0);
     return Math.max(...prices, 500000);
   }, [products]);
 
+  // Memoized filtered products
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesSearch =
+        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase());
 
-  let filteredProducts = products.filter((product) => {
-    // Search filter
-    const matchesSearch =
-      product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesAvailability = isProductAvailableForDates(product, dateRange);
 
-    // Availability filter
-    const matchesAvailability = isProductAvailableForDates(product, dateRange);
+      const productPrice = product.rental_price_4days || product.sale_price || 0;
+      const matchesPrice = !priceRange || (productPrice >= priceRange[0] && productPrice <= priceRange[1]);
 
-    // Price filter - only apply if priceRange is set
-    const productPrice = product.rental_price_4days || product.sale_price || 0;
-    const matchesPrice = !priceRange || (productPrice >= priceRange[0] && productPrice <= priceRange[1]);
+      const matchesSize = selectedSizes.length === 0 || 
+        selectedSizes.some(s => s.toLowerCase() === (product.size || "").toLowerCase());
 
-    // Size filter - case insensitive comparison
-    const matchesSize = selectedSizes.length === 0 || 
-      selectedSizes.some(s => s.toLowerCase() === (product.size || "").toLowerCase());
+      const matchesArea = !areaFilter || 
+        (product.area || "").toLowerCase().includes(areaFilter.toLowerCase());
 
-    // Area filter
-    const matchesArea = !areaFilter || 
-      (product.area || "").toLowerCase().includes(areaFilter.toLowerCase());
+      const matchesAlteration = !alterationFilter || product.alteration_possible === true;
 
-    // Alteration filter
-    const matchesAlteration = !alterationFilter || product.alteration_possible === true;
-
-    return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea && matchesAlteration;
-  });
+      return matchesSearch && matchesAvailability && matchesPrice && matchesSize && matchesArea && matchesAlteration;
+    });
+  }, [products, searchQuery, dateRange, priceRange, selectedSizes, areaFilter, alterationFilter, isProductAvailableForDates]);
 
   const hasActiveFilters = categoryFilter !== "all" || listingTypeFilter !== "all" || cityFilter || areaFilter || dateRange || (priceRange && (priceRange[0] > 0 || priceRange[1] < maxPrice)) || selectedSizes.length > 0 || alterationFilter;
 
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setCategoryFilter("all");
     setListingTypeFilter("all");
     setCityFilter("");
@@ -335,14 +238,19 @@ const Browse = () => {
     setPriceRange(null);
     setSelectedSizes([]);
     setAlterationFilter(false);
-  };
+  }, []);
 
-  const userRole = user?.user_metadata?.role || "";
+  const handleProductClick = useCallback((productId: string) => {
+    navigate(`/product/${productId}`);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <EarningsPromoPopup userRole={userRole} />
+      <Suspense fallback={null}>
+        <EarningsPromoPopup userRole={userRole} />
+      </Suspense>
+      
       {/* Page Title - Dynamic SEO */}
       <div className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -357,10 +265,9 @@ const Browse = () => {
         </div>
       </div>
 
-      {/* Filters - Static (not sticky) */}
+      {/* Filters */}
       <div className="border-b bg-card/50">
         <div className="container mx-auto px-4 py-4 space-y-4">
-          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -371,7 +278,6 @@ const Browse = () => {
             />
           </div>
 
-          {/* Filter Row */}
           <div className="flex flex-col md:flex-row gap-3">
             <LocationFilter
               selectedCity={cityFilter}
@@ -456,12 +362,14 @@ const Browse = () => {
         ) : (
           <>
             {showMap && (
-              <div className="mb-8">
-                <MapView 
-                  products={filteredProducts}
-                  onProductClick={(id) => navigate(`/product/${id}`)}
-                />
-              </div>
+              <Suspense fallback={<div className="h-[400px] bg-muted animate-pulse rounded-lg mb-8" />}>
+                <div className="mb-8">
+                  <MapView 
+                    products={filteredProducts}
+                    onProductClick={handleProductClick}
+                  />
+                </div>
+              </Suspense>
             )}
 
             <div className="mb-6 flex items-center justify-between">
@@ -477,19 +385,23 @@ const Browse = () => {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  blackoutDates={getProductBlackoutDates(product)}
-                  onClick={() => navigate(`/product/${product.id}`)}
-                />
-              ))}
+              {filteredProducts.map((product) => {
+                const rating = ratingsMap?.[product.id];
+                return (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    blackoutDates={getProductBlackoutDates(product)}
+                    onClick={() => handleProductClick(product.id)}
+                    averageRating={rating?.averageRating}
+                    reviewCount={rating?.reviewCount || 0}
+                  />
+                );
+              })}
             </div>
           </>
         )}
 
-        {/* SEO Bottom Content Section */}
         {seoContent?.bottom_content && (
           <SEOBottomContent content={seoContent.bottom_content} />
         )}
