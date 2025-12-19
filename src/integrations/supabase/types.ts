@@ -600,6 +600,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          profile_picture: string | null
           push_token: string | null
           role: string
           updated_at: string
@@ -613,6 +614,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          profile_picture?: string | null
           push_token?: string | null
           role: string
           updated_at?: string
@@ -626,6 +628,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          profile_picture?: string | null
           push_token?: string | null
           role?: string
           updated_at?: string
