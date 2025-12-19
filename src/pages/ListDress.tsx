@@ -43,7 +43,8 @@ const ListDress = () => {
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   
   // Multi-step wizard state
-  const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details">("upload");
+  const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
+  const [createdProduct, setCreatedProduct] = useState<{id: string; title: string; image: string; price: string} | null>(null);
   
   // Step 1: Image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -604,6 +605,7 @@ const ListDress = () => {
         if (updateError) throw updateError;
 
         toast.success("Product updated successfully!");
+        navigate("/browse");
       } else {
         // Create new product
         const { data: insertedProduct, error: insertError } = await supabase
@@ -664,10 +666,19 @@ const ListDress = () => {
           }
         }
 
-        toast.success("Product listed successfully!");
+        // Store product info and show success screen
+        const priceDisplay = formData.listing_type === "rent" 
+          ? `PKR ${formData.rental_price_per_day || formData.rental_price_4days}/day`
+          : `PKR ${formData.sale_price}`;
+        
+        setCreatedProduct({
+          id: insertedProduct.id,
+          title: formData.title,
+          image: aiCoverImage,
+          price: priceDisplay,
+        });
+        setCurrentStep("success");
       }
-
-      navigate("/browse");
 
     } catch (error: any) {
       console.error("Error submitting form:", error);
@@ -1581,7 +1592,129 @@ const ListDress = () => {
     </form>
   );
 
+  // Render Success Step
+  const handleListAnother = () => {
+    // Reset all form state
+    setCurrentStep("upload");
+    setImageFiles([]);
+    setImagePreviews([]);
+    setImageQualityChecked(false);
+    setAiCoverImage("");
+    setAiGenerationAttempts(0);
+    setAiGenerationError(null);
+    setBlackoutDates([]);
+    setIncludedAccessories([]);
+    setCreatedProduct(null);
+    setFormData({
+      title: "",
+      category: "",
+      subcategory: "",
+      product_type: "dress",
+      condition: "",
+      listing_type: "",
+      rental_price_per_day: "",
+      rental_price_4days: "",
+      extra_day_rate: "",
+      original_price: "",
+      sale_price: "",
+      security_deposit: "",
+      description: "",
+      style_tips: "",
+      fabric: "",
+      color: "",
+      work_type: "",
+      designer: "",
+      size: "",
+      height_range: "",
+      weight_range: "",
+      chest_size: "",
+      waist_size: "",
+      hips_size: "",
+      alteration_possible: false,
+      city: "",
+      area: "",
+      dry_clean_only: false,
+      contact_phone: "",
+      pickup_location: "",
+      dropoff_location: "",
+    });
+  };
+
+  const renderSuccessStep = () => (
+    <Card className="max-w-lg mx-auto text-center">
+      <CardHeader className="pb-2">
+        <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+          <Check className="h-8 w-8 text-primary" />
+        </div>
+        <CardTitle className="text-2xl">Congratulations! 🎉</CardTitle>
+        <CardDescription className="text-base">
+          Your product has been listed successfully!
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Product Preview */}
+        {createdProduct && (
+          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+            <div className="aspect-[3/4] w-40 mx-auto rounded-lg overflow-hidden border">
+              <img 
+                src={createdProduct.image} 
+                alt={createdProduct.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h3 className="font-semibold truncate">{createdProduct.title}</h3>
+              <p className="text-primary font-medium">{createdProduct.price}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3">
+          <Button 
+            onClick={handleListAnother}
+            size="lg"
+            className="w-full"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            List Another Product
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate("/browse")}
+            size="lg"
+            className="w-full"
+          >
+            Browse Products
+          </Button>
+          {createdProduct && (
+            <Button 
+              variant="ghost"
+              onClick={() => navigate(`/product/${createdProduct.id}`)}
+              size="sm"
+              className="text-muted-foreground"
+            >
+              View Your Listing
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   // Main render based on current step
+  if (currentStep === "success") {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-8">
+          {renderSuccessStep()}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
