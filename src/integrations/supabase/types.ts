@@ -488,6 +488,7 @@ export type Database = {
           latitude: number | null
           listing_type: string
           longitude: number | null
+          negotiation_allowed: boolean | null
           original_price: number | null
           owner_id: string
           pickup_location: string | null
@@ -539,6 +540,7 @@ export type Database = {
           latitude?: number | null
           listing_type: string
           longitude?: number | null
+          negotiation_allowed?: boolean | null
           original_price?: number | null
           owner_id: string
           pickup_location?: string | null
@@ -590,6 +592,7 @@ export type Database = {
           latitude?: number | null
           listing_type?: string
           longitude?: number | null
+          negotiation_allowed?: boolean | null
           original_price?: number | null
           owner_id?: string
           pickup_location?: string | null

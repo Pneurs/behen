@@ -392,7 +392,7 @@ const ProductDetail = () => {
                     </div>
                     
                     {/* Contact Seller */}
-                    {chatEnabled && (
+                    {chatEnabled && product.negotiation_allowed && (
                       <Button 
                         size="lg" 
                         variant="outline"
@@ -402,6 +402,13 @@ const ProductDetail = () => {
                         <MessageCircle className="mr-2 h-5 w-5" />
                         Chat to Negotiate
                       </Button>
+                    )}
+                    
+                    {/* Fixed Price Badge */}
+                    {!product.negotiation_allowed && (
+                      <Badge variant="secondary" className="w-full justify-center py-3 text-sm">
+                        🏷️ Fixed Price - No Negotiation
+                      </Badge>
                     )}
                     
                     {/* Secondary Action Buttons */}

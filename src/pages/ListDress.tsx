@@ -99,6 +99,7 @@ const ListDress = () => {
     contact_phone: "",
     pickup_location: "",
     dropoff_location: "",
+    negotiation_allowed: true,
   });
   const [sameAsPickup, setSameAsPickup] = useState(false);
 
@@ -212,6 +213,7 @@ const ListDress = () => {
               contact_phone: product.contact_phone || "",
               pickup_location: product.pickup_location || "",
               dropoff_location: product.dropoff_location || "",
+              negotiation_allowed: product.negotiation_allowed !== false,
             });
 
             setIncludedAccessories(Array.isArray(product.included_accessories) ? product.included_accessories as string[] : []);
@@ -586,6 +588,7 @@ const ListDress = () => {
         contact_phone: formData.contact_phone || null,
         pickup_location: formData.pickup_location || null,
         dropoff_location: formData.dropoff_location || null,
+        negotiation_allowed: formData.negotiation_allowed,
         updated_at: new Date().toISOString(),
       };
 
@@ -1311,6 +1314,28 @@ const ListDress = () => {
                 </div>
               </RadioGroup>
             </div>
+
+            {/* Negotiation Toggle */}
+            <div>
+              <Label>Allow Price Negotiation? *</Label>
+              <RadioGroup
+                value={formData.negotiation_allowed ? "yes" : "no"}
+                onValueChange={(value) => setFormData({ ...formData, negotiation_allowed: value === "yes" })}
+                className="flex gap-4 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="yes" id="negotiation-yes" />
+                  <Label htmlFor="negotiation-yes" className="cursor-pointer">Yes - Buyers can chat to negotiate</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="no" id="negotiation-no" />
+                  <Label htmlFor="negotiation-no" className="cursor-pointer">No - Fixed price only</Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground mt-1">
+                If disabled, buyers won't see the "Chat to Negotiate" option
+              </p>
+            </div>
           </div>
 
           {/* NEW: Included Accessories */}
@@ -1637,6 +1662,7 @@ const ListDress = () => {
       contact_phone: "",
       pickup_location: "",
       dropoff_location: "",
+      negotiation_allowed: true,
     });
   };
 
