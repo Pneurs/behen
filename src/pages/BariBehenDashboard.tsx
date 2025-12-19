@@ -12,9 +12,10 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2 } from "lucide-react";
-import { format } from "date-fns";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { useEarnings } from "@/hooks/useEarnings";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
+import PaymentInfoCard from "@/components/PaymentInfoCard";
+import OrderStageView from "@/components/OrderStageView";
 
 export default function BariBehenDashboard() {
   const navigate = useNavigate();
@@ -36,6 +39,9 @@ export default function BariBehenDashboard() {
     open: false,
     productId: null,
   });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
 
   useEffect(() => {
@@ -63,6 +69,46 @@ export default function BariBehenDashboard() {
     setUser(user);
     setUserName(user.user_metadata?.name || "User");
     fetchProducts(user.id);
+    fetchOrders(user.id);
+  };
+
+  const fetchOrders = async (userId: string) => {
+    setOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          products:product_id (
+            id,
+            title,
+            ai_cover_image,
+            real_images,
+            listing_type,
+            product_type,
+            rental_price_4days,
+            rental_price_per_day,
+            sale_price,
+            security_deposit
+          ),
+          renter:renter_id (
+            name
+          )
+        `)
+        .eq("owner_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load orders",
+        variant: "destructive",
+      });
+    } finally {
+      setOrdersLoading(false);
+    }
   };
 
   const handleGenerateReferralCode = async () => {
@@ -300,6 +346,190 @@ export default function BariBehenDashboard() {
             </Card>
           </div>
 
+          {/* My Orders Section */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5" />
+                My Orders (Incoming)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {ordersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : orders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No orders yet. Orders will appear here when customers book your products.</p>
+                </div>
+              ) : (
+                <Tabs defaultValue="active" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 mb-4">
+                    <TabsTrigger value="active" className="text-xs sm:text-sm">
+                      Active ({orders.filter(o => 
+                        o.booking_status === "confirmed" || 
+                        o.booking_status === "active" ||
+                        o.booking_status === "payment_verified"
+                      ).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="pending" className="text-xs sm:text-sm">
+                      Pending ({orders.filter(o => 
+                        o.booking_status === "pending_payment" || 
+                        o.booking_status === "payment_submitted"
+                      ).length})
+                    </TabsTrigger>
+                    <TabsTrigger value="completed" className="text-xs sm:text-sm">
+                      Completed ({orders.filter(o => 
+                        o.booking_status === "completed" || 
+                        o.booking_status === "cancelled"
+                      ).length})
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {["active", "pending", "completed"].map((tabValue) => (
+                    <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+                      {orders
+                        .filter(order => {
+                          if (tabValue === "active") {
+                            return order.booking_status === "confirmed" || 
+                                   order.booking_status === "active" ||
+                                   order.booking_status === "payment_verified";
+                          } else if (tabValue === "pending") {
+                            return order.booking_status === "pending_payment" || 
+                                   order.booking_status === "payment_submitted";
+                          } else {
+                            return order.booking_status === "completed" || 
+                                   order.booking_status === "cancelled";
+                          }
+                        })
+                        .map((order) => {
+                          const product = order.products;
+                          const renter = order.renter;
+                          const productImage = product?.ai_cover_image || product?.real_images?.[0];
+                          const isSale = product?.listing_type === "sale";
+                          const isRental = !isSale;
+                          const daysRemaining = order.return_deadline 
+                            ? differenceInDays(new Date(order.return_deadline), new Date())
+                            : null;
+
+                          return (
+                            <Card key={order.id} className="overflow-hidden">
+                              <CardContent className="p-4">
+                                <div className="flex gap-4">
+                                  {productImage && (
+                                    <img
+                                      src={productImage}
+                                      alt={product?.title}
+                                      className="w-20 h-20 object-cover rounded flex-shrink-0"
+                                    />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div>
+                                        <h4 className="font-semibold truncate">{product?.title}</h4>
+                                        <p className="text-sm text-muted-foreground">
+                                          Renter: {renter?.name || "Unknown"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {format(new Date(order.start_date), "MMM dd")} - {format(new Date(order.end_date), "MMM dd, yyyy")}
+                                        </p>
+                                      </div>
+                                      <div className="flex flex-col items-end gap-1">
+                                        <Badge variant={
+                                          order.booking_status === "completed" ? "default" :
+                                          order.booking_status === "cancelled" ? "destructive" :
+                                          order.booking_status === "active" ? "default" :
+                                          "secondary"
+                                        }>
+                                          {order.booking_status.replace(/_/g, " ")}
+                                        </Badge>
+                                        {order.order_stage && order.booking_status !== "cancelled" && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {order.order_stage.replace(/_/g, " ")}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Return deadline warning for rentals */}
+                                    {isRental && order.order_stage === "in_rental_period" && daysRemaining !== null && (
+                                      <div className={`mt-2 flex items-center gap-1 text-xs ${
+                                        daysRemaining < 0 ? "text-destructive" : 
+                                        daysRemaining <= 1 ? "text-amber-600" : "text-muted-foreground"
+                                      }`}>
+                                        <Clock className="h-3 w-3" />
+                                        {daysRemaining < 0 
+                                          ? `${Math.abs(daysRemaining)} day(s) overdue`
+                                          : `${daysRemaining} day(s) until return`
+                                        }
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Payment Info Card */}
+                                <div className="mt-4">
+                                  <PaymentInfoCard 
+                                    booking={{
+                                      ...order,
+                                      products: product
+                                    }}
+                                    isOwner={true}
+                                    isRenter={false}
+                                  />
+                                </div>
+
+                                {/* Manage Order Button */}
+                                {order.booking_status !== "cancelled" && order.booking_status !== "completed" && (
+                                  <Button 
+                                    variant="outline" 
+                                    className="w-full mt-4"
+                                    onClick={() => setSelectedOrder(order)}
+                                  >
+                                    Manage Order
+                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                  </Button>
+                                )}
+
+                                {order.booking_status === "completed" && (
+                                  <div className="mt-4 flex items-center justify-center gap-2 text-sm text-green-600">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Order Completed
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                      {orders.filter(order => {
+                        if (tabValue === "active") {
+                          return order.booking_status === "confirmed" || 
+                                 order.booking_status === "active" ||
+                                 order.booking_status === "payment_verified";
+                        } else if (tabValue === "pending") {
+                          return order.booking_status === "pending_payment" || 
+                                 order.booking_status === "payment_submitted";
+                        } else {
+                          return order.booking_status === "completed" || 
+                                 order.booking_status === "cancelled";
+                        }
+                      }).length === 0 && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p>No {tabValue} orders</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Products Section Header */}
+          <h2 className="text-2xl font-bold mb-4">My Products</h2>
+
           {products.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
@@ -489,6 +719,7 @@ export default function BariBehenDashboard() {
         </div>
       </div>
 
+      {/* Delete Product Dialog */}
       <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, productId: null })}>
         <DialogContent>
           <DialogHeader>
@@ -505,6 +736,28 @@ export default function BariBehenDashboard() {
               Delete
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Management Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Order</DialogTitle>
+            <DialogDescription>
+              {selectedOrder?.products?.title} - Renter: {selectedOrder?.renter?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedOrder && user && (
+            <OrderStageView 
+              booking={selectedOrder}
+              userId={user.id}
+              onRefresh={() => {
+                fetchOrders(user.id);
+                setSelectedOrder(null);
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
