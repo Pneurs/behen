@@ -100,6 +100,8 @@ const ListDress = () => {
     pickup_location: "",
     dropoff_location: "",
     negotiation_allowed: true,
+    dry_cleaned: false,
+    alterations_allowed: false,
   });
   const [sameAsPickup, setSameAsPickup] = useState(false);
 
@@ -214,6 +216,8 @@ const ListDress = () => {
               pickup_location: product.pickup_location || "",
               dropoff_location: product.dropoff_location || "",
               negotiation_allowed: product.negotiation_allowed !== false,
+              dry_cleaned: product.dry_cleaned || false,
+              alterations_allowed: product.alterations_allowed || false,
             });
 
             setIncludedAccessories(Array.isArray(product.included_accessories) ? product.included_accessories as string[] : []);
@@ -589,6 +593,8 @@ const ListDress = () => {
         pickup_location: formData.pickup_location || null,
         dropoff_location: formData.dropoff_location || null,
         negotiation_allowed: formData.negotiation_allowed,
+        dry_cleaned: formData.listing_type === "rent" ? formData.dry_cleaned : null,
+        alterations_allowed: formData.listing_type === "rent" ? formData.alterations_allowed : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -1336,6 +1342,53 @@ const ListDress = () => {
                 If disabled, buyers won't see the "Chat to Negotiate" option
               </p>
             </div>
+
+            {/* Rental-specific fields for Instruction Page */}
+            {formData.listing_type === "rent" && (
+              <>
+                <div>
+                  <Label>Has this dress been dry cleaned? *</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    This will be shown on the rental instruction page for the renter
+                  </p>
+                  <RadioGroup
+                    value={formData.dry_cleaned ? "yes" : "no"}
+                    onValueChange={(value) => setFormData({ ...formData, dry_cleaned: value === "yes" })}
+                    className="flex gap-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="yes" id="dry-cleaned-status-yes" />
+                      <Label htmlFor="dry-cleaned-status-yes" className="cursor-pointer">Yes - Dress has been dry cleaned</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="no" id="dry-cleaned-status-no" />
+                      <Label htmlFor="dry-cleaned-status-no" className="cursor-pointer">No - Not dry cleaned</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <div>
+                  <Label>Allow temporary alterations? *</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    This will be shown on the rental instruction page for the renter
+                  </p>
+                  <RadioGroup
+                    value={formData.alterations_allowed ? "yes" : "no"}
+                    onValueChange={(value) => setFormData({ ...formData, alterations_allowed: value === "yes" })}
+                    className="flex gap-4 mt-2"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="yes" id="alterations-allowed-yes" />
+                      <Label htmlFor="alterations-allowed-yes" className="cursor-pointer">Yes - Temporary alterations allowed (must be reversed)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="no" id="alterations-allowed-no" />
+                      <Label htmlFor="alterations-allowed-no" className="cursor-pointer">No - No alterations allowed</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              </>
+            )}
           </div>
 
           {/* NEW: Included Accessories */}
@@ -1663,6 +1716,8 @@ const ListDress = () => {
       pickup_location: "",
       dropoff_location: "",
       negotiation_allowed: true,
+      dry_cleaned: false,
+      alterations_allowed: false,
     });
   };
 
