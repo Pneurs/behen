@@ -39,6 +39,7 @@ const ListDress = () => {
   const editProductId = searchParams.get("edit");
   const [user, setUser] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   
   // Multi-step wizard state
@@ -122,18 +123,36 @@ const ListDress = () => {
   }, []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkAccess = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
         navigate("/auth");
-      } else {
-        setUser(session.user);
-        const role = session.user.user_metadata?.role;
-        if (role !== "bari") {
-          toast.error("Only Bari Behens can list dresses");
-          navigate("/browse");
-        }
+        return;
       }
-    });
+      
+      setUser(session.user);
+      
+      // Check if user is a super_admin
+      const { data: superAdminRole } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", session.user.id)
+        .eq("role", "super_admin")
+        .maybeSingle();
+      
+      const userIsSuperAdmin = !!superAdminRole;
+      setIsSuperAdmin(userIsSuperAdmin);
+      
+      // Allow if user is bari OR super_admin
+      const profileRole = session.user.user_metadata?.role;
+      if (profileRole !== "bari" && !userIsSuperAdmin) {
+        toast.error("Only Bari Behens can list dresses");
+        navigate("/browse");
+      }
+    };
+    
+    checkAccess();
   }, [navigate]);
 
   // Load product data when in edit mode
@@ -141,15 +160,6 @@ const ListDress = () => {
     if (editProductId && user) {
       const loadProductData = async () => {
         try {
-          // Check if user is super admin
-          const { data: roles } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .eq("role", "super_admin");
-          
-          const isSuperAdmin = roles && roles.length > 0;
-
           // Super admins can edit any product, regular users can only edit their own
           let query = supabase
             .from("products")
@@ -225,7 +235,7 @@ const ListDress = () => {
 
       loadProductData();
     }
-  }, [editProductId, user, navigate]);
+  }, [editProductId, user, navigate, isSuperAdmin]);
 
   // STEP 1A: Primary images for AI generation (1-3 images)
   const handlePrimaryImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
