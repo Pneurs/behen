@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import { Header } from "@/components/Header";
@@ -1140,7 +1141,27 @@ const ListDress = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="security_deposit">Security Deposit</Label>
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor="security_deposit">Security Deposit</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[280px] p-3">
+                            <p className="text-sm font-medium mb-1">How to decide security deposit?</p>
+                            <p className="text-xs text-muted-foreground">
+                              Imagine the second-hand resale price for this dress. Subtract the rental price from it. 
+                              The remaining amount is your security deposit.
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              <strong>Example:</strong> If resale value is PKR 15,000 and rental is PKR 5,000, 
+                              security deposit = PKR 10,000
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
                       id="security_deposit"
                       type="number"
