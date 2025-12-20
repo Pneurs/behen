@@ -180,22 +180,29 @@ const ProductCard = memo(({
           {product.listing_type === "rent" || product.listing_type === "both" ? (
             <div>
               <p className="text-sm text-muted-foreground">4-Day Rental</p>
-              <p className="text-lg font-bold text-primary">
-                PKR
-                {" "}
-                {product.rental_price_4days?.toLocaleString() ||
-                  product.rental_price_per_day?.toLocaleString()}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="text-lg font-bold text-primary">
+                  PKR
+                  {" "}
+                  {product.rental_price_4days?.toLocaleString() ||
+                    product.rental_price_per_day?.toLocaleString()}
+                </p>
+                {product.original_price && product.original_price > (product.rental_price_4days || 0) && (
+                  <p className="text-xs text-muted-foreground line-through">
+                    PKR {product.original_price.toLocaleString()}
+                  </p>
+                )}
+              </div>
             </div>
           ) : (
             <div>
               <p className="text-sm text-muted-foreground">Sale</p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="text-lg font-bold text-primary">
                   PKR {product.sale_price?.toLocaleString()}
                 </p>
                 {product.original_price && product.original_price > (product.sale_price || 0) && (
-                  <p className="text-sm text-muted-foreground line-through">
+                  <p className="text-xs text-muted-foreground line-through">
                     PKR {product.original_price.toLocaleString()}
                   </p>
                 )}

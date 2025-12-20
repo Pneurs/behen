@@ -271,16 +271,51 @@ const ProductDetail = () => {
               )}
             </div>
             
-            {/* View Real Images Button */}
+            {/* Real Images Section */}
             {hasRealImages && (
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handleViewRealImages}
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                View Real Images ({product.real_images.length})
-              </Button>
+              <Card className="border-dashed">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    Real Product Images
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-2">
+                    {product.real_images.slice(0, 6).map((img: string, index: number) => (
+                      <div 
+                        key={index}
+                        className="aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={handleViewRealImages}
+                      >
+                        <img
+                          src={img}
+                          alt={`Real image ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {product.real_images.length > 6 && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full mt-2"
+                      onClick={handleViewRealImages}
+                    >
+                      View All {product.real_images.length} Images
+                    </Button>
+                  )}
+                  {product.real_images.length <= 6 && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full mt-2"
+                      onClick={handleViewRealImages}
+                    >
+                      View Full Size Images
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </div>
 
@@ -313,10 +348,22 @@ const ProductDetail = () => {
                   {(product.listing_type === "rent" || product.listing_type === "both") && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Rental Price</p>
-                      <p className="text-3xl font-bold text-primary">
-                        PKR {product.rental_price_4days?.toLocaleString() || (product.rental_price_per_day * 4)?.toLocaleString()}
-                        <span className="text-lg font-normal text-muted-foreground"> / 4 days</span>
-                      </p>
+                      <div className="flex items-baseline gap-3 flex-wrap">
+                        <p className="text-3xl font-bold text-primary">
+                          PKR {product.rental_price_4days?.toLocaleString() || (product.rental_price_per_day * 4)?.toLocaleString()}
+                          <span className="text-lg font-normal text-muted-foreground"> / 4 days</span>
+                        </p>
+                        {product.original_price && product.original_price > (product.rental_price_4days || 0) && (
+                          <>
+                            <p className="text-xl text-muted-foreground line-through">
+                              PKR {product.original_price.toLocaleString()}
+                            </p>
+                            <Badge variant="destructive" className="text-sm font-bold">
+                              {Math.round(((product.original_price - (product.rental_price_4days || 0)) / product.original_price) * 100)}% OFF
+                            </Badge>
+                          </>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground mt-1">
                         + PKR {product.extra_day_rate?.toLocaleString() || product.rental_price_per_day?.toLocaleString()} per extra day
                       </p>

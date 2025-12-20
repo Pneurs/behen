@@ -1088,47 +1088,67 @@ const ListDress = () => {
             <h3 className="text-lg font-semibold">Pricing</h3>
             
             {formData.listing_type === "rent" && (
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="rental_price_4days">4-Day Rental Price *</Label>
-                  <Input
-                    id="rental_price_4days"
-                    type="number"
-                    value={formData.rental_price_4days}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (formData.original_price && parseFloat(value) > parseFloat(formData.original_price)) {
-                        toast.error("Rental price cannot be higher than original price");
-                      }
-                      setFormData({ ...formData, rental_price_4days: value });
-                    }}
-                    placeholder="5000"
-                    required
-                    className={formData.original_price && formData.rental_price_4days && parseFloat(formData.rental_price_4days) > parseFloat(formData.original_price) ? "border-destructive" : ""}
-                  />
-                  {formData.original_price && formData.rental_price_4days && parseFloat(formData.rental_price_4days) > parseFloat(formData.original_price) && (
-                    <p className="text-sm text-destructive mt-1">Rental price cannot be higher than original price</p>
-                  )}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="original_price_rent">Original Price (Market Value) *</Label>
+                    <Input
+                      id="original_price_rent"
+                      type="number"
+                      value={formData.original_price}
+                      onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                      placeholder="50000"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This helps show the discount % to renters
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="rental_price_4days">4-Day Rental Price *</Label>
+                    <Input
+                      id="rental_price_4days"
+                      type="number"
+                      value={formData.rental_price_4days}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (formData.original_price && parseFloat(value) > parseFloat(formData.original_price)) {
+                          toast.error("Rental price cannot be higher than original price");
+                        }
+                        setFormData({ ...formData, rental_price_4days: value });
+                      }}
+                      placeholder="5000"
+                      required
+                      className={formData.original_price && formData.rental_price_4days && parseFloat(formData.rental_price_4days) > parseFloat(formData.original_price) ? "border-destructive" : ""}
+                    />
+                    {formData.original_price && formData.rental_price_4days && (
+                      <p className="text-xs text-primary mt-1 font-medium">
+                        {Math.round(((parseFloat(formData.original_price) - parseFloat(formData.rental_price_4days)) / parseFloat(formData.original_price)) * 100)}% savings shown to renters
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="extra_day_rate">Extra Day Rate</Label>
-                  <Input
-                    id="extra_day_rate"
-                    type="number"
-                    value={formData.extra_day_rate}
-                    onChange={(e) => setFormData({ ...formData, extra_day_rate: e.target.value })}
-                    placeholder="500"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="security_deposit">Security Deposit</Label>
-                  <Input
-                    id="security_deposit"
-                    type="number"
-                    value={formData.security_deposit}
-                    onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
-                    placeholder="2000"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="extra_day_rate">Extra Day Rate</Label>
+                    <Input
+                      id="extra_day_rate"
+                      type="number"
+                      value={formData.extra_day_rate}
+                      onChange={(e) => setFormData({ ...formData, extra_day_rate: e.target.value })}
+                      placeholder="500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="security_deposit">Security Deposit</Label>
+                    <Input
+                      id="security_deposit"
+                      type="number"
+                      value={formData.security_deposit}
+                      onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
+                      placeholder="2000"
+                    />
+                  </div>
                 </div>
               </div>
             )}
