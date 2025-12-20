@@ -67,6 +67,10 @@ const ListDress = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [blackoutDates, setBlackoutDates] = useState<Date[]>([]);
   const [includedAccessories, setIncludedAccessories] = useState<string[]>([]);
+  
+  // Location dropdown state
+  const [cityOpen, setCityOpen] = useState(false);
+  const [areaOpen, setAreaOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -259,13 +263,17 @@ const ListDress = () => {
     const newPreviews: string[] = [];
 
     for (const file of files.slice(0, 3)) {
-      // Basic quality check
-      if (file.size < 100000) {
+      // Basic quality check - reduced minimum size for edited photos
+      if (file.size < 50000) {
         toast.error(`${file.name} is too small. Please upload a higher quality photo.`);
         continue;
       }
 
-      if (!file.type.startsWith("image/")) {
+      // Accept common image types including HEIC from phones
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const isValidType = file.type.startsWith("image/") || validTypes.includes(file.type.toLowerCase());
+      
+      if (!isValidType) {
         toast.error(`${file.name} is not a valid image file.`);
         continue;
       }
@@ -311,14 +319,17 @@ const ListDress = () => {
     const validPreviews: string[] = [];
 
     newFiles.forEach((file) => {
-      // Check file size (must be at least 100KB for quality)
-      if (file.size < 100000) {
+      // Check file size - reduced minimum size for edited photos
+      if (file.size < 50000) {
         toast.error(`${file.name} is too small. Please upload higher quality images.`);
         return;
       }
 
-      // Check file type
-      if (!file.type.startsWith("image/")) {
+      // Accept common image types including HEIC from phones
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      const isValidType = file.type.startsWith("image/") || validTypes.includes(file.type.toLowerCase());
+      
+      if (!isValidType) {
         toast.error(`${file.name} is not a valid image file.`);
         return;
       }
@@ -1474,7 +1485,7 @@ const ListDress = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="city">City *</Label>
-                <Popover>
+                <Popover open={cityOpen} onOpenChange={setCityOpen}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -1498,7 +1509,10 @@ const ListDress = () => {
                             <CommandItem
                               key={city}
                               value={city}
-                              onSelect={() => setFormData({ ...formData, city: city, area: "" })}
+                              onSelect={() => {
+                                setFormData({ ...formData, city: city, area: "" });
+                                setCityOpen(false);
+                              }}
                             >
                               <Check
                                 className={cn(
@@ -1517,7 +1531,7 @@ const ListDress = () => {
               </div>
               <div>
                 <Label htmlFor="area">Area *</Label>
-                <Popover>
+                <Popover open={areaOpen} onOpenChange={setAreaOpen}>
                   <PopoverTrigger asChild>
                     <Button 
                       variant="outline" 
@@ -1541,7 +1555,10 @@ const ListDress = () => {
                             <CommandItem
                               key={area}
                               value={area}
-                              onSelect={() => setFormData({ ...formData, area: area })}
+                              onSelect={() => {
+                                setFormData({ ...formData, area: area });
+                                setAreaOpen(false);
+                              }}
                             >
                               <Check
                                 className={cn(
