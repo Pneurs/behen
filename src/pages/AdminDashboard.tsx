@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin
 } from "lucide-react";
 import SEOContentManager from "@/components/admin/SEOContentManager";
+import AdminLocationManager from "@/components/admin/AdminLocationManager";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 
@@ -1003,6 +1004,12 @@ export default function AdminDashboard() {
                 </TabsTrigger>
               )}
               {currentRole === "super_admin" && (
+                <TabsTrigger value="locations" className="data-[state=active]:bg-primary">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  Locations
+                </TabsTrigger>
+              )}
+              {currentRole === "super_admin" && (
                 <TabsTrigger value="settings" className="data-[state=active]:bg-primary">
                   <Settings className="h-4 w-4 mr-1" />
                   Settings
@@ -1890,6 +1897,13 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+            )}
+
+            {/* Locations Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="locations">
+                <AdminLocationManager />
               </TabsContent>
             )}
 
