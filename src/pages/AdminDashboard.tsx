@@ -63,6 +63,12 @@ export default function AdminDashboard() {
   const [updatingChatSystem, setUpdatingChatSystem] = useState(false);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [commissionSettings, setCommissionSettings] = useState({
+    bariBehen: 10,
+    chotiBehen: 5,
+    loading: true,
+    saving: false,
+  });
 
   useEffect(() => {
     checkAdminAccess();
@@ -370,6 +376,31 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.log("Could not fetch chat system setting:", error);
+    }
+
+    // Fetch commission settings
+    try {
+      const { data: commissionData } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .in("key", ["bari_behen_commission", "choti_behen_commission"]);
+      
+      if (commissionData) {
+        const bariSetting = commissionData.find(s => s.key === "bari_behen_commission");
+        const chotiSetting = commissionData.find(s => s.key === "choti_behen_commission");
+        
+        setCommissionSettings({
+          bariBehen: (bariSetting?.value as { percentage?: number })?.percentage || 10,
+          chotiBehen: (chotiSetting?.value as { percentage?: number })?.percentage || 5,
+          loading: false,
+          saving: false,
+        });
+      } else {
+        setCommissionSettings(prev => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.log("Could not fetch commission settings:", error);
+      setCommissionSettings(prev => ({ ...prev, loading: false }));
     }
 
     setLoading(false);
@@ -766,6 +797,54 @@ export default function AdminDashboard() {
       toast({ title: "Error", description: "Failed to update AI model", variant: "destructive" });
     } finally {
       setUpdatingAIModel(false);
+    }
+  };
+
+  const handleSaveCommissionSettings = async () => {
+    if (currentRole !== "super_admin") {
+      toast({ title: "Access Denied", description: "Only super admins can change commission settings", variant: "destructive" });
+      return;
+    }
+
+    setCommissionSettings(prev => ({ ...prev, saving: true }));
+
+    try {
+      // Update both commission settings
+      const updates = [
+        supabase
+          .from("app_settings")
+          .upsert({ 
+            key: "bari_behen_commission",
+            value: { percentage: commissionSettings.bariBehen },
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser?.id
+          }, { onConflict: "key" }),
+        supabase
+          .from("app_settings")
+          .upsert({ 
+            key: "choti_behen_commission",
+            value: { percentage: commissionSettings.chotiBehen },
+            updated_at: new Date().toISOString(),
+            updated_by: currentUser?.id
+          }, { onConflict: "key" })
+      ];
+
+      const results = await Promise.all(updates);
+      const hasError = results.some(r => r.error);
+
+      if (hasError) {
+        throw new Error("Failed to update commission settings");
+      }
+
+      toast({ 
+        title: "Commission Settings Updated", 
+        description: `Bari Behen: ${commissionSettings.bariBehen}%, Choti Behen: ${commissionSettings.chotiBehen}%` 
+      });
+    } catch (error: any) {
+      console.error("Error updating commission settings:", error);
+      toast({ title: "Error", description: "Failed to update commission settings", variant: "destructive" });
+    } finally {
+      setCommissionSettings(prev => ({ ...prev, saving: false }));
     }
   };
 
@@ -1548,6 +1627,107 @@ export default function AdminDashboard() {
             {/* Settings Tab - Super Admin Only */}
             {currentRole === "super_admin" && (
               <TabsContent value="settings">
+                {/* Commission Settings */}
+                <Card className="bg-slate-800/50 border-slate-700 mb-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <DollarSign className="h-5 w-5" />
+                      Commission Percentage Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {commissionSettings.loading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {/* Bari Behen Commission */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-300">
+                              Bari Behen Commission (%)
+                            </label>
+                            <p className="text-xs text-slate-400">
+                              Percentage taken from dress owners on each rental
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={commissionSettings.bariBehen}
+                                onChange={(e) => setCommissionSettings(prev => ({
+                                  ...prev,
+                                  bariBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                                }))}
+                                className="bg-slate-700 border-slate-600 text-white w-24"
+                              />
+                              <span className="text-slate-400">%</span>
+                              <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30">
+                                Bari Behen
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {/* Choti Behen Commission */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-300">
+                              Choti Behen Commission (%)
+                            </label>
+                            <p className="text-xs text-slate-400">
+                              Percentage taken from renters on each booking
+                            </p>
+                            <div className="flex items-center gap-3">
+                              <Input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={commissionSettings.chotiBehen}
+                                onChange={(e) => setCommissionSettings(prev => ({
+                                  ...prev,
+                                  chotiBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                                }))}
+                                className="bg-slate-700 border-slate-600 text-white w-24"
+                              />
+                              <span className="text-slate-400">%</span>
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                                Choti Behen
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-slate-700/50 rounded-lg p-4">
+                          <h4 className="font-medium text-white mb-2">ℹ️ About Commission</h4>
+                          <p className="text-sm text-slate-400">
+                            Commission is deducted from the rental amount. For example, if Bari Behen commission is 10% 
+                            and rental price is PKR 1000, Bari Behen receives PKR 900 and platform gets PKR 100.
+                          </p>
+                        </div>
+
+                        <Button 
+                          onClick={handleSaveCommissionSettings} 
+                          disabled={commissionSettings.saving}
+                          className="w-full md:w-auto"
+                        >
+                          {commissionSettings.saving ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4 mr-2" />
+                              Save Commission Settings
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Chat System Toggle */}
                 <Card className="bg-slate-800/50 border-slate-700 mb-6">
                   <CardHeader>
