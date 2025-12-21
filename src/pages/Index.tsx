@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 
 // Lazy load non-critical components
-const HomeProducts = lazy(() => import("@/components/HomeProducts").then(m => ({ default: m.HomeProducts })));
+const HomeProducts = lazy(() => import("@/components/HomeProducts"));
 const EarningsPromoPopup = lazy(() => import("@/components/EarningsPromoPopup"));
 
 const ProductsSkeleton = () => (
