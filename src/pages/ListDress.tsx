@@ -67,6 +67,7 @@ const ListDress = () => {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [blackoutDates, setBlackoutDates] = useState<Date[]>([]);
   const [includedAccessories, setIncludedAccessories] = useState<string[]>([]);
+  const [otherAccessoriesText, setOtherAccessoriesText] = useState<string>("");
   
   // Location dropdown state
   const [cityOpen, setCityOpen] = useState(false);
@@ -225,7 +226,15 @@ const ListDress = () => {
               alterations_allowed: product.alterations_allowed || false,
             });
 
-            setIncludedAccessories(Array.isArray(product.included_accessories) ? product.included_accessories as string[] : []);
+            // Parse included accessories
+            const accessories = Array.isArray(product.included_accessories) ? product.included_accessories as string[] : [];
+            const otherEntry = accessories.find((a: string) => a.startsWith("other:"));
+            if (otherEntry) {
+              setOtherAccessoriesText(otherEntry.replace("other:", ""));
+              setIncludedAccessories([...accessories.filter((a: string) => !a.startsWith("other:")), "other"]);
+            } else {
+              setIncludedAccessories(accessories);
+            }
             
             // Load blackout dates
             if (product.availability_data && typeof product.availability_data === 'object') {
@@ -600,7 +609,9 @@ const ListDress = () => {
         area: formData.area,
         availability_data: availabilityData,
         dry_clean_only: formData.dry_clean_only,
-        included_accessories: includedAccessories,
+        included_accessories: includedAccessories.includes("other") && otherAccessoriesText 
+          ? [...includedAccessories.filter(a => a !== "other"), `other:${otherAccessoriesText}`]
+          : includedAccessories,
         contact_phone: formData.contact_phone || null,
         pickup_location: formData.pickup_location || null,
         dropoff_location: formData.dropoff_location || null,
@@ -1356,7 +1367,10 @@ const ListDress = () => {
             <h3 className="text-lg font-semibold">Care Instructions *</h3>
             
             <div>
-              <Label>Dry Clean Only? *</Label>
+              <Label>Requires Dry Cleaning After Use? *</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Let renters know if this item must be professionally dry cleaned after use
+              </p>
               <RadioGroup
                 value={formData.dry_clean_only ? "yes" : "no"}
                 onValueChange={(value) => setFormData({ ...formData, dry_clean_only: value === "yes" })}
@@ -1364,11 +1378,11 @@ const ListDress = () => {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="yes" id="dry-clean-yes" />
-                  <Label htmlFor="dry-clean-yes" className="cursor-pointer">Yes</Label>
+                  <Label htmlFor="dry-clean-yes" className="cursor-pointer">Yes - Must be dry cleaned</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="no" id="dry-clean-no" />
-                  <Label htmlFor="dry-clean-no" className="cursor-pointer">No</Label>
+                  <Label htmlFor="dry-clean-no" className="cursor-pointer">No - Regular wash is fine</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -1467,6 +1481,10 @@ const ListDress = () => {
                           setIncludedAccessories([...includedAccessories, accessory.id]);
                         } else {
                           setIncludedAccessories(includedAccessories.filter(a => a !== accessory.id));
+                          // Clear text if unchecking "other"
+                          if (accessory.id === "other") {
+                            setOtherAccessoriesText("");
+                          }
                         }
                       }}
                     />
@@ -1476,6 +1494,20 @@ const ListDress = () => {
                   </div>
                 ))}
               </div>
+              
+              {/* Text field for "Other" accessories */}
+              {includedAccessories.includes("other") && (
+                <div className="mt-3">
+                  <Label htmlFor="other_accessories_text">Please specify other accessories</Label>
+                  <Input
+                    id="other_accessories_text"
+                    value={otherAccessoriesText}
+                    onChange={(e) => setOtherAccessoriesText(e.target.value)}
+                    placeholder="e.g., Hair pins, Matha Patti, Bangles set"
+                    className="mt-1"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
