@@ -207,8 +207,23 @@ const ProductDetail = () => {
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
 
-  // Parse included accessories
-  const includedAccessories = product.included_accessories || [];
+  // Parse included accessories - handle "other:text" format
+  const rawAccessories = product.included_accessories || [];
+  const includedAccessories = rawAccessories.map((acc: string) => {
+    if (acc.startsWith("other:")) {
+      return acc.replace("other:", "");
+    }
+    // Convert IDs to readable labels
+    const labelMap: Record<string, string> = {
+      jewelry: "Jewelry",
+      matching_footwear: "Matching Footwear",
+      dupatta: "Dupatta",
+      bag: "Bag/Clutch",
+      belt: "Belt",
+      other: "Other Accessories",
+    };
+    return labelMap[acc] || acc;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -582,17 +597,17 @@ const ProductDetail = () => {
                     </div>
                   )}
                   
-                  {/* Dry Clean Only */}
+                  {/* Dry Clean Required */}
                   <div>
                     <p className="text-sm text-muted-foreground flex items-center gap-1">
                       <Droplets className="h-3 w-3" />
-                      Dry Clean Only
+                      Requires Dry Cleaning
                     </p>
                     <p className="font-medium flex items-center gap-1">
                       {product.dry_clean_only ? (
-                        <><Check className="h-4 w-4 text-green-600" /> Yes</>
+                        <><Check className="h-4 w-4 text-green-600" /> Yes - Must be dry cleaned after use</>
                       ) : (
-                        <><X className="h-4 w-4 text-muted-foreground" /> No</>
+                        <><X className="h-4 w-4 text-muted-foreground" /> No - Regular wash is fine</>
                       )}
                     </p>
                   </div>
