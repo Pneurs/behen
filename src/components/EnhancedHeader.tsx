@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -16,52 +16,39 @@ import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
 import { NotificationBell } from "./NotificationBell";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState<any>(null);
+  const { user, userRole, isAdmin, signOut } = useAuth();
+
   const [userName, setUserName] = useState<string>("");
-  const [userRole, setUserRole] = useState<string>("");
-  const [isAdmin, setIsAdmin] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const { chatEnabled } = useChatEnabled();
 
   useEffect(() => {
-    const initializeUser = async (session: any) => {
-      if (session) {
-        setUser(session.user);
-        setUserRole(session.user.user_metadata?.role || "choti");
-        // Run all API calls in parallel for speed
-        Promise.all([
-          checkAdminRole(session.user.id),
-          fetchUnreadCount(session.user.id),
-          fetchWishlistCount(session.user.id),
-          fetchUserName(session.user.id)
-        ]);
-      }
-    };
+    if (!user) {
+      setUserName("");
+      setUnreadCount(0);
+      setWishlistCount(0);
+      return;
+    }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      initializeUser(session);
-    });
+    const userId = user.id;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        initializeUser(session);
-      } else {
-        setUser(null);
-        setUserName("");
-        setUserRole("");
-        setIsAdmin(false);
-        setUnreadCount(0);
-        setWishlistCount(0);
-      }
-    });
+    // Defer any DB calls (avoid doing them in auth callbacks)
+    const t = setTimeout(() => {
+      Promise.all([
+        fetchUnreadCount(userId),
+        fetchWishlistCount(userId),
+        fetchUserName(userId),
+      ]);
+    }, 0);
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => clearTimeout(t);
+  }, [user]);
 
   const fetchUserName = async (userId: string) => {
     try {
@@ -91,7 +78,7 @@ export const EnhancedHeader = () => {
         },
         (payload) => {
           // If the message is not from the current user, increment unread count
-          if (payload.new.sender_id !== user.id) {
+          if ((payload as any).new?.sender_id !== user.id) {
             setUnreadCount(prev => prev + 1);
           }
         }
@@ -119,7 +106,7 @@ export const EnhancedHeader = () => {
       // Get messages from others in these conversations from the last 24 hours
       const convIds = conversations.map(c => c.id);
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+
       const { count } = await supabase
         .from("chat_messages")
         .select("*", { count: "exact", head: true })
@@ -131,17 +118,6 @@ export const EnhancedHeader = () => {
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }
-  };
-
-  const checkAdminRole = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "super_admin")
-      .single();
-    
-    setIsAdmin(!!data);
   };
 
   const fetchWishlistCount = async (userId: string) => {
@@ -158,7 +134,7 @@ export const EnhancedHeader = () => {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Signed out successfully");
     navigate("/");
     setMobileOpen(false);

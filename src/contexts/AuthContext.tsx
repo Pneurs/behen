@@ -97,16 +97,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
+      (event, currentSession) => {
+        // Keep this callback synchronous to avoid auth deadlocks
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setUserRole(currentSession?.user?.user_metadata?.role || "");
-        
+
         if (currentSession?.user) {
-          await checkAdminRole(currentSession.user.id);
+          // Defer any extra DB calls
+          setTimeout(() => {
+            checkAdminRole(currentSession.user.id);
+          }, 0);
         } else {
           setIsAdmin(false);
         }
+
         setLoading(false);
       }
     );
