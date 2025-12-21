@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,11 +64,27 @@ const Browse = () => {
   const [alterationFilter, setAlterationFilter] = useState(false);
 
   // React Query for products
-  const { data: products = [], isLoading: loading } = useBrowseProducts({
+  const {
+    data: products = [],
+    isLoading: loading,
+    isError: productsError,
+    refetch: refetchProducts,
+  } = useBrowseProducts({
     category: categoryFilter,
     listingType: listingTypeFilter,
     city: cityFilter,
   });
+
+  const [slowLoad, setSlowLoad] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setSlowLoad(false);
+      return;
+    }
+
+    const t = setTimeout(() => setSlowLoad(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // React Query for bookings
   const { data: allBookings = [] } = useAllBookings();
@@ -344,8 +360,22 @@ const Browse = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
+          <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            {slowLoad && (
+              <div className="mt-4 text-center space-y-3">
+                <p className="text-sm text-muted-foreground">Still loading dresses…</p>
+                <Button variant="outline" onClick={() => refetchProducts()}>
+                  Retry
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : productsError ? (
+          <div className="text-center py-20">
+            <h3 className="text-2xl font-semibold mb-4">Couldn’t load dresses</h3>
+            <p className="text-muted-foreground mb-8">Please check your connection and try again.</p>
+            <Button onClick={() => refetchProducts()}>Retry</Button>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-20">
