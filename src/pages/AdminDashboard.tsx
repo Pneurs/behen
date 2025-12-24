@@ -14,11 +14,12 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift
 } from "lucide-react";
 import SEOContentManager from "@/components/admin/SEOContentManager";
 import AdminLocationManager from "@/components/admin/AdminLocationManager";
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
+import AdminReferralManager from "@/components/admin/AdminReferralManager";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 
@@ -1005,6 +1006,12 @@ export default function AdminDashboard() {
                 </TabsTrigger>
               )}
               {currentRole === "super_admin" && (
+                <TabsTrigger value="referrals" className="data-[state=active]:bg-primary">
+                  <Gift className="h-4 w-4 mr-1" />
+                  Referrals
+                </TabsTrigger>
+              )}
+              {currentRole === "super_admin" && (
                 <TabsTrigger value="locations" className="data-[state=active]:bg-primary">
                   <MapPin className="h-4 w-4 mr-1" />
                   Locations
@@ -1904,6 +1911,13 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+            )}
+
+            {/* Referrals Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="referrals">
+                <AdminReferralManager />
               </TabsContent>
             )}
 

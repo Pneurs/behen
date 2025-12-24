@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search, UserCheck, Gift } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import {
   Select,
@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEarnings } from "@/hooks/useEarnings";
+import { useReferralStats } from "@/hooks/useReferralStats";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import PaymentInfoCard from "@/components/PaymentInfoCard";
 import OrderStageView from "@/components/OrderStageView";
@@ -44,6 +45,7 @@ export default function BariBehenDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
+  const { stats: referralStats, loading: referralStatsLoading } = useReferralStats();
 
   useEffect(() => {
     checkAuth();
@@ -324,8 +326,31 @@ export default function BariBehenDashboard() {
                         </Button>
                       </div>
                     </div>
+                    
+                    {/* Referral Stats */}
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-purple-200">
+                      <div className="bg-white/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
+                          <UserCheck className="h-4 w-4" />
+                          <span className="text-xs font-medium">Users Joined</span>
+                        </div>
+                        <p className="text-2xl font-bold text-purple-700">
+                          {referralStatsLoading ? "..." : referralStats.referredCount}
+                        </p>
+                      </div>
+                      <div className="bg-white/50 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+                          <Gift className="h-4 w-4" />
+                          <span className="text-xs font-medium">Earned</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-700">
+                          PKR {referralStatsLoading ? "..." : referralStats.totalEarned.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                    
                     <p className="text-xs text-muted-foreground">
-                      Share this code! Both you and your friend get PKR 150 when they upload their first product.
+                      Share this code! Both you and your friend get PKR 150 when they sign up.
                     </p>
                   </div>
                 ) : (

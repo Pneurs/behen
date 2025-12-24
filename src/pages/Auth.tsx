@@ -157,6 +157,93 @@ const Auth = () => {
           .from("profiles")
           .update({ email_verified: true })
           .eq("user_id", user.id);
+
+        // Process referral bonus if user was referred
+        if (userData.referred_by) {
+          try {
+            // Get referrer's referral code for the signup record
+            const { data: referrerEarnings } = await supabase
+              .from("user_earnings")
+              .select("referral_code, pending_balance")
+              .eq("user_id", userData.referred_by)
+              .single();
+
+            if (referrerEarnings) {
+              // Add 150 PKR to referrer's pending balance
+              await supabase
+                .from("user_earnings")
+                .update({
+                  pending_balance: (referrerEarnings.pending_balance || 0) + 150
+                })
+                .eq("user_id", userData.referred_by);
+
+              // Create transaction for referrer
+              await supabase
+                .from("earning_transactions")
+                .insert({
+                  user_id: userData.referred_by,
+                  amount: 150,
+                  type: "referral_bonus",
+                  status: "pending",
+                  reference_id: user.id,
+                  notes: "Referral bonus - new user signup"
+                });
+            }
+
+            // Create or update new user's earnings with 150 PKR bonus
+            const { data: newUserEarnings } = await supabase
+              .from("user_earnings")
+              .select("*")
+              .eq("user_id", user.id)
+              .single();
+
+            if (newUserEarnings) {
+              await supabase
+                .from("user_earnings")
+                .update({
+                  pending_balance: (newUserEarnings.pending_balance || 0) + 150,
+                  referred_by: userData.referred_by
+                })
+                .eq("user_id", user.id);
+            } else {
+              await supabase
+                .from("user_earnings")
+                .insert({
+                  user_id: user.id,
+                  pending_balance: 150,
+                  referred_by: userData.referred_by,
+                  balance: 0
+                });
+            }
+
+            // Create transaction for new user
+            await supabase
+              .from("earning_transactions")
+              .insert({
+                user_id: user.id,
+                amount: 150,
+                type: "referral_bonus",
+                status: "pending",
+                notes: "Referral signup bonus"
+              });
+
+            // Create referral signup record for tracking
+            await supabase
+              .from("referral_signups")
+              .insert({
+                referrer_user_id: userData.referred_by,
+                referred_user_id: user.id,
+                referral_code: referrerEarnings?.referral_code || "",
+                bonus_amount: 150,
+                bonus_credited: true
+              });
+
+            toast.success("🎉 PKR 150 bonus credited to your account!");
+          } catch (refError) {
+            console.error("Error processing referral bonus:", refError);
+            // Don't fail the signup if referral processing fails
+          }
+        }
       }
 
       // Delete the used token
