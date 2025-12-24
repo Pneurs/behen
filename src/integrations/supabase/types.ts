@@ -766,6 +766,36 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_signups: {
+        Row: {
+          bonus_amount: number
+          bonus_credited: boolean
+          created_at: string
+          id: string
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+        }
+        Insert: {
+          bonus_amount?: number
+          bonus_credited?: boolean
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_user_id: string
+          referrer_user_id: string
+        }
+        Update: {
+          bonus_amount?: number
+          bonus_credited?: boolean
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_user_id?: string
+          referrer_user_id?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           booking_id: string
