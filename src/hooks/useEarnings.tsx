@@ -69,51 +69,71 @@ export const useEarnings = () => {
   }, []);
 
   const generateReferralCode = async (userName: string) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+    const maxRetries = 3;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Not authenticated");
 
-      // Generate unique code: bari-behen-username format
-      const cleanName = userName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 15);
-      const referralCode = `bari-behen-${cleanName}`;
+        // Generate unique code with random suffix: bari-behen-username-xxxx
+        const cleanName = userName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12);
+        const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const referralCode = `bari-behen-${cleanName}-${suffix}`;
 
-      // Check if user already has earnings record
-      if (earnings) {
-        const { error } = await supabase
-          .from("user_earnings")
-          .update({ referral_code: referralCode })
-          .eq("user_id", user.id);
+        // Check if user already has earnings record
+        if (earnings) {
+          const { error } = await supabase
+            .from("user_earnings")
+            .update({ referral_code: referralCode })
+            .eq("user_id", user.id);
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("user_earnings")
-          .insert({
-            user_id: user.id,
-            referral_code: referralCode,
-            balance: 0,
-            pending_balance: 0
+          if (error) {
+            if (error.code === "23505" && attempt < maxRetries - 1) {
+              // Duplicate key, retry with new suffix
+              continue;
+            }
+            throw error;
+          }
+        } else {
+          const { error } = await supabase
+            .from("user_earnings")
+            .insert({
+              user_id: user.id,
+              referral_code: referralCode,
+              balance: 0,
+              pending_balance: 0
+            });
+
+          if (error) {
+            if (error.code === "23505" && attempt < maxRetries - 1) {
+              // Duplicate key, retry with new suffix
+              continue;
+            }
+            throw error;
+          }
+        }
+
+        toast({
+          title: "Referral Code Generated!",
+          description: `Your code is: ${referralCode}`,
+        });
+
+        await fetchEarnings();
+        return referralCode;
+      } catch (error: any) {
+        if (attempt === maxRetries - 1) {
+          console.error("Error generating referral code:", error);
+          toast({
+            title: "Error",
+            description: "Could not generate referral code. Please try again.",
+            variant: "destructive",
           });
-
-        if (error) throw error;
+          return null;
+        }
       }
-
-      toast({
-        title: "Referral Code Generated!",
-        description: `Your code is: ${referralCode}`,
-      });
-
-      await fetchEarnings();
-      return referralCode;
-    } catch (error: any) {
-      console.error("Error generating referral code:", error);
-      toast({
-        title: "Error",
-        description: "Could not generate referral code",
-        variant: "destructive",
-      });
-      return null;
     }
+    return null;
   };
 
   const validateReferralCode = async (code: string): Promise<boolean> => {
