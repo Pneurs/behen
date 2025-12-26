@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User, Phone, MapPin, Mail, Save, Camera, Info } from "lucide-react";
+import { Loader2, User, Phone, MapPin, Mail, Save, Camera, Info, Lock, Eye, EyeOff } from "lucide-react";
 import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
 
 export default function Profile() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [uploadingPic, setUploadingPic] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
@@ -27,6 +28,12 @@ export default function Profile() {
     role: "",
   });
   const [email, setEmail] = useState("");
+  
+  // Password change state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -165,6 +172,41 @@ export default function Profile() {
       console.error("Error updating profile:", error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast.error("Please fill in both password fields");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast.success("Password updated successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      console.error("Error updating password:", error);
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -366,6 +408,80 @@ export default function Profile() {
                 </>
               )}
             </Button>
+
+            {/* Password Change Section */}
+            <div className="border-t pt-6 mt-6">
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+                <Lock className="h-5 w-5" />
+                Change Password
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Update your password for better account security.
+              </p>
+              
+              <div className="space-y-4">
+                {/* New Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter new password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm new password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handlePasswordChange}
+                  disabled={savingPassword || !newPassword || !confirmPassword}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {savingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="mr-2 h-4 w-4" />
+                      Update Password
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
