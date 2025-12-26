@@ -17,10 +17,12 @@ import { HeaderSearchPopup } from "./HeaderSearchPopup";
 import { NotificationBell } from "./NotificationBell";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEarnings } from "@/hooks/useEarnings";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
   const { user, userRole, isAdmin, signOut } = useAuth();
+  const { earnings } = useEarnings();
 
   const [userName, setUserName] = useState<string>("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -198,6 +200,18 @@ export const EnhancedHeader = () => {
                   <User className="mr-2 h-4 w-4" />
                   View Profile
                 </DropdownMenuItem>
+                {userRole === "bari" && (
+                  <DropdownMenuItem 
+                    onClick={() => navigate("/dashboard")} 
+                    className="cursor-pointer bg-gradient-to-r from-primary/10 to-primary/5"
+                  >
+                    <Wallet className="mr-2 h-4 w-4 text-primary" />
+                    <span className="flex-1">Your Balance</span>
+                    <span className="font-semibold text-primary">
+                      PKR {earnings?.balance?.toLocaleString() || 0}
+                    </span>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 {userRole === "bari" && (
                   <>
@@ -292,6 +306,23 @@ export const EnhancedHeader = () => {
                   >
                     <User className="mr-2 h-4 w-4" />
                     View Profile
+                  </Button>
+                )}
+                
+                {user && userRole === "bari" && (
+                  <Button
+                    onClick={() => {
+                      navigate("/dashboard");
+                      setMobileOpen(false);
+                    }}
+                    variant="outline"
+                    className="w-full bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20"
+                  >
+                    <Wallet className="mr-2 h-4 w-4 text-primary" />
+                    <span className="flex-1 text-left">Your Balance</span>
+                    <span className="font-semibold text-primary">
+                      PKR {earnings?.balance?.toLocaleString() || 0}
+                    </span>
                   </Button>
                 )}
                 

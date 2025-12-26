@@ -93,17 +93,30 @@ export default function BariBehenDashboard() {
             rental_price_per_day,
             sale_price,
             security_deposit
-          ),
-          renter:renter_id (
-            name
           )
         `)
         .eq("owner_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      
+      // Fetch renter names from profiles separately
+      const ordersWithNames = await Promise.all((data || []).map(async (order) => {
+        const { data: renterProfile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("user_id", order.renter_id)
+          .maybeSingle();
+        
+        return {
+          ...order,
+          renter: { name: renterProfile?.name || "Unknown User" }
+        };
+      }));
+      
+      setOrders(ordersWithNames);
     } catch (error: any) {
+      console.error("Error loading orders:", error);
       toast({
         title: "Error",
         description: "Failed to load orders",
