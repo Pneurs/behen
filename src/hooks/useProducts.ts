@@ -33,6 +33,14 @@ interface UseProductsOptions {
   limit?: number;
 }
 
+// Only select fields needed for product cards (performance optimization)
+const PRODUCT_CARD_FIELDS = `
+  id, title, category, condition, 
+  rental_price_per_day, rental_price_4days, sale_price, 
+  listing_type, ai_cover_image, real_images, 
+  city, area, original_price, status, owner_id
+`;
+
 // Fetch home page products (latest 8 published)
 export const useHomeProducts = () => {
   return useQuery({
@@ -40,7 +48,7 @@ export const useHomeProducts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_FIELDS)
         .eq("status", "published")
         .limit(8)
         .order("created_at", { ascending: false });
@@ -61,7 +69,7 @@ export const useBrowseProducts = (options: UseProductsOptions = {}) => {
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_FIELDS)
         .eq("status", status)
         .order("created_at", { ascending: false });
 
