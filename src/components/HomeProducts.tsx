@@ -60,7 +60,7 @@ export const HomeProducts = () => {
                 key={product.id} 
                 className="pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 animate-fade-in opacity-0"
                 style={{ 
-                  animationDelay: `${index * 100}ms`,
+                  animationDelay: `${Math.min(index * 50, 300)}ms`,
                   animationFillMode: 'forwards'
                 }}
               >

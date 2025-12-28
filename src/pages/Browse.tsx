@@ -415,17 +415,25 @@ const Browse = () => {
               </h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => {
+              {filteredProducts.map((product, index) => {
                 const rating = ratingsMap?.[product.id];
                 return (
-                  <ProductCard
+                  <div 
                     key={product.id}
-                    product={product}
-                    blackoutDates={getProductBlackoutDates(product)}
-                    onClick={() => handleProductClick(product.id)}
-                    averageRating={rating?.averageRating}
-                    reviewCount={rating?.reviewCount || 0}
-                  />
+                    className="animate-fade-in opacity-0"
+                    style={{ 
+                      animationDelay: `${Math.min(index * 50, 400)}ms`,
+                      animationFillMode: 'forwards'
+                    }}
+                  >
+                    <ProductCard
+                      product={product}
+                      blackoutDates={getProductBlackoutDates(product)}
+                      onClick={() => handleProductClick(product.id)}
+                      averageRating={rating?.averageRating}
+                      reviewCount={rating?.reviewCount || 0}
+                    />
+                  </div>
                 );
               })}
             </div>
