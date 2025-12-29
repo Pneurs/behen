@@ -161,6 +161,13 @@ export type Database = {
             foreignKeyName: "bookings_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -243,7 +250,21 @@ export type Database = {
             foreignKeyName: "chat_conversations_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: false
+            referencedRelation: "admin_bookings_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
             referencedColumns: ["id"]
           },
           {
@@ -284,6 +305,13 @@ export type Database = {
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "admin_conversations_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "chat_messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -505,7 +533,21 @@ export type Database = {
             foreignKeyName: "offers_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "admin_conversations_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
             referencedColumns: ["id"]
           },
           {
@@ -847,7 +889,21 @@ export type Database = {
             foreignKeyName: "reviews_booking_id_fkey"
             columns: ["booking_id"]
             isOneToOne: true
+            referencedRelation: "admin_bookings_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
             referencedColumns: ["id"]
           },
           {
@@ -943,6 +999,13 @@ export type Database = {
             foreignKeyName: "wishlists_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlists_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
@@ -950,7 +1013,221 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_bookings_view: {
+        Row: {
+          acceptance_video_uploaded_at: string | null
+          acceptance_video_url: string | null
+          admin_notes: string | null
+          booking_status: Database["public"]["Enums"]["booking_status"] | null
+          cancelled_reason: string | null
+          completed_at: string | null
+          created_at: string | null
+          daily_rate: number | null
+          end_date: string | null
+          id: string | null
+          instruction_page_downloaded: boolean | null
+          late_days: number | null
+          late_fee_total: number | null
+          opening_video_uploaded_at: string | null
+          opening_video_url: string | null
+          order_stage: Database["public"]["Enums"]["order_stage"] | null
+          owner_id: string | null
+          owner_name: string | null
+          owner_phone: string | null
+          packing_checklist_completed: boolean | null
+          packing_video_uploaded_at: string | null
+          packing_video_url: string | null
+          payment_notes: string | null
+          payment_proof_url: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          picked_at: string | null
+          picked_by_user_id: string | null
+          product_id: string | null
+          product_image: string | null
+          product_title: string | null
+          renter_id: string | null
+          renter_name: string | null
+          renter_phone: string | null
+          return_deadline: string | null
+          return_video_uploaded_at: string | null
+          return_video_url: string | null
+          security_deposit: number | null
+          start_date: string | null
+          stickers_downloaded: boolean | null
+          total_days: number | null
+          total_price: number | null
+          updated_at: string | null
+          videos_delete_after: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_conversations_view: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          id: string | null
+          is_booking_confirmed: boolean | null
+          owner_id: string | null
+          owner_name: string | null
+          product_id: string | null
+          product_image: string | null
+          product_title: string | null
+          renter_id: string | null
+          renter_name: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "admin_bookings_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_conversations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_products_view: {
+        Row: {
+          ai_cover_image: string | null
+          ai_generation_attempts: number | null
+          alteration_possible: boolean | null
+          alterations_allowed: boolean | null
+          area: string | null
+          availability_data: Json | null
+          category: string | null
+          chest_size: string | null
+          city: string | null
+          color: string | null
+          condition: string | null
+          contact_phone: string | null
+          created_at: string | null
+          description: string | null
+          designer: string | null
+          dropoff_location: string | null
+          dry_clean_only: boolean | null
+          dry_cleaned: boolean | null
+          extra_day_rate: number | null
+          fabric: string | null
+          height_range: string | null
+          hips_size: string | null
+          id: string | null
+          image_quality_validated: boolean | null
+          included_accessories: Json | null
+          inventory_status: string | null
+          last_rented_on: string | null
+          latitude: number | null
+          listing_type: string | null
+          longitude: number | null
+          negotiation_allowed: boolean | null
+          original_price: number | null
+          owner_id: string | null
+          owner_name: string | null
+          pickup_location: string | null
+          product_type: string | null
+          real_images: string[] | null
+          rental_price_4days: number | null
+          rental_price_per_day: number | null
+          sale_price: number | null
+          security_deposit: number | null
+          size: string | null
+          status: string | null
+          style_tips: string | null
+          subcategory: string | null
+          times_rented: number | null
+          title: string | null
+          updated_at: string | null
+          waist_size: string | null
+          weight_range: string | null
+          work_type: string | null
+        }
+        Relationships: []
+      }
+      admin_reviews_view: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          id: string | null
+          owner_id: string | null
+          owner_name: string | null
+          owner_rating: number | null
+          owner_response: string | null
+          owner_response_at: string | null
+          owner_review: string | null
+          product_id: string | null
+          product_rating: number | null
+          product_review: string | null
+          product_title: string | null
+          reviewer_id: string | null
+          reviewer_name: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "admin_bookings_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_owner_average_rating: {
