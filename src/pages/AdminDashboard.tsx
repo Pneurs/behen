@@ -22,45 +22,54 @@ import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
 import AdminReferralManager from "@/components/admin/AdminReferralManager";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
+import {
+  useAdminStats,
+  useAdminPendingBookings,
+  useAdminAllBookings,
+  useAdminPendingProducts,
+  useAdminAllProducts,
+  useAdminUsers,
+  useAdminReviews,
+  useAdminChats,
+  useAdminSettings,
+  useInvalidateAdminData,
+  AdminBooking,
+  AdminProduct,
+  AdminUser,
+  AdminReview,
+  AdminChat,
+} from "@/hooks/useAdminData";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentRole, setCurrentRole] = useState<string>("");
-  const [stats, setStats] = useState({ 
-    users: 0, products: 0, bookings: 0, revenue: 0, 
-    activeRentals: 0, soldProducts: 0, totalRentals: 0 
-  });
-  const [pendingBookings, setPendingBookings] = useState<any[]>([]);
-  const [pendingProducts, setPendingProducts] = useState<any[]>([]);
-  const [allProducts, setAllProducts] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
-  const [allBookings, setAllBookings] = useState<any[]>([]);
-  const [allChats, setAllChats] = useState<any[]>([]);
-  const [allReviews, setAllReviews] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [activeTab, setActiveTab] = useState("bookings");
+  
+  // Dialog states
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [userProducts, setUserProducts] = useState<any[]>([]);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [securityDepositDialog, setSecurityDepositDialog] = useState<{
     open: boolean;
-    booking: any;
+    booking: AdminBooking | null;
     recipient: 'owner' | 'renter';
     amount: string;
     notes: string;
   }>({ open: false, booking: null, recipient: 'renter', amount: '', notes: '' });
   const [reviewResponseDialog, setReviewResponseDialog] = useState<{
     open: boolean;
-    review: any;
+    review: AdminReview | null;
     response: string;
   }>({ open: false, review: null, response: '' });
+  
+  // Settings states
   const [aiModelSetting, setAiModelSetting] = useState<{
     provider: "lovable" | "openai";
     model: string;
-    loading: boolean;
-  }>({ provider: "lovable", model: "google/gemini-2.5-flash-image-preview", loading: true });
+  }>({ provider: "lovable", model: "google/gemini-2.5-flash-image-preview" });
   const [updatingAIModel, setUpdatingAIModel] = useState(false);
   const [chatSystemEnabled, setChatSystemEnabled] = useState(true);
   const [updatingChatSystem, setUpdatingChatSystem] = useState(false);
@@ -69,9 +78,48 @@ export default function AdminDashboard() {
   const [commissionSettings, setCommissionSettings] = useState({
     bariBehen: 10,
     chotiBehen: 5,
-    loading: true,
     saving: false,
   });
+
+  // React Query hooks with lazy loading based on active tab
+  const { data: stats, isLoading: statsLoading } = useAdminStats();
+  const { data: pendingBookings = [], refetch: refetchPendingBookings } = useAdminPendingBookings();
+  const { data: allBookings = [], refetch: refetchAllBookings } = useAdminAllBookings(activeTab === "rentals");
+  const { data: pendingProducts = [], refetch: refetchPendingProducts } = useAdminPendingProducts();
+  const { data: allProducts = [], refetch: refetchAllProducts } = useAdminAllProducts(
+    activeTab === "all-products" || currentRole === "super_admin"
+  );
+  const { data: users = [], refetch: refetchUsers } = useAdminUsers(
+    activeTab === "users" || activeTab === "roles"
+  );
+  const { data: allReviews = [], refetch: refetchReviews } = useAdminReviews(activeTab === "reviews");
+  const { data: allChats = [], refetch: refetchChats } = useAdminChats(activeTab === "chats");
+  const { data: appSettings } = useAdminSettings();
+  const invalidateAdminData = useInvalidateAdminData();
+
+  // Parse app settings when they load
+  useEffect(() => {
+    if (appSettings) {
+      if (appSettings.ai_image_model) {
+        const setting = appSettings.ai_image_model as { provider?: string; model?: string };
+        setAiModelSetting({
+          provider: (setting.provider as "lovable" | "openai") || "lovable",
+          model: setting.model || "google/gemini-2.5-flash-image-preview",
+        });
+      }
+      if (appSettings.chat_system_enabled) {
+        const setting = appSettings.chat_system_enabled as { enabled?: boolean };
+        setChatSystemEnabled(setting.enabled !== false);
+      }
+      if (appSettings.bari_behen_commission || appSettings.choti_behen_commission) {
+        setCommissionSettings(prev => ({
+          ...prev,
+          bariBehen: (appSettings.bari_behen_commission as { percentage?: number })?.percentage || 10,
+          chotiBehen: (appSettings.choti_behen_commission as { percentage?: number })?.percentage || 5,
+        }));
+      }
+    }
+  }, [appSettings]);
 
   useEffect(() => {
     checkAdminAccess();
@@ -102,314 +150,14 @@ export default function AdminDashboard() {
 
     setCurrentUser(user);
     setCurrentRole(roles[0].role);
-    fetchData();
+    setIsAuthorized(true);
   };
 
-  const fetchData = async () => {
-    setLoading(true);
-
-    // Fetch stats
-    const { count: userCount } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true });
-
-    const { count: productCount } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true });
-
-    const { count: bookingCount } = await supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true });
-
-    const { data: completedBookings } = await supabase
-      .from("bookings")
-      .select("total_price")
-      .eq("booking_status", "completed");
-
-    const revenue = completedBookings?.reduce((sum, b) => sum + Number(b.total_price), 0) || 0;
-
-    // Count active rentals (not completed/cancelled)
-    const { count: activeRentals } = await supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .in("booking_status", ["confirmed", "pending_payment", "payment_submitted"]);
-
-    // Count total completed rentals
-    const { count: totalRentals } = await supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("booking_status", "completed");
-
-    // Count products that were sold (listing_type = 'sale')
-    const { count: soldProducts } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true })
-      .eq("listing_type", "sale")
-      .eq("inventory_status", "unavailable");
-
-    setStats({
-      users: userCount || 0,
-      products: productCount || 0,
-      bookings: bookingCount || 0,
-      revenue,
-      activeRentals: activeRentals || 0,
-      soldProducts: soldProducts || 0,
-      totalRentals: totalRentals || 0,
-    });
-
-    // Fetch pending bookings with owner and renter info
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select(`*, products (title, ai_cover_image)`)
-      .eq("payment_status", "submitted")
-      .order("created_at", { ascending: false });
-
-    const bookingsWithNames = await Promise.all((bookings || []).map(async (booking) => {
-      const [ownerProfile, renterProfile] = await Promise.all([
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
-      ]);
-      
-      return {
-        ...booking,
-        owner_name: ownerProfile.data?.name || "Bari Behen",
-        owner_phone: ownerProfile.data?.phone || null,
-        renter_name: renterProfile.data?.name || "Choti Behen",
-        renter_phone: renterProfile.data?.phone || null,
-      };
-    }));
-
-    setPendingBookings(bookingsWithNames);
-
-    // Fetch ALL bookings for rental holdings view
-    const { data: allBookingsData } = await supabase
-      .from("bookings")
-      .select(`*, products (title, ai_cover_image)`)
-      .order("created_at", { ascending: false });
-
-    const allBookingsWithNames = await Promise.all((allBookingsData || []).map(async (booking) => {
-      const [ownerProfile, renterProfile] = await Promise.all([
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
-        supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
-      ]);
-      
-      return {
-        ...booking,
-        owner_name: ownerProfile.data?.name || "Bari Behen",
-        owner_phone: ownerProfile.data?.phone || null,
-        renter_name: renterProfile.data?.name || "Choti Behen",
-        renter_phone: renterProfile.data?.phone || null,
-      };
-    }));
-
-    setAllBookings(allBookingsWithNames);
-
-    // Fetch pending products
-    const { data: products } = await supabase
-      .from("products")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
-
-    const productsWithNames = await Promise.all((products || []).map(async (product) => {
-      const { data: ownerProfile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("user_id", product.owner_id)
-        .maybeSingle();
-      
-      return {
-        ...product,
-        owner_name: ownerProfile?.name || "Unknown",
-      };
-    }));
-
-    setPendingProducts(productsWithNames);
-
-    // Fetch ALL products for super admin
-    const { data: allProductsData } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    const allProductsWithNames = await Promise.all((allProductsData || []).map(async (product) => {
-      const { data: ownerProfile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("user_id", product.owner_id)
-        .maybeSingle();
-      
-      return {
-        ...product,
-        owner_name: ownerProfile?.name || "Unknown",
-      };
-    }));
-
-    setAllProducts(allProductsWithNames);
-
-    // Fetch users with their roles and emails
-    const { data: allUsers } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    // Fetch auth users to get emails (super admin can see this)
-    // Build product count map
-    const productCountByUser = (allProductsData || []).reduce((acc: Record<string, number>, product: any) => {
-      acc[product.owner_id] = (acc[product.owner_id] || 0) + 1;
-      return acc;
-    }, {});
-
-    const usersWithRolesAndEmails = await Promise.all((allUsers || []).map(async (user) => {
-      const { data: userRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.user_id);
-      
-      return {
-        ...user,
-        roles: userRoles?.map(r => r.role) || [],
-        email: null as string | null,
-        product_count: productCountByUser[user.user_id] || 0,
-      };
-    }));
-
-    // Fetch emails for all users via edge function
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const response = await supabase.functions.invoke('admin-list-users', {
-        headers: {
-          Authorization: `Bearer ${session.session?.access_token}`,
-        },
-      });
-      
-      if (response.data?.userEmails) {
-        const emailMap = response.data.userEmails as Record<string, string>;
-        usersWithRolesAndEmails.forEach(user => {
-          user.email = emailMap[user.user_id] || null;
-        });
-      }
-    } catch (e) {
-      console.log("Could not fetch user emails via edge function:", e);
-    }
-
-    setUsers(usersWithRolesAndEmails);
-
-    // Fetch all chats with messages
-    const { data: conversations } = await supabase
-      .from("chat_conversations")
-      .select(`
-        *,
-        products (title, ai_cover_image)
-      `)
-      .order("updated_at", { ascending: false });
-
-    const chatsWithDetails = await Promise.all((conversations || []).map(async (conv) => {
-      const [ownerProfile, renterProfile, messages] = await Promise.all([
-        supabase.from("profiles").select("name").eq("user_id", conv.owner_id).maybeSingle(),
-        supabase.from("profiles").select("name").eq("user_id", conv.renter_id).maybeSingle(),
-        supabase.from("chat_messages").select("*").eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(20),
-      ]);
-
-      return {
-        ...conv,
-        owner_name: ownerProfile.data?.name || "Bari Behen",
-        renter_name: renterProfile.data?.name || "Choti Behen",
-        messages: messages.data || [],
-      };
-    }));
-
-    setAllChats(chatsWithDetails);
-
-    // Fetch all reviews
-    const { data: reviews } = await supabase
-      .from("reviews")
-      .select(`*, products (title)`)
-      .order("created_at", { ascending: false });
-
-    const reviewsWithDetails = await Promise.all((reviews || []).map(async (review) => {
-      const [reviewerProfile, ownerProfile] = await Promise.all([
-        supabase.from("profiles").select("name").eq("user_id", review.reviewer_id).maybeSingle(),
-        supabase.from("profiles").select("name").eq("user_id", review.owner_id).maybeSingle(),
-      ]);
-
-      return {
-        ...review,
-        reviewer_name: reviewerProfile.data?.name || "Choti Behen",
-        owner_name: ownerProfile.data?.name || "Bari Behen",
-      };
-    }));
-
-    setAllReviews(reviewsWithDetails);
-
-    // Fetch AI model setting
-    try {
-      const { data: aiSetting } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "ai_image_model")
-        .single();
-      
-      if (aiSetting?.value) {
-        const settingValue = aiSetting.value as { provider?: string; model?: string };
-        setAiModelSetting({
-          provider: (settingValue.provider as "lovable" | "openai") || "lovable",
-          model: settingValue.model || "google/gemini-2.5-flash-image-preview",
-          loading: false,
-        });
-      } else {
-        setAiModelSetting(prev => ({ ...prev, loading: false }));
-      }
-    } catch (error) {
-      console.log("Could not fetch AI model setting:", error);
-      setAiModelSetting(prev => ({ ...prev, loading: false }));
-    }
-
-    // Fetch chat system setting
-    try {
-      const { data: chatSetting } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "chat_system_enabled")
-        .single();
-      
-      if (chatSetting?.value) {
-        const settingValue = chatSetting.value as { enabled?: boolean };
-        setChatSystemEnabled(settingValue.enabled !== false);
-      }
-    } catch (error) {
-      console.log("Could not fetch chat system setting:", error);
-    }
-
-    // Fetch commission settings
-    try {
-      const { data: commissionData } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .in("key", ["bari_behen_commission", "choti_behen_commission"]);
-      
-      if (commissionData) {
-        const bariSetting = commissionData.find(s => s.key === "bari_behen_commission");
-        const chotiSetting = commissionData.find(s => s.key === "choti_behen_commission");
-        
-        setCommissionSettings({
-          bariBehen: (bariSetting?.value as { percentage?: number })?.percentage || 10,
-          chotiBehen: (chotiSetting?.value as { percentage?: number })?.percentage || 5,
-          loading: false,
-          saving: false,
-        });
-      } else {
-        setCommissionSettings(prev => ({ ...prev, loading: false }));
-      }
-    } catch (error) {
-      console.log("Could not fetch commission settings:", error);
-      setCommissionSettings(prev => ({ ...prev, loading: false }));
-    }
-
-    setLoading(false);
+  const refreshData = () => {
+    invalidateAdminData();
   };
 
-  const handleVerifyPayment = async (booking: any, approved: boolean) => {
+  const handleVerifyPayment = async (booking: AdminBooking, approved: boolean) => {
     const updateData = approved 
       ? {
           payment_status: "verified" as const,
@@ -430,15 +178,6 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Get both profiles with phone numbers
-    const [renterProfileRes, ownerProfileRes] = await Promise.all([
-      supabase.from("profiles").select("name, phone").eq("user_id", booking.renter_id).maybeSingle(),
-      supabase.from("profiles").select("name, phone").eq("user_id", booking.owner_id).maybeSingle(),
-    ]);
-
-    const renterProfile = renterProfileRes.data;
-    const ownerProfile = ownerProfileRes.data;
-
     if (approved) {
       // Find or create chat conversation for this booking
       let conversationId: string;
@@ -449,12 +188,11 @@ export default function AdminDashboard() {
         .eq("product_id", booking.product_id)
         .eq("owner_id", booking.owner_id)
         .eq("renter_id", booking.renter_id)
-        .single();
+        .maybeSingle();
 
       if (existingConv) {
         conversationId = existingConv.id;
       } else {
-        // Create new conversation
         const { data: newConv, error: convError } = await supabase
           .from("chat_conversations")
           .insert({
@@ -474,15 +212,13 @@ export default function AdminDashboard() {
         }
       }
 
-      // Update conversation to mark booking confirmed
       if (conversationId!) {
         await supabase
           .from("chat_conversations")
           .update({ is_booking_confirmed: true, booking_id: booking.id })
           .eq("id", conversationId);
 
-        // Send system message with contact details to both users
-        const contactMessage = `✅ **Payment Verified by Behen.pk!**\n\n👩 **Bari Behen Details:**\nName: ${ownerProfile?.name || 'N/A'}\nPhone: ${ownerProfile?.phone || 'Contact via app'}\n\n👧 **Choti Behen Details:**\nName: ${renterProfile?.name || 'N/A'}\nPhone: ${renterProfile?.phone || 'Contact via app'}\n\n📦 You both can now decide where and how to pick/deliver the dress.\n\n🔗 Check your chat on behen.pk for updates!`;
+        const contactMessage = `✅ **Payment Verified by Behen.pk!**\n\n👩 **Bari Behen Details:**\nName: ${booking.owner_name || 'N/A'}\nPhone: ${booking.owner_phone || 'Contact via app'}\n\n👧 **Choti Behen Details:**\nName: ${booking.renter_name || 'N/A'}\nPhone: ${booking.renter_phone || 'Contact via app'}\n\n📦 You both can now decide where and how to pick/deliver the dress.\n\n🔗 Check your chat on behen.pk for updates!`;
 
         await supabase.from("chat_messages").insert({
           conversation_id: conversationId,
@@ -491,13 +227,12 @@ export default function AdminDashboard() {
         });
       }
 
-      // Send email to both users
       await sendEmailNotification({
         type: "payment_verification",
         recipientEmail: `renter-${booking.renter_id}@behen.pk`,
-        recipientName: renterProfile?.name || "Choti Behen",
+        recipientName: booking.renter_name || "Choti Behen",
         data: {
-          productTitle: booking.products?.title,
+          productTitle: booking.product_title,
           verified: true,
         },
       });
@@ -505,20 +240,19 @@ export default function AdminDashboard() {
       await sendEmailNotification({
         type: "payment_verification",
         recipientEmail: `owner-${booking.owner_id}@behen.pk`,
-        recipientName: ownerProfile?.name || "Bari Behen",
+        recipientName: booking.owner_name || "Bari Behen",
         data: {
-          productTitle: booking.products?.title,
+          productTitle: booking.product_title,
           verified: true,
         },
       });
     } else {
-      // Send rejection email to renter
       await sendEmailNotification({
         type: "payment_verification",
         recipientEmail: `renter-${booking.renter_id}@behen.pk`,
-        recipientName: renterProfile?.name || "Choti Behen",
+        recipientName: booking.renter_name || "Choti Behen",
         data: {
-          productTitle: booking.products?.title,
+          productTitle: booking.product_title,
           verified: false,
         },
       });
@@ -531,7 +265,8 @@ export default function AdminDashboard() {
         : "Choti Behen will be notified to upload correct payment proof.",
     });
 
-    fetchData();
+    refetchPendingBookings();
+    refetchAllBookings();
   };
 
   const handleApproveProduct = async (productId: string, approved: boolean) => {
@@ -550,7 +285,8 @@ export default function AdminDashboard() {
       description: `Product has been ${approved ? "published" : "rejected"}`,
     });
 
-    fetchData();
+    refetchPendingProducts();
+    refetchAllProducts();
   };
 
   const handleAssignRole = async (userId: string, role: string) => {
@@ -573,7 +309,7 @@ export default function AdminDashboard() {
     }
 
     toast({ title: "Role Assigned", description: `Successfully assigned ${role} role` });
-    fetchData();
+    refetchUsers();
   };
 
   const handleRemoveRole = async (userId: string, role: string) => {
@@ -594,7 +330,7 @@ export default function AdminDashboard() {
     }
 
     toast({ title: "Role Removed", description: `Successfully removed ${role} role` });
-    fetchData();
+    refetchUsers();
   };
 
   const handleDeleteUser = async (userId: string, userName: string) => {
@@ -606,8 +342,6 @@ export default function AdminDashboard() {
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const response = await supabase.functions.invoke('admin-delete-user', {
         body: { userId },
       });
@@ -618,7 +352,7 @@ export default function AdminDashboard() {
       }
 
       toast({ title: "User Deleted", description: `User "${userName}" and all their data has been deleted` });
-      fetchData();
+      refreshData();
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to delete user", variant: "destructive" });
     }
@@ -641,13 +375,12 @@ export default function AdminDashboard() {
     }
 
     toast({ title: "Role Changed", description: `User role changed to ${newRole === 'bari' ? 'Bari Behen' : 'Choti Behen'}` });
-    fetchData();
+    refetchUsers();
   };
 
-  const handleViewUserProfile = async (user: any) => {
+  const handleViewUserProfile = async (user: AdminUser) => {
     setSelectedUser(user);
     
-    // Fetch user's products
     const { data: products } = await supabase
       .from("products")
       .select("*")
@@ -672,11 +405,11 @@ export default function AdminDashboard() {
 
     toast({ title: "Product Deleted", description: "Product has been removed" });
     
-    // Refresh user products
     if (selectedUser) {
       handleViewUserProfile(selectedUser);
     }
-    fetchData();
+    refetchAllProducts();
+    refetchPendingProducts();
   };
 
   const handleEditProduct = async (productId: string) => {
@@ -690,7 +423,6 @@ export default function AdminDashboard() {
     const recipientId = recipient === 'owner' ? booking.owner_id : booking.renter_id;
     const recipientName = recipient === 'owner' ? booking.owner_name : booking.renter_name;
 
-    // Update booking with security deposit info
     const { error } = await supabase
       .from("bookings")
       .update({
@@ -704,14 +436,13 @@ export default function AdminDashboard() {
       return;
     }
 
-    // Send notification
     await sendEmailNotification({
       type: "security_deposit",
       recipientEmail: `user-${recipientId}@behen.pk`,
-      recipientName: recipientName,
+      recipientName: recipientName || "User",
       data: {
         action: "sent",
-        productTitle: booking.products?.title,
+        productTitle: booking.product_title,
         amount: amount,
         notes: notes,
         message: `Your security deposit of PKR ${amount} has been processed.`,
@@ -720,7 +451,7 @@ export default function AdminDashboard() {
 
     toast({ title: "Security Deposit Sent", description: `PKR ${amount} sent to ${recipientName}` });
     setSecurityDepositDialog({ open: false, booking: null, recipient: 'renter', amount: '', notes: '' });
-    fetchData();
+    refetchAllBookings();
   };
 
   const handleDeleteReview = async (reviewId: string) => {
@@ -737,7 +468,7 @@ export default function AdminDashboard() {
     }
 
     toast({ title: "Review Deleted", description: "Review has been removed" });
-    fetchData();
+    refetchReviews();
   };
 
   const handleRespondToReview = async () => {
@@ -759,7 +490,7 @@ export default function AdminDashboard() {
 
     toast({ title: "Response Submitted", description: "Review response has been added" });
     setReviewResponseDialog({ open: false, review: null, response: '' });
-    fetchData();
+    refetchReviews();
   };
 
   const handleToggleAIModel = async (newProvider: "lovable" | "openai") => {
@@ -788,7 +519,6 @@ export default function AdminDashboard() {
       setAiModelSetting({
         provider: newProvider,
         model: newModel,
-        loading: false
       });
 
       toast({ 
@@ -812,7 +542,6 @@ export default function AdminDashboard() {
     setCommissionSettings(prev => ({ ...prev, saving: true }));
 
     try {
-      // Update both commission settings
       const updates = [
         supabase
           .from("app_settings")
@@ -866,7 +595,7 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) {
+  if (!isAuthorized || statsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -908,7 +637,7 @@ export default function AdminDashboard() {
                 <Users className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{stats.users}</div>
+                <div className="text-2xl font-bold text-white">{stats?.users || 0}</div>
               </CardContent>
             </Card>
 
@@ -918,7 +647,7 @@ export default function AdminDashboard() {
                 <Package className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{stats.products}</div>
+                <div className="text-2xl font-bold text-white">{stats?.products || 0}</div>
               </CardContent>
             </Card>
 
@@ -928,7 +657,7 @@ export default function AdminDashboard() {
                 <Calendar className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{stats.bookings}</div>
+                <div className="text-2xl font-bold text-white">{stats?.bookings || 0}</div>
               </CardContent>
             </Card>
 
@@ -938,7 +667,7 @@ export default function AdminDashboard() {
                 <ShoppingBag className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-400">{stats.activeRentals}</div>
+                <div className="text-2xl font-bold text-orange-400">{stats?.activeRentals || 0}</div>
               </CardContent>
             </Card>
 
@@ -948,7 +677,7 @@ export default function AdminDashboard() {
                 <Check className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-400">{stats.totalRentals}</div>
+                <div className="text-2xl font-bold text-green-400">{stats?.totalRentals || 0}</div>
               </CardContent>
             </Card>
 
@@ -958,7 +687,7 @@ export default function AdminDashboard() {
                 <DollarSign className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-400">{stats.soldProducts}</div>
+                <div className="text-2xl font-bold text-blue-400">{stats?.soldProducts || 0}</div>
               </CardContent>
             </Card>
 
@@ -968,13 +697,13 @@ export default function AdminDashboard() {
                 <TrendingUp className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold text-white">PKR {stats.revenue.toLocaleString()}</div>
+                <div className="text-xl font-bold text-white">PKR {(stats?.revenue || 0).toLocaleString()}</div>
               </CardContent>
             </Card>
           </div>
 
           {/* Management Tabs */}
-          <Tabs defaultValue="bookings" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
             <TabsList className="bg-slate-800 border-slate-700 flex-wrap h-auto gap-1">
               <TabsTrigger value="bookings" className="data-[state=active]:bg-primary">
                 Payments ({pendingBookings.length})
@@ -1053,10 +782,10 @@ export default function AdminDashboard() {
                         <Card key={booking.id} className="border-amber-500/30 bg-slate-700/50">
                           <CardContent className="pt-6">
                             <div className="flex flex-col lg:flex-row gap-4">
-                              {booking.products?.ai_cover_image && (
+                              {booking.product_image && (
                                 <img
-                                  src={booking.products.ai_cover_image}
-                                  alt={booking.products.title}
+                                  src={booking.product_image}
+                                  alt={booking.product_title}
                                   className="w-24 h-24 object-cover rounded-lg flex-shrink-0"
                                 />
                               )}
@@ -1064,7 +793,7 @@ export default function AdminDashboard() {
                               <div className="flex-1 space-y-2">
                                 <div className="flex items-start justify-between">
                                   <div>
-                                    <h3 className="font-semibold text-lg text-white">{booking.products?.title}</h3>
+                                    <h3 className="font-semibold text-lg text-white">{booking.product_title}</h3>
                                     <Badge variant="outline" className="mt-1 border-slate-600 text-slate-300">
                                       Order #{booking.id.slice(0, 8)}
                                     </Badge>
@@ -1167,7 +896,7 @@ export default function AdminDashboard() {
                         .filter(booking => {
                           if (!orderSearchQuery.trim()) return true;
                           const query = orderSearchQuery.toLowerCase();
-                          const productTitle = booking.products?.title?.toLowerCase() || "";
+                          const productTitle = booking.product_title?.toLowerCase() || "";
                           const ownerName = booking.owner_name?.toLowerCase() || "";
                           const renterName = booking.renter_name?.toLowerCase() || "";
                           return productTitle.includes(query) || ownerName.includes(query) || renterName.includes(query);
@@ -1176,11 +905,11 @@ export default function AdminDashboard() {
                         <Card key={booking.id} className="bg-slate-700/50 border-slate-600">
                           <CardContent className="py-4">
                             <div className="flex items-center gap-4">
-                              {booking.products?.ai_cover_image && (
-                                <img src={booking.products.ai_cover_image} alt="" className="w-16 h-16 object-cover rounded" />
+                              {booking.product_image && (
+                                <img src={booking.product_image} alt="" className="w-16 h-16 object-cover rounded" />
                               )}
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-white truncate">{booking.products?.title}</p>
+                                <p className="font-medium text-white truncate">{booking.product_title}</p>
                                 <p className="text-sm text-slate-400">{booking.renter_name} ← {booking.owner_name}</p>
                                 <p className="text-xs text-slate-500">
                                   {format(new Date(booking.start_date), "MMM dd")} - {format(new Date(booking.end_date), "MMM dd")}
@@ -1230,24 +959,46 @@ export default function AdminDashboard() {
                   <ScrollArea className="h-[500px]">
                     <div className="space-y-4">
                       {pendingProducts.map((product) => (
-                        <Card key={product.id} className="bg-slate-700/50 border-slate-600">
+                        <Card key={product.id} className="border-amber-500/30 bg-slate-700/50">
                           <CardContent className="pt-6">
-                            <div className="flex items-start gap-4">
+                            <div className="flex flex-col lg:flex-row gap-4">
                               {product.ai_cover_image && (
-                                <img src={product.ai_cover_image} alt={product.title} className="w-24 h-24 object-cover rounded" />
+                                <img
+                                  src={product.ai_cover_image}
+                                  alt={product.title}
+                                  className="w-32 h-32 object-cover rounded-lg flex-shrink-0"
+                                />
                               )}
-                              <div className="flex-1">
-                                <h3 className="font-semibold text-white">{product.title}</h3>
-                                <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
-                                <p className="text-sm text-slate-300">Category: {product.category}</p>
-                                <p className="text-sm text-slate-300">Price: PKR {product.rental_price_4days}/4 days</p>
+                              
+                              <div className="flex-1 space-y-2">
+                                <h3 className="font-semibold text-lg text-white">{product.title}</h3>
+                                <p className="text-sm text-slate-400">Listed by: {product.owner_name}</p>
+                                <div className="flex flex-wrap gap-2">
+                                  <Badge variant="outline" className="border-slate-600 text-slate-300">{product.category}</Badge>
+                                  <Badge variant="outline" className="border-slate-600 text-slate-300">{product.size}</Badge>
+                                  <Badge variant="outline" className="border-slate-600 text-slate-300">{product.city}</Badge>
+                                </div>
+                                <div className="text-sm text-slate-300">
+                                  {product.rental_price_4days && <span>Rent: PKR {product.rental_price_4days}/4 days</span>}
+                                  {product.sale_price && <span className="ml-4">Sale: PKR {product.sale_price}</span>}
+                                </div>
                               </div>
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleApproveProduct(product.id, true)}>
+                              
+                              <div className="flex flex-col gap-2 lg:w-32">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => window.open(`/product/${product.id}`, '_blank')}
+                                  className="w-full border-slate-600 text-slate-300"
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View
+                                </Button>
+                                <Button size="sm" onClick={() => handleApproveProduct(product.id, true)} className="w-full">
                                   <Check className="h-4 w-4 mr-2" />
                                   Approve
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleApproveProduct(product.id, false)}>
+                                <Button size="sm" variant="destructive" onClick={() => handleApproveProduct(product.id, false)} className="w-full">
                                   <X className="h-4 w-4 mr-2" />
                                   Reject
                                 </Button>
@@ -1268,7 +1019,7 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            {/* All Products Tab (Super Admin) */}
+            {/* All Products Tab - Super Admin Only */}
             {currentRole === "super_admin" && (
               <TabsContent value="all-products">
                 <Card className="bg-slate-800/50 border-slate-700">
@@ -1276,13 +1027,13 @@ export default function AdminDashboard() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <CardTitle className="flex items-center gap-2 text-white">
                         <Package className="h-5 w-5" />
-                        All Products ({allProducts.length})
+                        All Products
                       </CardTitle>
                       <div className="relative w-full sm:w-72">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                           type="text"
-                          placeholder="Search by title, owner, city..."
+                          placeholder="Search products..."
                           value={productSearchQuery}
                           onChange={(e) => setProductSearchQuery(e.target.value)}
                           className="pl-9 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
@@ -1425,7 +1176,6 @@ export default function AdminDashboard() {
                               
                               {currentRole === "super_admin" && (
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  {/* Role Switch */}
                                   <Select 
                                     value={user.role} 
                                     onValueChange={(value) => handleChangeUserRole(user.user_id, value)}
@@ -1490,8 +1240,8 @@ export default function AdminDashboard() {
                             <div className="space-y-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-medium text-white">{review.products?.title}</p>
-                                  <p className="text-sm text-slate-400">By: Choti Behen • To: {review.owner_name}</p>
+                                  <p className="font-medium text-white">{review.product_title}</p>
+                                  <p className="text-sm text-slate-400">By: {review.reviewer_name} • To: {review.owner_name}</p>
                                   <div className="flex items-center gap-1 mt-1">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                       <Star key={star} className={`h-4 w-4 ${star <= review.product_rating ? "fill-yellow-400 text-yellow-400" : "text-slate-600"}`} />
@@ -1552,7 +1302,7 @@ export default function AdminDashboard() {
                             <div className="space-y-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-medium text-white">{chat.products?.title || "Direct Chat"}</p>
+                                  <p className="font-medium text-white">{chat.product_title || "Direct Chat"}</p>
                                   <p className="text-sm text-slate-400">{chat.renter_name} ↔ {chat.owner_name}</p>
                                   <p className="text-xs text-slate-500">Last active: {format(new Date(chat.updated_at), "MMM dd, hh:mm a")}</p>
                                 </div>
@@ -1604,36 +1354,43 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <ScrollArea className="h-[500px]">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {users.map((user) => (
                           <Card key={user.id} className="bg-slate-700/50 border-slate-600">
                             <CardContent className="py-4">
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 <div>
                                   <p className="font-medium text-white">{user.name}</p>
-                                  <p className="text-sm text-slate-400">{user.user_id.slice(0, 8)}...</p>
-                                  <div className="flex gap-1 mt-2">
+                                  {user.email && <p className="text-sm text-slate-400">{user.email}</p>}
+                                  <div className="flex gap-2 mt-2 flex-wrap">
                                     {user.roles?.map((role: string) => (
                                       <Badge 
                                         key={role} 
-                                        className="bg-primary/20 text-primary border-primary/30 cursor-pointer hover:bg-red-500/20 hover:text-red-400"
+                                        className="bg-primary/20 text-primary border-primary/30 cursor-pointer hover:bg-red-500/20"
                                         onClick={() => handleRemoveRole(user.user_id, role)}
                                       >
                                         {role.replace("_", " ")} ×
                                       </Badge>
                                     ))}
+                                    {(!user.roles || user.roles.length === 0) && (
+                                      <span className="text-slate-500 text-sm">No admin roles</span>
+                                    )}
                                   </div>
                                 </div>
-                                <Select onValueChange={(value) => handleAssignRole(user.user_id, value)}>
-                                  <SelectTrigger className="w-40 bg-slate-600 border-slate-500 text-white">
-                                    <SelectValue placeholder="Add Role" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-slate-700 border-slate-600">
-                                    <SelectItem value="super_admin" className="text-white">Super Admin</SelectItem>
-                                    <SelectItem value="admin" className="text-white">Admin</SelectItem>
-                                    <SelectItem value="manager" className="text-white">Manager</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                                <div className="flex gap-2 flex-wrap">
+                                  {["admin", "manager"].map((role) => (
+                                    <Button
+                                      key={role}
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleAssignRole(user.user_id, role)}
+                                      disabled={user.roles?.includes(role)}
+                                      className="border-slate-600 text-slate-300"
+                                    >
+                                      + {role}
+                                    </Button>
+                                  ))}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -1653,99 +1410,91 @@ export default function AdminDashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-white">
                       <DollarSign className="h-5 w-5" />
-                      Commission Percentage Settings
+                      Commission Settings
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {commissionSettings.loading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        <div className="grid md:grid-cols-2 gap-6">
-                          {/* Bari Behen Commission */}
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">
-                              Bari Behen Commission (%)
-                            </label>
-                            <p className="text-xs text-slate-400">
-                              Percentage taken from dress owners on each rental
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={commissionSettings.bariBehen}
-                                onChange={(e) => setCommissionSettings(prev => ({
-                                  ...prev,
-                                  bariBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
-                                }))}
-                                className="bg-slate-700 border-slate-600 text-white w-24"
-                              />
-                              <span className="text-slate-400">%</span>
-                              <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30">
-                                Bari Behen
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* Choti Behen Commission */}
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-300">
-                              Choti Behen Commission (%)
-                            </label>
-                            <p className="text-xs text-slate-400">
-                              Percentage taken from renters on each booking
-                            </p>
-                            <div className="flex items-center gap-3">
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100"
-                                value={commissionSettings.chotiBehen}
-                                onChange={(e) => setCommissionSettings(prev => ({
-                                  ...prev,
-                                  chotiBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
-                                }))}
-                                className="bg-slate-700 border-slate-600 text-white w-24"
-                              />
-                              <span className="text-slate-400">%</span>
-                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                                Choti Behen
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-700/50 rounded-lg p-4">
-                          <h4 className="font-medium text-white mb-2">ℹ️ About Commission</h4>
-                          <p className="text-sm text-slate-400">
-                            Commission is deducted from the rental amount. For example, if Bari Behen commission is 10% 
-                            and rental price is PKR 1000, Bari Behen receives PKR 900 and platform gets PKR 100.
+                    <div className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-300">
+                            Bari Behen Commission (%)
+                          </label>
+                          <p className="text-xs text-slate-500">
+                            Percentage taken from owners on each rental
                           </p>
+                          <div className="flex items-center gap-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={commissionSettings.bariBehen}
+                              onChange={(e) => setCommissionSettings(prev => ({
+                                ...prev,
+                                bariBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                              }))}
+                              className="bg-slate-700 border-slate-600 text-white w-24"
+                            />
+                            <span className="text-slate-400">%</span>
+                            <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30">
+                              Bari Behen
+                            </Badge>
+                          </div>
                         </div>
-
-                        <Button 
-                          onClick={handleSaveCommissionSettings} 
-                          disabled={commissionSettings.saving}
-                          className="w-full md:w-auto"
-                        >
-                          {commissionSettings.saving ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4 mr-2" />
-                              Save Commission Settings
-                            </>
-                          )}
-                        </Button>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-slate-300">
+                            Choti Behen Commission (%)
+                          </label>
+                          <p className="text-xs text-slate-500">
+                            Percentage taken from renters on each booking
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={commissionSettings.chotiBehen}
+                              onChange={(e) => setCommissionSettings(prev => ({
+                                ...prev,
+                                chotiBehen: Math.min(100, Math.max(0, parseInt(e.target.value) || 0))
+                              }))}
+                              className="bg-slate-700 border-slate-600 text-white w-24"
+                            />
+                            <span className="text-slate-400">%</span>
+                            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                              Choti Behen
+                            </Badge>
+                          </div>
+                        </div>
                       </div>
-                    )}
+
+                      <div className="bg-slate-700/50 rounded-lg p-4">
+                        <h4 className="font-medium text-white mb-2">ℹ️ About Commission</h4>
+                        <p className="text-sm text-slate-400">
+                          Commission is deducted from the rental amount. For example, if Bari Behen commission is 10% 
+                          and rental price is PKR 1000, Bari Behen receives PKR 900 and platform gets PKR 100.
+                        </p>
+                      </div>
+
+                      <Button 
+                        onClick={handleSaveCommissionSettings} 
+                        disabled={commissionSettings.saving}
+                        className="w-full md:w-auto"
+                      >
+                        {commissionSettings.saving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Save Commission Settings
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -1818,97 +1567,91 @@ export default function AdminDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {aiModelSetting.loading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4">
+                        <span className="text-slate-300">Current Model:</span>
+                        <Badge className={aiModelSetting.provider === "lovable" 
+                          ? "bg-green-500/20 text-green-400 border-green-500/30" 
+                          : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                        }>
+                          {aiModelSetting.provider === "lovable" ? "✨ Lovable AI" : "🔶 OpenAI"}
+                        </Badge>
                       </div>
-                    ) : (
-                      <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                          <span className="text-slate-300">Current Model:</span>
-                          <Badge className={aiModelSetting.provider === "lovable" 
-                            ? "bg-green-500/20 text-green-400 border-green-500/30" 
-                            : "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                          }>
-                            {aiModelSetting.provider === "lovable" ? "✨ Lovable AI" : "🔶 OpenAI"}
-                          </Badge>
-                        </div>
 
-                        <div className="grid md:grid-cols-2 gap-4">
-                          {/* Lovable AI Card */}
-                          <Card className={`border-2 transition-colors cursor-pointer ${
-                            aiModelSetting.provider === "lovable" 
-                              ? "border-green-500 bg-green-500/10" 
-                              : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
-                          }`}
-                          onClick={() => !updatingAIModel && handleToggleAIModel("lovable")}
-                          >
-                            <CardContent className="py-6">
-                              <div className="flex items-center gap-3 mb-3">
-                                <Sparkles className="h-8 w-8 text-green-400" />
-                                <div>
-                                  <h3 className="font-semibold text-white">Our Own AI</h3>
-                                  <p className="text-xs text-slate-400">Advanced Image Generation</p>
-                                </div>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Lovable AI Card */}
+                        <Card className={`border-2 transition-colors cursor-pointer ${
+                          aiModelSetting.provider === "lovable" 
+                            ? "border-green-500 bg-green-500/10" 
+                            : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                        }`}
+                        onClick={() => !updatingAIModel && handleToggleAIModel("lovable")}
+                        >
+                          <CardContent className="py-6">
+                            <div className="flex items-center gap-3 mb-3">
+                              <Sparkles className="h-8 w-8 text-green-400" />
+                              <div>
+                                <h3 className="font-semibold text-white">Our Own AI</h3>
+                                <p className="text-xs text-slate-400">Advanced Image Generation</p>
                               </div>
-                              <div className="space-y-2 text-sm">
-                                <p className="text-green-400 font-medium">✓ Included in plan</p>
-                                <p className="text-slate-300">Cost-efficient image generation</p>
-                                <p className="text-slate-400">Best for budget optimization</p>
-                              </div>
-                              {aiModelSetting.provider === "lovable" && (
-                                <Badge className="mt-3 bg-green-500 text-white">Active</Badge>
-                              )}
-                            </CardContent>
-                          </Card>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <p className="text-green-400 font-medium">✓ Included in plan</p>
+                              <p className="text-slate-300">Cost-efficient image generation</p>
+                              <p className="text-slate-400">Best for budget optimization</p>
+                            </div>
+                            {aiModelSetting.provider === "lovable" && (
+                              <Badge className="mt-3 bg-green-500 text-white">Active</Badge>
+                            )}
+                          </CardContent>
+                        </Card>
 
-                          {/* OpenAI Card */}
-                          <Card className={`border-2 transition-colors cursor-pointer ${
-                            aiModelSetting.provider === "openai" 
-                              ? "border-amber-500 bg-amber-500/10" 
-                              : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
-                          }`}
-                          onClick={() => !updatingAIModel && handleToggleAIModel("openai")}
-                          >
-                            <CardContent className="py-6">
-                              <div className="flex items-center gap-3 mb-3">
-                                <div className="h-8 w-8 rounded bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
-                                  AI
-                                </div>
-                                <div>
-                                  <h3 className="font-semibold text-white">OpenAI</h3>
-                                  <p className="text-xs text-slate-400">gpt-image-1</p>
-                                </div>
+                        {/* OpenAI Card */}
+                        <Card className={`border-2 transition-colors cursor-pointer ${
+                          aiModelSetting.provider === "openai" 
+                            ? "border-amber-500 bg-amber-500/10" 
+                            : "border-slate-600 bg-slate-700/50 hover:border-slate-500"
+                        }`}
+                        onClick={() => !updatingAIModel && handleToggleAIModel("openai")}
+                        >
+                          <CardContent className="py-6">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="h-8 w-8 rounded bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+                                AI
                               </div>
-                              <div className="space-y-2 text-sm">
-                                <p className="text-amber-400 font-medium">~$0.05/image (medium)</p>
-                                <p className="text-slate-300">Higher quality output</p>
-                                <p className="text-slate-400">Best for premium results</p>
+                              <div>
+                                <h3 className="font-semibold text-white">OpenAI</h3>
+                                <p className="text-xs text-slate-400">gpt-image-1</p>
                               </div>
-                              {aiModelSetting.provider === "openai" && (
-                                <Badge className="mt-3 bg-amber-500 text-white">Active</Badge>
-                              )}
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {updatingAIModel && (
-                          <div className="flex items-center justify-center gap-2 text-slate-300">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            <span>Updating AI model...</span>
-                          </div>
-                        )}
-
-                        <div className="bg-slate-700/50 rounded-lg p-4 mt-4">
-                          <h4 className="font-medium text-white mb-2">ℹ️ About AI Image Generation</h4>
-                          <p className="text-sm text-slate-400">
-                            AI Image Generation creates professional mannequin displays from uploaded dress photos. 
-                            Lovable AI (default) is cost-efficient and included in your plan. OpenAI provides 
-                            higher quality results at ~$0.05 per image. Switch anytime based on your needs.
-                          </p>
-                        </div>
+                            </div>
+                            <div className="space-y-2 text-sm">
+                              <p className="text-amber-400 font-medium">~$0.05/image (medium)</p>
+                              <p className="text-slate-300">Higher quality output</p>
+                              <p className="text-slate-400">Best for premium results</p>
+                            </div>
+                            {aiModelSetting.provider === "openai" && (
+                              <Badge className="mt-3 bg-amber-500 text-white">Active</Badge>
+                            )}
+                          </CardContent>
+                        </Card>
                       </div>
-                    )}
+
+                      {updatingAIModel && (
+                        <div className="flex items-center justify-center gap-2 text-slate-300">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Updating AI model...</span>
+                        </div>
+                      )}
+
+                      <div className="bg-slate-700/50 rounded-lg p-4 mt-4">
+                        <h4 className="font-medium text-white mb-2">ℹ️ About AI Image Generation</h4>
+                        <p className="text-sm text-slate-400">
+                          AI Image Generation creates professional mannequin displays from uploaded dress photos. 
+                          Lovable AI (default) is cost-efficient and included in your plan. OpenAI provides 
+                          higher quality results at ~$0.05 per image. Switch anytime based on your needs.
+                        </p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -2027,7 +1770,7 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-white">Send Security Deposit</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Order: {securityDepositDialog.booking?.products?.title}
+              Order: {securityDepositDialog.booking?.product_title}
             </DialogDescription>
           </DialogHeader>
           
@@ -2059,16 +1802,17 @@ export default function AdminDashboard() {
                 value={securityDepositDialog.amount}
                 onChange={(e) => setSecurityDepositDialog(prev => ({ ...prev, amount: e.target.value }))}
                 className="bg-slate-700 border-slate-600 text-white"
+                placeholder="Enter amount"
               />
             </div>
             
             <div>
-              <label className="text-sm text-slate-300">Notes (optional)</label>
+              <label className="text-sm text-slate-300">Notes (Optional)</label>
               <Textarea
                 value={securityDepositDialog.notes}
                 onChange={(e) => setSecurityDepositDialog(prev => ({ ...prev, notes: e.target.value }))}
                 className="bg-slate-700 border-slate-600 text-white"
-                placeholder="Any notes about the deposit..."
+                placeholder="Add any notes..."
               />
             </div>
             
@@ -2086,7 +1830,7 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-white">Respond to Review</DialogTitle>
             <DialogDescription className="text-slate-400">
-              Product: {reviewResponseDialog.review?.products?.title}
+              Product: {reviewResponseDialog.review?.product_title}
             </DialogDescription>
           </DialogHeader>
           
@@ -2094,7 +1838,7 @@ export default function AdminDashboard() {
             {reviewResponseDialog.review?.product_review && (
               <div className="bg-slate-700/50 p-3 rounded">
                 <p className="text-xs text-slate-400 mb-1">Original Review:</p>
-                <p className="text-sm text-slate-200">"{reviewResponseDialog.review.product_review}"</p>
+                <p className="text-slate-200">"{reviewResponseDialog.review.product_review}"</p>
               </div>
             )}
             
@@ -2104,13 +1848,13 @@ export default function AdminDashboard() {
                 value={reviewResponseDialog.response}
                 onChange={(e) => setReviewResponseDialog(prev => ({ ...prev, response: e.target.value }))}
                 className="bg-slate-700 border-slate-600 text-white"
-                placeholder="Write a polite response..."
+                placeholder="Write your response..."
                 rows={4}
               />
             </div>
             
-            <Button onClick={handleRespondToReview} className="w-full" disabled={!reviewResponseDialog.response.trim()}>
-              <Send className="h-4 w-4 mr-2" />
+            <Button onClick={handleRespondToReview} className="w-full">
+              <MessageSquare className="h-4 w-4 mr-2" />
               Submit Response
             </Button>
           </div>
