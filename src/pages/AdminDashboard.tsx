@@ -20,6 +20,7 @@ import SEOContentManager from "@/components/admin/SEOContentManager";
 import AdminLocationManager from "@/components/admin/AdminLocationManager";
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
 import AdminReferralManager from "@/components/admin/AdminReferralManager";
+import { BrandingSettings } from "@/components/admin/BrandingSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1497,6 +1498,9 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Branding Settings */}
+                <BrandingSettings />
 
                 {/* Chat System Toggle */}
                 <Card className="bg-slate-800/50 border-slate-700 mb-6">

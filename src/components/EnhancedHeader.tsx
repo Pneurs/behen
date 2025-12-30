@@ -18,11 +18,13 @@ import { NotificationBell } from "./NotificationBell";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEarnings } from "@/hooks/useEarnings";
+import { useBranding } from "@/hooks/useBranding";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
   const { user, userRole, isAdmin, signOut } = useAuth();
   const { earnings } = useEarnings();
+  const { data: branding } = useBranding();
 
   const [userName, setUserName] = useState<string>("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -163,10 +165,16 @@ export const EnhancedHeader = () => {
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 relative z-50">
       <div className="container flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex flex-col items-start">
-          <span className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Behen.pk
-          </span>
-          <span className="text-xs text-muted-foreground" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>بہنیں تو سب شیئر کرتی ہیں</span>
+          {branding?.logoType === 'image' && branding?.logoUrl ? (
+            <img src={branding.logoUrl} alt="Logo" className="h-10 object-contain" />
+          ) : (
+            <>
+              <span className="text-2xl font-bold text-primary" style={{ fontFamily: "'Playfair Display', serif" }}>
+                Behen.pk
+              </span>
+              <span className="text-xs text-muted-foreground" style={{ fontFamily: "'Noto Nastaliq Urdu', serif" }}>بہنیں تو سب شیئر کرتی ہیں</span>
+            </>
+          )}
         </Link>
 
         {/* Desktop Navigation */}
