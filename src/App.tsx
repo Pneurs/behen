@@ -2,11 +2,11 @@ import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useBranding } from "@/hooks/useBranding";
 
 // Lazy load all pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -52,34 +52,21 @@ const queryClient = new QueryClient({
 
 // Dynamic favicon component
 const DynamicFavicon = () => {
-  const { data: faviconUrl } = useQuery({
-    queryKey: ['branding-favicon'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'branding_favicon_url')
-        .single();
-      
-      const value = data?.value as { url?: string } | null;
-      return value?.url || null;
-    },
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
+  const { data: branding } = useBranding();
 
   useEffect(() => {
-    if (faviconUrl) {
+    if (branding?.faviconUrl) {
       const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
       if (link) {
-        link.href = faviconUrl;
+        link.href = branding.faviconUrl;
       } else {
         const newLink = document.createElement('link');
         newLink.rel = 'icon';
-        newLink.href = faviconUrl;
+        newLink.href = branding.faviconUrl;
         document.head.appendChild(newLink);
       }
     }
-  }, [faviconUrl]);
+  }, [branding?.faviconUrl]);
 
   return null;
 };
