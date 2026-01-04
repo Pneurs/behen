@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Gift, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEarningsPromoSettings } from "@/hooks/useEarningsPromoSettings";
 
 interface EarningsPromoPopupProps {
   userRole?: string;
@@ -10,12 +11,13 @@ interface EarningsPromoPopupProps {
 const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
+  const { data: settings, isLoading } = useEarningsPromoSettings();
 
   useEffect(() => {
-    // Only show for Bari Behens and once per session
+    // Only show for Bari Behens, once per session, and if enabled
     const hasSeenPopup = sessionStorage.getItem("earnings_popup_seen");
     
-    if (userRole === "bari" && !hasSeenPopup) {
+    if (userRole === "bari" && !hasSeenPopup && !isLoading && settings?.enabled) {
       // Delay popup appearance for better UX
       const timer = setTimeout(() => {
         setIsVisible(true);
@@ -23,7 +25,7 @@ const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
       
       return () => clearTimeout(timer);
     }
-  }, [userRole]);
+  }, [userRole, isLoading, settings?.enabled]);
 
   const handleDismiss = () => {
     sessionStorage.setItem("earnings_popup_seen", "true");
@@ -36,7 +38,7 @@ const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
     navigate("/earn-money");
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || !settings) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 animate-in slide-in-from-bottom-4 duration-300">
@@ -55,14 +57,14 @@ const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
           
           <div className="flex-1">
             <h3 className="font-bold text-lg mb-1">
-              Earn Money with Behen.pk! 💰
+              {settings.title}
             </h3>
             <p className="text-sm text-white/90 mb-3">
-              Upload your product & get <strong>PKR 250 instantly</strong>
+              {settings.description} <strong>PKR {settings.productBonusAmount} instantly</strong>
               <br />
               <span className="inline-flex items-center gap-1">
                 <Share2 className="h-3 w-3" />
-                OR Share & earn <strong>PKR 150</strong> each!
+                OR Share & earn <strong>PKR {settings.referralBonusAmount}</strong> each!
               </span>
             </p>
             
@@ -72,7 +74,7 @@ const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
               onClick={handleLearnMore}
               className="bg-white text-primary hover:bg-white/90"
             >
-              Learn More
+              {settings.buttonText}
             </Button>
           </div>
         </div>
