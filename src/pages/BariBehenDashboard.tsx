@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralStats } from "@/hooks/useReferralStats";
+import { useEarningsPromoSettings } from "@/hooks/useEarningsPromoSettings";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import PaymentInfoCard from "@/components/PaymentInfoCard";
 import OrderStageView from "@/components/OrderStageView";
@@ -46,6 +47,8 @@ export default function BariBehenDashboard() {
   const [orderSearchQuery, setOrderSearchQuery] = useState("");
   const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
   const { stats: referralStats, loading: referralStatsLoading } = useReferralStats();
+  const { data: promoSettings } = useEarningsPromoSettings();
+  const referralBonusAmount = promoSettings?.referralBonusAmount ?? 150;
 
   useEffect(() => {
     checkAuth();
@@ -147,7 +150,7 @@ export default function BariBehenDashboard() {
 
   const shareReferralCode = () => {
     const shareUrl = `${window.location.origin}/auth?role=bari&ref=${earnings?.referral_code}`;
-    const shareText = `Join Behen.pk using my referral code: ${earnings?.referral_code} and get PKR 150 bonus! Sign up here: ${shareUrl}`;
+    const shareText = `Join Behen.pk using my referral code: ${earnings?.referral_code} and get PKR ${referralBonusAmount} bonus! Sign up here: ${shareUrl}`;
     
     if (navigator.share) {
       navigator.share({
@@ -363,13 +366,13 @@ export default function BariBehenDashboard() {
                     </div>
                     
                     <p className="text-xs text-muted-foreground">
-                      Share this code! Both you and your friend get PKR 150 when they sign up.
+                      Share this code! Both you and your friend get PKR {referralBonusAmount} when they sign up.
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                      Generate your referral code and earn PKR 150 for every friend who joins!
+                      Generate your referral code and earn PKR {referralBonusAmount} for every friend who joins!
                     </p>
                     <Button 
                       onClick={handleGenerateReferralCode}

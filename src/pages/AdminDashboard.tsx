@@ -21,6 +21,7 @@ import AdminLocationManager from "@/components/admin/AdminLocationManager";
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
 import AdminReferralManager from "@/components/admin/AdminReferralManager";
 import { BrandingSettings } from "@/components/admin/BrandingSettings";
+import EarningsPromoSettings from "@/components/admin/EarningsPromoSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1501,6 +1502,11 @@ export default function AdminDashboard() {
 
                 {/* Branding Settings */}
                 <BrandingSettings />
+
+                {/* Earnings Promo Settings */}
+                <div className="mt-6">
+                  <EarningsPromoSettings />
+                </div>
 
                 {/* Chat System Toggle */}
                 <Card className="bg-slate-800/50 border-slate-700 mb-6">

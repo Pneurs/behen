@@ -6,6 +6,7 @@ import { Gift, Users, Upload, ArrowRight, Wallet, CheckCircle2, Copy, Share2 } f
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useEarnings } from "@/hooks/useEarnings";
+import { useEarningsPromoSettings } from "@/hooks/useEarningsPromoSettings";
 import { toast } from "sonner";
 
 const EarnMoney = () => {
@@ -13,6 +14,10 @@ const EarnMoney = () => {
   const [isBariBehenLoggedIn, setIsBariBehenLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
   const { earnings, generateReferralCode, loading } = useEarnings();
+  const { data: settings } = useEarningsPromoSettings();
+
+  const productBonusAmount = settings?.productBonusAmount ?? 250;
+  const referralBonusAmount = settings?.referralBonusAmount ?? 150;
 
   useEffect(() => {
     const checkUser = async () => {
@@ -42,7 +47,7 @@ const EarnMoney = () => {
 
   const handleShareWhatsApp = () => {
     if (earnings?.referral_code) {
-      const message = `🎉 Join Behen.pk and earn PKR 150! Use my referral code: ${earnings.referral_code}\n\nSign up here: ${window.location.origin}/auth?role=bari`;
+      const message = `🎉 Join Behen.pk and earn PKR ${referralBonusAmount}! Use my referral code: ${earnings.referral_code}\n\nSign up here: ${window.location.origin}/auth?role=bari`;
       window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank");
     }
   };
@@ -83,10 +88,10 @@ const EarnMoney = () => {
                 <span className="text-sm font-medium">New User Bonus</span>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Upload Your First Product & Get <span className="text-primary">PKR 250</span> Instantly!
+                Upload Your First Product & Get <span className="text-primary">PKR {productBonusAmount}</span> Instantly!
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                As a new Bari Behen, when you upload your first product on Behen.pk, you'll receive PKR 250 in your account immediately!
+                As a new Bari Behen, when you upload your first product on Behen.pk, you'll receive PKR {productBonusAmount} in your account immediately!
               </p>
               
               <div className="space-y-4 mb-8">
@@ -100,7 +105,7 @@ const EarnMoney = () => {
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium">Get PKR 250 credited to your account</p>
+                    <p className="font-medium">Get PKR {productBonusAmount} credited to your account</p>
                     <p className="text-sm text-muted-foreground">Amount will be in pending balance initially</p>
                   </div>
                 </div>
@@ -129,7 +134,7 @@ const EarnMoney = () => {
                 <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Gift className="h-12 w-12 text-primary" />
                 </div>
-                <p className="text-6xl font-bold text-primary mb-2">250</p>
+                <p className="text-6xl font-bold text-primary mb-2">{productBonusAmount}</p>
                 <p className="text-2xl font-semibold mb-4">PKR Bonus</p>
                 <p className="text-muted-foreground">On your first product upload</p>
               </CardContent>
@@ -147,7 +152,7 @@ const EarnMoney = () => {
                 <div className="w-24 h-24 bg-purple-200 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Users className="h-12 w-12 text-purple-600" />
                 </div>
-                <p className="text-6xl font-bold text-purple-600 mb-2">150 + 150</p>
+                <p className="text-6xl font-bold text-purple-600 mb-2">{referralBonusAmount} + {referralBonusAmount}</p>
                 <p className="text-2xl font-semibold mb-4">PKR Each</p>
                 <p className="text-muted-foreground">You earn + Your friend earns</p>
               </CardContent>
@@ -162,7 +167,7 @@ const EarnMoney = () => {
                 Become a <span className="text-primary">Brand Ambassador</span>
               </h2>
               <p className="text-lg text-muted-foreground mb-6">
-                Share your unique referral code with friends. When they sign up as Bari Behen and upload their first product, you BOTH get PKR 150!
+                Share your unique referral code with friends. When they sign up as Bari Behen and upload their first product, you BOTH get PKR {referralBonusAmount}!
               </p>
 
               <div className="space-y-4 mb-8">
@@ -199,7 +204,7 @@ const EarnMoney = () => {
                   </div>
                   <div>
                     <p className="font-medium">Earn together!</p>
-                    <p className="text-sm text-muted-foreground">Both of you get PKR 150 when they upload first product</p>
+                    <p className="text-sm text-muted-foreground">Both of you get PKR {referralBonusAmount} when they upload first product</p>
                   </div>
                 </div>
               </div>
