@@ -22,6 +22,7 @@ import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
 import AdminReferralManager from "@/components/admin/AdminReferralManager";
 import { BrandingSettings } from "@/components/admin/BrandingSettings";
 import EarningsPromoSettings from "@/components/admin/EarningsPromoSettings";
+import HeroSettings from "@/components/admin/HeroSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1506,6 +1507,11 @@ export default function AdminDashboard() {
                 {/* Earnings Promo Settings */}
                 <div className="mt-6">
                   <EarningsPromoSettings />
+                </div>
+
+                {/* Hero Section Settings */}
+                <div className="mt-6">
+                  <HeroSettings />
                 </div>
 
                 {/* Chat System Toggle */}

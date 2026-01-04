@@ -6,6 +6,7 @@ import { EnhancedHeader } from "@/components/EnhancedHeader";
 import { HomeSearch } from "@/components/HomeSearch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
+import { useHeroSettings } from "@/hooks/useHeroSettings";
 
 // Lazy load non-critical components
 const HomeProducts = lazy(() => import("@/components/HomeProducts"));
@@ -25,6 +26,7 @@ const ProductsSkeleton = () => (
 
 const Index = () => {
   const [userRole, setUserRole] = useState<string>("");
+  const { data: heroSettings } = useHeroSettings();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -48,15 +50,15 @@ const Index = () => {
           <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-card rounded-full shadow-sm mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <Sparkles className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-foreground">Pakistan's Premier Bridal Marketplace</span>
+              <span className="text-sm font-medium text-foreground">{heroSettings?.tagline || "Pakistan's Premier Bridal Marketplace"}</span>
             </div>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Behen.pk
+              {heroSettings?.title || "Behen.pk"}
             </h1>
             
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
-              Rent or buy stunning bridal and formal wear. Share your designer pieces with your Behen and make every celebration unforgettable.
+              {heroSettings?.description || "Rent or buy stunning bridal and formal wear. Share your designer pieces with your Behen and make every celebration unforgettable."}
             </p>
             
             <div className="w-full mb-8 animate-in fade-in slide-in-from-bottom-7 duration-700 delay-300">
