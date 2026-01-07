@@ -8,24 +8,24 @@ interface EarningsPromoPopupProps {
   userRole?: string;
 }
 
-const EarningsPromoPopup = ({ userRole }: EarningsPromoPopupProps) => {
+const EarningsPromoPopup = ({ userRole: _userRole }: EarningsPromoPopupProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const navigate = useNavigate();
   const { data: settings, isLoading } = useEarningsPromoSettings();
 
   useEffect(() => {
-    // Only show for Bari Behens, once per session, and if enabled
+    // Show once per session (for all users) and only if enabled
     const hasSeenPopup = sessionStorage.getItem("earnings_popup_seen");
-    
-    if (userRole === "bari" && !hasSeenPopup && !isLoading && settings?.enabled) {
+
+    if (!hasSeenPopup && !isLoading && settings?.enabled) {
       // Delay popup appearance for better UX
       const timer = setTimeout(() => {
         setIsVisible(true);
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
-  }, [userRole, isLoading, settings?.enabled]);
+  }, [isLoading, settings?.enabled]);
 
   const handleDismiss = () => {
     sessionStorage.setItem("earnings_popup_seen", "true");
