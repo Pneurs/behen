@@ -457,6 +457,19 @@ const ProductDetail = () => {
                     </div>
                     
                     {/* Contact Seller */}
+                    {/* Show Contact Details Button - Above Chat */}
+                    {owner && (
+                      <OwnerContactCard 
+                        owner={owner} 
+                        currentUser={currentUser}
+                        onLoginClick={() => {
+                          localStorage.setItem("auth_redirect", `/product/${product.id}`);
+                          toast.info("Please sign in to view contact details");
+                          navigate("/auth");
+                        }}
+                      />
+                    )}
+
                     {chatEnabled && product.negotiation_allowed && (
                       <Button 
                         size="lg" 
@@ -510,18 +523,6 @@ const ProductDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Owner Info */}
-            {owner && (
-              <OwnerContactCard 
-                owner={owner} 
-                currentUser={currentUser}
-                onLoginClick={() => {
-                  localStorage.setItem("auth_redirect", `/product/${product.id}`);
-                  toast.info("Please sign in to view contact details");
-                  navigate("/auth");
-                }}
-              />
-            )}
           </div>
         </div>
 
