@@ -10,6 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabilityCalendarFlatpickr";
 import RealImagesViewer from "@/components/RealImagesViewer";
+import OwnerContactCard from "@/components/OwnerContactCard";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useBuyRentEnabled } from "@/hooks/useBuyRentEnabled";
@@ -511,21 +512,15 @@ const ProductDetail = () => {
 
             {/* Owner Info */}
             {owner && (
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-lg">
-                      {owner.name?.[0]?.toUpperCase() || "B"}
-                    </div>
-                    <div>
-                      <p className="font-semibold">{owner.name || "Bari Behen"}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {owner.role === "bari" ? "Verified Seller" : "Member"}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <OwnerContactCard 
+                owner={owner} 
+                currentUser={currentUser}
+                onLoginClick={() => {
+                  localStorage.setItem("auth_redirect", `/product/${product.id}`);
+                  toast.info("Please sign in to view contact details");
+                  navigate("/auth");
+                }}
+              />
             )}
           </div>
         </div>
