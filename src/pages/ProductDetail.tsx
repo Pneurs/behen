@@ -12,6 +12,7 @@ import ProductAvailabilityCalendarFlatpickr from "@/components/ProductAvailabili
 import RealImagesViewer from "@/components/RealImagesViewer";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
+import { useBuyRentEnabled } from "@/hooks/useBuyRentEnabled";
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -45,6 +46,7 @@ const ProductDetail = () => {
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
   const { chatEnabled } = useChatEnabled();
+  const { buyEnabled, rentEnabled } = useBuyRentEnabled();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -415,7 +417,7 @@ const ProductDetail = () => {
                   <div className="space-y-3 mt-6">
                     {/* Main Action Buttons */}
                     <div className="flex gap-3">
-                      {(product.listing_type === "sale" || product.listing_type === "both") && (
+                      {buyEnabled && (product.listing_type === "sale" || product.listing_type === "both") && (
                         <Button 
                           size="lg" 
                           onClick={() => {
@@ -433,7 +435,7 @@ const ProductDetail = () => {
                           Buy Now
                         </Button>
                       )}
-                      {(product.listing_type === "rent" || product.listing_type === "both") && (
+                      {rentEnabled && (product.listing_type === "rent" || product.listing_type === "both") && (
                         <Button 
                           size="lg" 
                           onClick={() => {

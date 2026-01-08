@@ -23,6 +23,7 @@ import AdminReferralManager from "@/components/admin/AdminReferralManager";
 import { BrandingSettings } from "@/components/admin/BrandingSettings";
 import EarningsPromoSettings from "@/components/admin/EarningsPromoSettings";
 import HeroSettings from "@/components/admin/HeroSettings";
+import BuyRentSettings from "@/components/admin/BuyRentSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1512,6 +1513,11 @@ export default function AdminDashboard() {
                 {/* Hero Section Settings */}
                 <div className="mt-6">
                   <HeroSettings />
+                </div>
+
+                {/* Buy & Rent Settings */}
+                <div className="mt-6">
+                  <BuyRentSettings />
                 </div>
 
                 {/* Chat System Toggle */}
