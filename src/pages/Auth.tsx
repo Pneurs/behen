@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, Gift } from "lucide-react";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { z } from "zod";
+import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -37,6 +38,7 @@ const Auth = () => {
   const [pendingPassword, setPendingPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyEmailRequired, setVerifyEmailRequired] = useState(false);
+  const { data: referralSettings } = useReferralSystemEnabled();
 
   // Generate random token for email verification
   const generateToken = () => {
@@ -953,7 +955,7 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
-                {role === "bari" && (
+                {role === "bari" && referralSettings?.referralSystemEnabled && (
                   <div className="space-y-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-2">
                       <Gift className="h-5 w-5 text-purple-600" />

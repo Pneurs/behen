@@ -24,6 +24,7 @@ import { BrandingSettings } from "@/components/admin/BrandingSettings";
 import EarningsPromoSettings from "@/components/admin/EarningsPromoSettings";
 import HeroSettings from "@/components/admin/HeroSettings";
 import BuyRentSettings from "@/components/admin/BuyRentSettings";
+import ReferralSystemSettings from "@/components/admin/ReferralSystemSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1518,6 +1519,11 @@ export default function AdminDashboard() {
                 {/* Buy & Rent Settings */}
                 <div className="mt-6">
                   <BuyRentSettings />
+                </div>
+
+                {/* Referral System Settings */}
+                <div className="mt-6">
+                  <ReferralSystemSettings />
                 </div>
 
                 {/* Chat System Toggle */}

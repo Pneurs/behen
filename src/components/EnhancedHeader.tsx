@@ -19,12 +19,14 @@ import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEarnings } from "@/hooks/useEarnings";
 import { useBranding } from "@/hooks/useBranding";
+import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 
 export const EnhancedHeader = () => {
   const navigate = useNavigate();
   const { user, userRole, isAdmin, signOut } = useAuth();
   const { earnings } = useEarnings();
   const { data: branding } = useBranding();
+  const { data: referralSettings } = useReferralSystemEnabled();
 
   const [userName, setUserName] = useState<string>("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -177,13 +179,14 @@ export const EnhancedHeader = () => {
           )}
         </Link>
 
-        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-3">
           <HeaderSearchPopup />
-          <Button onClick={() => navigate("/earn-money")} variant="ghost" size="sm" className="text-primary">
-            <Wallet className="mr-2 h-4 w-4" />
-            Earn Money
-          </Button>
+          {referralSettings?.earnMoneyEnabled && (
+            <Button onClick={() => navigate("/earn-money")} variant="ghost" size="sm" className="text-primary">
+              <Wallet className="mr-2 h-4 w-4" />
+              Earn Money
+            </Button>
+          )}
           
           {user ? (
             <>
@@ -334,17 +337,19 @@ export const EnhancedHeader = () => {
                   </Button>
                 )}
                 
-                <Button
-                  onClick={() => {
-                    navigate("/earn-money");
-                    setMobileOpen(false);
-                  }}
-                  variant="ghost"
-                  className="w-full justify-start text-primary"
-                >
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Earn Money
-                </Button>
+                {referralSettings?.earnMoneyEnabled && (
+                  <Button
+                    onClick={() => {
+                      navigate("/earn-money");
+                      setMobileOpen(false);
+                    }}
+                    variant="ghost"
+                    className="w-full justify-start text-primary"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Earn Money
+                  </Button>
+                )}
                 {user ? (
                   <>
                     {userRole === "bari" && (

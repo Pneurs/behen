@@ -26,6 +26,7 @@ import {
 import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralStats } from "@/hooks/useReferralStats";
 import { useEarningsPromoSettings } from "@/hooks/useEarningsPromoSettings";
+import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import PaymentInfoCard from "@/components/PaymentInfoCard";
 import OrderStageView from "@/components/OrderStageView";
@@ -48,6 +49,7 @@ export default function BariBehenDashboard() {
   const { earnings, generateReferralCode, loading: earningsLoading } = useEarnings();
   const { stats: referralStats, loading: referralStatsLoading } = useReferralStats();
   const { data: promoSettings } = useEarningsPromoSettings();
+  const { data: referralSettings } = useReferralSystemEnabled();
   const referralBonusAmount = promoSettings?.referralBonusAmount ?? 150;
 
   useEffect(() => {
@@ -288,105 +290,107 @@ export default function BariBehenDashboard() {
             </Button>
           </div>
 
-          {/* Earnings & Ambassador Section */}
-          <div className="grid md:grid-cols-2 gap-4 mb-8">
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Wallet className="h-5 w-5 text-primary" />
-                  My Earnings
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Available Balance</p>
-                    <p className="text-2xl font-bold text-primary">
-                      PKR {earnings?.balance?.toLocaleString() || 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pending Balance</p>
-                    <p className="text-2xl font-bold text-muted-foreground">
-                      PKR {earnings?.pending_balance?.toLocaleString() || 0}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Available after first order
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-purple-100 to-pink-50 border-purple-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="h-5 w-5 text-purple-600" />
-                  Brand Ambassador
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {earnings?.referral_code ? (
-                  <div className="space-y-3">
+          {/* Earnings & Ambassador Section - Only show if referral system is enabled */}
+          {referralSettings?.referralSystemEnabled && (
+            <div className="grid md:grid-cols-2 gap-4 mb-8">
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Wallet className="h-5 w-5 text-primary" />
+                    My Earnings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
-                      <div className="flex items-center gap-2">
-                        <code className="bg-white px-3 py-2 rounded font-mono text-lg font-bold text-purple-600 flex-1">
-                          {earnings.referral_code}
-                        </code>
-                        <Button size="icon" variant="outline" onClick={copyReferralCode}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="outline" onClick={shareReferralCode}>
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      <p className="text-sm text-muted-foreground">Available Balance</p>
+                      <p className="text-2xl font-bold text-primary">
+                        PKR {earnings?.balance?.toLocaleString() || 0}
+                      </p>
                     </div>
-                    
-                    {/* Referral Stats */}
-                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-purple-200">
-                      <div className="bg-white/50 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
-                          <UserCheck className="h-4 w-4" />
-                          <span className="text-xs font-medium">Users Joined</span>
-                        </div>
-                        <p className="text-2xl font-bold text-purple-700">
-                          {referralStatsLoading ? "..." : referralStats.referredCount}
-                        </p>
-                      </div>
-                      <div className="bg-white/50 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
-                          <Gift className="h-4 w-4" />
-                          <span className="text-xs font-medium">Earned</span>
-                        </div>
-                        <p className="text-2xl font-bold text-green-700">
-                          PKR {referralStatsLoading ? "..." : referralStats.totalEarned.toLocaleString()}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pending Balance</p>
+                      <p className="text-2xl font-bold text-muted-foreground">
+                        PKR {earnings?.pending_balance?.toLocaleString() || 0}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Available after first order
+                      </p>
                     </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Share this code! Both you and your friend get PKR {referralBonusAmount} when they sign up.
-                    </p>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      Generate your referral code and earn PKR {referralBonusAmount} for every friend who joins!
-                    </p>
-                    <Button 
-                      onClick={handleGenerateReferralCode}
-                      className="w-full bg-purple-600 hover:bg-purple-700"
-                      disabled={earningsLoading}
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      Become Brand Ambassador
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-100 to-pink-50 border-purple-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Users className="h-5 w-5 text-purple-600" />
+                    Brand Ambassador
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {earnings?.referral_code ? (
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Your Referral Code</p>
+                        <div className="flex items-center gap-2">
+                          <code className="bg-white px-3 py-2 rounded font-mono text-lg font-bold text-purple-600 flex-1">
+                            {earnings.referral_code}
+                          </code>
+                          <Button size="icon" variant="outline" onClick={copyReferralCode}>
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="outline" onClick={shareReferralCode}>
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Referral Stats */}
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-purple-200">
+                        <div className="bg-white/50 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
+                            <UserCheck className="h-4 w-4" />
+                            <span className="text-xs font-medium">Users Joined</span>
+                          </div>
+                          <p className="text-2xl font-bold text-purple-700">
+                            {referralStatsLoading ? "..." : referralStats.referredCount}
+                          </p>
+                        </div>
+                        <div className="bg-white/50 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
+                            <Gift className="h-4 w-4" />
+                            <span className="text-xs font-medium">Earned</span>
+                          </div>
+                          <p className="text-2xl font-bold text-green-700">
+                            PKR {referralStatsLoading ? "..." : referralStats.totalEarned.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground">
+                        Share this code! Both you and your friend get PKR {referralBonusAmount} when they sign up.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Generate your referral code and earn PKR {referralBonusAmount} for every friend who joins!
+                      </p>
+                      <Button 
+                        onClick={handleGenerateReferralCode}
+                        className="w-full bg-purple-600 hover:bg-purple-700"
+                        disabled={earningsLoading}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Become Brand Ambassador
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* My Orders Section */}
           <Card className="mb-8">
