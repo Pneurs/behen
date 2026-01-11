@@ -9,21 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, MapPin, Check, ChevronsUpDown, Clock, TrendingUp, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
+import { GENDER_CATEGORIES, getSubcategoriesByGender, KIDS_CLOTHING_CATEGORIES } from "@/hooks/useGenderCategories";
 
 interface RecentSearch {
   keyword?: string;
   city?: string;
   area?: string;
+  gender?: string;
   category?: string;
   timestamp: number;
 }
 
 const POPULAR_SEARCHES = [
-  { label: "Bridal Dresses", category: "bridal" },
-  { label: "Party Wear", category: "party_wear" },
-  { label: "Walima Collection", category: "walima" },
-  { label: "Formal Wear", category: "formal" },
-  { label: "Wedding Jewelry", category: "jewelry" },
+  { label: "Women's Bridal", gender: "women", category: "bridal" },
+  { label: "Women's Party Wear", gender: "women", category: "party_wear" },
+  { label: "Men's Sherwani", gender: "men", category: "sherwani" },
+  { label: "Kids Formal", gender: "kids", category: "formal" },
+  { label: "Women's Jewelry", gender: "women", category: "jewelry" },
 ];
 
 const STORAGE_KEY = "behen_recent_searches";
@@ -35,6 +37,7 @@ export const HeaderSearchPopup = () => {
   const [keyword, setKeyword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -79,19 +82,34 @@ export const HeaderSearchPopup = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
+  const handleGenderChange = (gender: string) => {
+    setSelectedGender(gender);
+    setSelectedCategory(""); // Reset category when gender changes
+  };
+
+  const getAvailableCategories = () => {
+    if (!selectedGender || selectedGender === "all") return [];
+    if (selectedGender === "kids") {
+      return KIDS_CLOTHING_CATEGORIES;
+    }
+    return getSubcategoriesByGender(selectedGender);
+  };
+
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (keyword) params.append("search", keyword);
     if (selectedCity) params.append("city", selectedCity);
     if (selectedArea) params.append("area", selectedArea);
+    if (selectedGender && selectedGender !== "all") params.append("gender", selectedGender);
     if (selectedCategory && selectedCategory !== "all") params.append("category", selectedCategory);
     
     // Save to recent searches
-    if (keyword || selectedCity || selectedCategory) {
+    if (keyword || selectedCity || selectedGender || selectedCategory) {
       saveRecentSearch({
         keyword: keyword || undefined,
         city: selectedCity || undefined,
         area: selectedArea || undefined,
+        gender: selectedGender || undefined,
         category: selectedCategory || undefined,
         timestamp: Date.now(),
       });
@@ -103,6 +121,7 @@ export const HeaderSearchPopup = () => {
     setKeyword("");
     setSelectedCity("");
     setSelectedArea("");
+    setSelectedGender("");
     setSelectedCategory("");
   };
 
@@ -111,14 +130,15 @@ export const HeaderSearchPopup = () => {
     if (search.keyword) params.append("search", search.keyword);
     if (search.city) params.append("city", search.city);
     if (search.area) params.append("area", search.area);
+    if (search.gender) params.append("gender", search.gender);
     if (search.category) params.append("category", search.category);
     
     navigate(`/browse?${params.toString()}`);
     setOpen(false);
   };
 
-  const applyPopularSearch = (category: string) => {
-    navigate(`/browse?category=${category}`);
+  const applyPopularSearch = (gender: string, category: string) => {
+    navigate(`/browse?gender=${gender}&category=${category}`);
     setOpen(false);
   };
 
@@ -260,24 +280,37 @@ export const HeaderSearchPopup = () => {
             )}
           </div>
 
-          {/* Category */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          {/* Gender Selector */}
+          <Select value={selectedGender} onValueChange={handleGenderChange}>
             <SelectTrigger className="h-11">
-              <SelectValue placeholder="All Categories" />
+              <SelectValue placeholder="For (All)" />
             </SelectTrigger>
             <SelectContent className="bg-popover border shadow-lg z-[300]">
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="bridal">Bridal</SelectItem>
-              <SelectItem value="barat">Barat</SelectItem>
-              <SelectItem value="walima">Walima</SelectItem>
-              <SelectItem value="formal">Formal</SelectItem>
-              <SelectItem value="party_wear">Party Wear</SelectItem>
-              <SelectItem value="footwear">Footwear</SelectItem>
-              <SelectItem value="accessories">Accessories</SelectItem>
-              <SelectItem value="jewelry">Jewelry</SelectItem>
-              <SelectItem value="bags">Bags</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+              {GENDER_CATEGORIES.map((g) => (
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+
+          {/* Category - Only show if gender selected */}
+          {selectedGender && selectedGender !== "all" && (
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-[300]">
+                <SelectItem value="all">All Categories</SelectItem>
+                {getAvailableCategories().map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Search Button */}
           <Button onClick={handleSearch} className="w-full h-11">
@@ -337,11 +370,11 @@ export const HeaderSearchPopup = () => {
             <div className="flex flex-wrap gap-2">
               {POPULAR_SEARCHES.map((item) => (
                 <Button
-                  key={item.category}
+                  key={`${item.gender}-${item.category}`}
                   variant="outline"
                   size="sm"
                   className="h-8 text-xs"
-                  onClick={() => applyPopularSearch(item.category)}
+                  onClick={() => applyPopularSearch(item.gender, item.category)}
                 >
                   {item.label}
                 </Button>

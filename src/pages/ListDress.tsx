@@ -13,6 +13,7 @@ import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info } fr
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
+import GenderCategorySelector from "@/components/GenderCategorySelector";
 import { Header } from "@/components/Header";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -72,6 +73,11 @@ const ListDress = () => {
   // Location dropdown state
   const [cityOpen, setCityOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
+
+  // Gender category state
+  const [selectedGender, setSelectedGender] = useState("");
+  const [selectedKidGender, setSelectedKidGender] = useState("");
+  const [selectedAgeRange, setSelectedAgeRange] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -1028,6 +1034,37 @@ const ListDress = () => {
             </div>
           </div>
 
+          {/* Gender & Category Selection */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Who is this for?</h3>
+            
+            <GenderCategorySelector
+              gender={selectedGender}
+              kidGender={selectedKidGender}
+              ageRange={selectedAgeRange}
+              category={formData.category}
+              subcategory={formData.subcategory}
+              onGenderChange={(g) => {
+                setSelectedGender(g);
+                // Build composite category for storage
+                setFormData({ ...formData, category: "", subcategory: "" });
+              }}
+              onKidGenderChange={setSelectedKidGender}
+              onAgeRangeChange={setSelectedAgeRange}
+              onCategoryChange={(cat) => {
+                // Build composite category string for storage
+                let compositeCategory = "";
+                if (selectedGender === "kids") {
+                  compositeCategory = `kids_${selectedKidGender}_${selectedAgeRange}_${cat}`;
+                } else {
+                  compositeCategory = `${selectedGender}_${cat}`;
+                }
+                setFormData({ ...formData, category: compositeCategory, subcategory: cat });
+              }}
+              onSubcategoryChange={(sub) => setFormData({ ...formData, subcategory: sub })}
+            />
+          </div>
+
           {/* Basic Details */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Basic Details</h3>
@@ -1044,30 +1081,6 @@ const ListDress = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bridal">Bridal</SelectItem>
-                    <SelectItem value="barat">Barat</SelectItem>
-                    <SelectItem value="walima">Walima</SelectItem>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="party_wear">Party Wear</SelectItem>
-                    <SelectItem value="footwear">Footwear</SelectItem>
-                    <SelectItem value="accessories">Accessories</SelectItem>
-                    <SelectItem value="jewelry">Jewelry</SelectItem>
-                    <SelectItem value="bags">Bags</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div>
                 <Label htmlFor="condition">Condition *</Label>
                 <Select

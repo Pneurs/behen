@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, ChevronRight, Check, X, ChevronsUpDown } from "lucide-react";
+import { Search, MapPin, Check, ChevronsUpDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,24 +14,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
-
-const CATEGORIES = [
-  { value: "bridal", label: "Bridal" },
-  { value: "barat", label: "Barat" },
-  { value: "walima", label: "Walima" },
-  { value: "formal", label: "Formal" },
-  { value: "party_wear", label: "Party Wear" },
-  { value: "footwear", label: "Footwear" },
-  { value: "accessories", label: "Accessories" },
-  { value: "jewelry", label: "Jewelry" },
-  { value: "bags", label: "Bags" },
-];
+import { GENDER_CATEGORIES, getSubcategoriesByGender, KIDS_CLOTHING_CATEGORIES } from "@/hooks/useGenderCategories";
 
 export const HomeSearch = () => {
   const navigate = useNavigate();
   const [keyword, setKeyword] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
+  const [selectedGender, setSelectedGender] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [cityOpen, setCityOpen] = useState(false);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -54,12 +44,26 @@ export const HomeSearch = () => {
     setSelectedArea("");
   };
 
+  const handleGenderChange = (gender: string) => {
+    setSelectedGender(gender);
+    setSelectedCategory(""); // Reset category when gender changes
+  };
+
+  const getAvailableCategories = () => {
+    if (!selectedGender || selectedGender === "all") return [];
+    if (selectedGender === "kids") {
+      return KIDS_CLOTHING_CATEGORIES;
+    }
+    return getSubcategoriesByGender(selectedGender);
+  };
+
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (keyword) params.append("search", keyword);
     if (selectedCity) params.append("city", selectedCity);
     if (selectedArea) params.append("area", selectedArea);
-    if (selectedCategory) params.append("category", selectedCategory);
+    if (selectedGender && selectedGender !== "all") params.append("gender", selectedGender);
+    if (selectedCategory && selectedCategory !== "all") params.append("category", selectedCategory);
     
     navigate(`/browse?${params.toString()}`);
   };
@@ -176,24 +180,37 @@ export const HomeSearch = () => {
             </Popover>
           )}
 
-          {/* Category Selector */}
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-full lg:w-[150px] h-12 bg-background">
-              <SelectValue placeholder="Category" />
+          {/* Gender Selector */}
+          <Select value={selectedGender} onValueChange={handleGenderChange}>
+            <SelectTrigger className="w-full lg:w-[130px] h-12 bg-background">
+              <SelectValue placeholder="For" />
             </SelectTrigger>
             <SelectContent className="bg-popover border shadow-lg z-[200]">
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="bridal">Bridal</SelectItem>
-              <SelectItem value="barat">Barat</SelectItem>
-              <SelectItem value="walima">Walima</SelectItem>
-              <SelectItem value="formal">Formal</SelectItem>
-              <SelectItem value="party_wear">Party Wear</SelectItem>
-              <SelectItem value="footwear">Footwear</SelectItem>
-              <SelectItem value="accessories">Accessories</SelectItem>
-              <SelectItem value="jewelry">Jewelry</SelectItem>
-              <SelectItem value="bags">Bags</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+              {GENDER_CATEGORIES.map((g) => (
+                <SelectItem key={g.value} value={g.value}>
+                  {g.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+
+          {/* Category Selector - Only show if gender selected */}
+          {selectedGender && selectedGender !== "all" && (
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full lg:w-[150px] h-12 bg-background">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border shadow-lg z-[200]">
+                <SelectItem value="all">All Categories</SelectItem>
+                {getAvailableCategories().map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Search Button */}
           <Button onClick={handleSearch} size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-12 lg:w-auto w-full">
