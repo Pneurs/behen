@@ -30,7 +30,10 @@ import {
   Droplets,
   Share2,
   Heart,
-  ShoppingBag
+  ShoppingBag,
+  Video,
+  ExternalLink,
+  Download
 } from "lucide-react";
 
 const ProductDetail = () => {
@@ -45,10 +48,30 @@ const ProductDetail = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [isAdminOrSuperAdmin, setIsAdminOrSuperAdmin] = useState(false);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
   const { chatEnabled } = useChatEnabled();
   const { buyEnabled, rentEnabled } = useBuyRentEnabled();
 
+  // Check if current user is admin or super_admin
+  useEffect(() => {
+    const checkAdminRole = async () => {
+      if (!currentUser) {
+        setIsAdminOrSuperAdmin(false);
+        return;
+      }
+      
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", currentUser.id)
+        .in("role", ["admin", "super_admin"]);
+      
+      setIsAdminOrSuperAdmin(roleData && roleData.length > 0);
+    };
+    
+    checkAdminRole();
+  }, [currentUser]);
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -550,6 +573,50 @@ const ProductDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground whitespace-pre-line">{product.style_tips}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Product Video - Only visible to Admin/Super Admin */}
+            {product.video_url && isAdminOrSuperAdmin && (
+              <Card className="border-primary/30 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Video className="h-5 w-5 text-primary" />
+                    Product Video
+                    <Badge variant="outline" className="ml-2 text-xs">Admin Only</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    This video is only visible to admins for verification purposes.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(product.video_url, '_blank')}
+                      className="flex items-center gap-2"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Open Video Link
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(product.video_url);
+                        toast.success("Video URL copied to clipboard");
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      Copy Link
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground break-all bg-muted p-2 rounded">
+                    {product.video_url}
+                  </p>
                 </CardContent>
               </Card>
             )}
