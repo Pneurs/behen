@@ -653,6 +653,7 @@ export type Database = {
           times_rented: number | null
           title: string
           updated_at: string
+          video_url: string | null
           waist_size: string | null
           weight_range: string | null
           work_type: string | null
@@ -705,6 +706,7 @@ export type Database = {
           times_rented?: number | null
           title: string
           updated_at?: string
+          video_url?: string | null
           waist_size?: string | null
           weight_range?: string | null
           work_type?: string | null
@@ -757,6 +759,7 @@ export type Database = {
           times_rented?: number | null
           title?: string
           updated_at?: string
+          video_url?: string | null
           waist_size?: string | null
           weight_range?: string | null
           work_type?: string | null

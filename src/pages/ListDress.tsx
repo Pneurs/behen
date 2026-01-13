@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info, Video, ExternalLink, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -114,6 +114,7 @@ const ListDress = () => {
     negotiation_allowed: true,
     dry_cleaned: false,
     alterations_allowed: false,
+    video_url: "",
   });
   const [sameAsPickup, setSameAsPickup] = useState(false);
 
@@ -230,6 +231,7 @@ const ListDress = () => {
               negotiation_allowed: product.negotiation_allowed !== false,
               dry_cleaned: product.dry_cleaned || false,
               alterations_allowed: product.alterations_allowed || false,
+              video_url: product.video_url || "",
             });
 
             // Parse included accessories
@@ -624,6 +626,7 @@ const ListDress = () => {
         negotiation_allowed: formData.negotiation_allowed,
         dry_cleaned: formData.listing_type === "rent" ? formData.dry_cleaned : null,
         alterations_allowed: formData.listing_type === "rent" ? formData.alterations_allowed : null,
+        video_url: formData.video_url || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -1741,6 +1744,33 @@ const ListDress = () => {
               rows={3}
             />
           </div>
+
+          {/* Product Video URL */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-primary" />
+              <Label htmlFor="video_url">Product Video (Optional)</Label>
+            </div>
+            <Alert className="bg-primary/5 border-primary/20">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-sm">
+                <strong className="text-primary">Products with videos have higher chances of selling!</strong>
+                <br />
+                Upload your video to YouTube, Google Drive, or Vimeo and paste the link below.
+              </AlertDescription>
+            </Alert>
+            <Input
+              id="video_url"
+              value={formData.video_url}
+              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+              placeholder="e.g., https://www.youtube.com/watch?v=... or https://drive.google.com/..."
+              type="url"
+            />
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <ExternalLink className="h-3 w-3" />
+              Supported: YouTube, Google Drive, Vimeo, or any public video link
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -1819,8 +1849,9 @@ const ListDress = () => {
       pickup_location: "",
       dropoff_location: "",
       negotiation_allowed: true,
-      dry_cleaned: false,
-      alterations_allowed: false,
+        dry_cleaned: false,
+        alterations_allowed: false,
+        video_url: "",
     });
   };
 
