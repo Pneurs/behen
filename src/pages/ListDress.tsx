@@ -1207,6 +1207,10 @@ const ListDress = () => {
                       onChange={(e) => setFormData({ ...formData, security_deposit: e.target.value })}
                       placeholder="2000"
                     />
+                    <p className="text-xs text-muted-foreground mt-1.5">
+                      💡 You can take Choti Behen's ID card only, or ID card with security deposit. 
+                      Security will be deposited in your account and returned when the dress is returned.
+                    </p>
                   </div>
                 </div>
               </div>
