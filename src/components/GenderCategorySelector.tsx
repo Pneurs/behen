@@ -146,7 +146,7 @@ const GenderCategorySelector = ({
             <SelectTrigger>
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[9999] bg-background">
               {gender === "kids"
                 ? KIDS_CLOTHING_CATEGORIES.map((cat) => (
                     <SelectItem key={cat.value} value={cat.value}>
