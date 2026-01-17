@@ -142,19 +142,23 @@ const GenderCategorySelector = ({
       {((gender && gender !== "kids") || (gender === "kids" && kidGender && ageRange)) && (
         <div className="space-y-3">
           <Label htmlFor="category" className="text-base font-semibold">Category *</Label>
-          <Select value={category} onValueChange={onCategoryChange}>
-            <SelectTrigger>
+          <Select value={category} onValueChange={(value) => onCategoryChange(value)}>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent className="z-[9999] bg-background">
+            <SelectContent 
+              className="z-[9999] bg-background" 
+              position="popper" 
+              sideOffset={4}
+            >
               {gender === "kids"
                 ? KIDS_CLOTHING_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
+                    <SelectItem key={cat.value} value={cat.value} className="cursor-pointer">
                       {cat.label}
                     </SelectItem>
                   ))
                 : getSubcategoriesByGender(gender).map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
+                    <SelectItem key={cat.value} value={cat.value} className="cursor-pointer">
                       {cat.label}
                     </SelectItem>
                   ))}
