@@ -61,11 +61,13 @@ const GenderCategorySelector = ({
     onKidGenderChange(newKidGender);
     onAgeRangeChange("");
     onCategoryChange("");
+    onSubcategoryChange("");
   };
 
   const handleAgeRangeChange = (newAgeRange: string) => {
     onAgeRangeChange(newAgeRange);
     onCategoryChange("");
+    onSubcategoryChange("");
   };
 
   return (
@@ -142,7 +144,7 @@ const GenderCategorySelector = ({
       {((gender && gender !== "kids") || (gender === "kids" && kidGender && ageRange)) && (
         <div className="space-y-3">
           <Label htmlFor="category" className="text-base font-semibold">Category *</Label>
-          <Select value={category} onValueChange={(value) => onCategoryChange(value)}>
+          <Select value={subcategory || undefined} onValueChange={(value) => onCategoryChange(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
