@@ -25,7 +25,8 @@ import { useEarnings } from "@/hooks/useEarnings";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
-  category: z.enum(["bridal", "barat", "walima", "formal", "party_wear", "footwear", "accessories", "jewelry", "bags", "fashion_tips"]),
+  // Stored as a composite string like: women_barat, men_kurta, kids_boy_3-5_formal
+  category: z.string().min(1, "Category is required"),
   condition: z.enum(["new", "like_new", "used_twice", "used_often"]),
   listing_type: z.enum(["rent", "sale"]),
   description: z.string().min(20, "Description must be at least 20 characters").max(1000),
@@ -1049,8 +1050,8 @@ const ListDress = () => {
               subcategory={formData.subcategory}
               onGenderChange={(g) => {
                 setSelectedGender(g);
-                // Build composite category for storage
-                setFormData({ ...formData, category: "", subcategory: "" });
+                // Reset category fields (use functional update to avoid stale state)
+                setFormData((prev) => ({ ...prev, category: "", subcategory: "" }));
               }}
               onKidGenderChange={setSelectedKidGender}
               onAgeRangeChange={setSelectedAgeRange}
@@ -1062,9 +1063,11 @@ const ListDress = () => {
                 } else {
                   compositeCategory = `${selectedGender}_${cat}`;
                 }
-                setFormData({ ...formData, category: compositeCategory, subcategory: cat });
+                setFormData((prev) => ({ ...prev, category: compositeCategory, subcategory: cat }));
               }}
-              onSubcategoryChange={(sub) => setFormData({ ...formData, subcategory: sub })}
+              onSubcategoryChange={(sub) =>
+                setFormData((prev) => ({ ...prev, subcategory: sub }))
+              }
             />
           </div>
 
