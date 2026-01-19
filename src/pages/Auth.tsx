@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, Gift } from "lucide-react";
+import { Loader2, Eye, EyeOff, Gift, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { z } from "zod";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
@@ -899,7 +900,19 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-base sm:text-sm">Phone Number</Label>
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="phone" className="text-base sm:text-sm">Phone Number <span className="text-destructive">*</span></Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[250px] text-center">
+                          <p>Preferably your WhatsApp number. This will be public and customers will contact you on this number.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="phone"
                     type="tel"
@@ -907,8 +920,8 @@ const Auth = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
+                    minLength={11}
                   />
-                  <p className="text-xs text-muted-foreground">Required for order coordination</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password" className="text-base sm:text-sm">Password</Label>
