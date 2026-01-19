@@ -22,6 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
 import { useEarnings } from "@/hooks/useEarnings";
+import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -44,6 +45,7 @@ const ListDress = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
+  const { data: referralSettings } = useReferralSystemEnabled();
   
   // Multi-step wizard state
   const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
@@ -666,8 +668,8 @@ const ListDress = () => {
 
         if (insertError) throw insertError;
 
-        // Check and claim first product bonus
-        if (insertedProduct && !earnings?.first_product_bonus_claimed) {
+        // Check and claim first product bonus (only if yourBalanceEnabled is on)
+        if (insertedProduct && !earnings?.first_product_bonus_claimed && referralSettings?.yourBalanceEnabled) {
           const bonusClaimed = await claimFirstProductBonus(insertedProduct.id);
           
           if (bonusClaimed) {

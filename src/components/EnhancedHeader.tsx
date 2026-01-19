@@ -211,7 +211,7 @@ export const EnhancedHeader = () => {
                   <User className="mr-2 h-4 w-4" />
                   View Profile
                 </DropdownMenuItem>
-                {userRole === "bari" && (
+                {userRole === "bari" && referralSettings?.yourBalanceEnabled && (
                   <DropdownMenuItem 
                     onClick={() => navigate("/dashboard")} 
                     className="cursor-pointer bg-gradient-to-r from-primary/10 to-primary/5"
@@ -320,7 +320,7 @@ export const EnhancedHeader = () => {
                   </Button>
                 )}
                 
-                {user && userRole === "bari" && (
+                {user && userRole === "bari" && referralSettings?.yourBalanceEnabled && (
                   <Button
                     onClick={() => {
                       navigate("/dashboard");
