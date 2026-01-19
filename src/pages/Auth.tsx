@@ -871,7 +871,7 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="name" className="text-base sm:text-sm">Name</Label>
+                  <Label htmlFor="name" className="text-base sm:text-sm">Name <span className="text-destructive">*</span></Label>
                   <Input
                     id="name"
                     type="text"
@@ -882,7 +882,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-base sm:text-sm">Email</Label>
+                  <Label htmlFor="signup-email" className="text-base sm:text-sm">Email <span className="text-destructive">*</span></Label>
                   <Input
                     id="signup-email"
                     type="email"
