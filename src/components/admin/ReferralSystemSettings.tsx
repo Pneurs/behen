@@ -13,6 +13,7 @@ export default function ReferralSystemSettings() {
   const [saving, setSaving] = useState(false);
   const [referralSystemEnabled, setReferralSystemEnabled] = useState(true);
   const [earnMoneyEnabled, setEarnMoneyEnabled] = useState(true);
+  const [yourBalanceEnabled, setYourBalanceEnabled] = useState(true);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -25,7 +26,7 @@ export default function ReferralSystemSettings() {
       const { data, error } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["referral_system_enabled", "earn_money_enabled"]);
+        .in("key", ["referral_system_enabled", "earn_money_enabled", "your_balance_enabled"]);
 
       if (error) throw error;
 
@@ -35,6 +36,9 @@ export default function ReferralSystemSettings() {
         }
         if (setting.key === "earn_money_enabled") {
           setEarnMoneyEnabled(setting.value === true);
+        }
+        if (setting.key === "your_balance_enabled") {
+          setYourBalanceEnabled(setting.value === true);
         }
       });
     } catch (error) {
@@ -73,6 +77,18 @@ export default function ReferralSystemSettings() {
         }, { onConflict: "key" });
 
       if (error2) throw error2;
+
+      // Upsert your_balance_enabled
+      const { error: error3 } = await supabase
+        .from("app_settings")
+        .upsert({
+          key: "your_balance_enabled",
+          value: yourBalanceEnabled,
+          updated_by: user.id,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "key" });
+
+      if (error3) throw error3;
 
       // Invalidate the query cache so components refetch
       queryClient.invalidateQueries({ queryKey: ["referral-system-settings"] });
@@ -136,6 +152,23 @@ export default function ReferralSystemSettings() {
             id="earn-money"
             checked={earnMoneyEnabled}
             onCheckedChange={setEarnMoneyEnabled}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="your-balance" className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              "Your Balance" Menu (Bari Behen)
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              When disabled: hides "Your Balance" from Bari Behen menu and the first product bonus popup (250 PKR congratulations)
+            </p>
+          </div>
+          <Switch
+            id="your-balance"
+            checked={yourBalanceEnabled}
+            onCheckedChange={setYourBalanceEnabled}
           />
         </div>
 

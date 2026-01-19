@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 interface ReferralSystemSettings {
   referralSystemEnabled: boolean;
   earnMoneyEnabled: boolean;
+  yourBalanceEnabled: boolean;
 }
 
 const defaultSettings: ReferralSystemSettings = {
   referralSystemEnabled: true,
   earnMoneyEnabled: true,
+  yourBalanceEnabled: true,
 };
 
 export const useReferralSystemEnabled = () => {
@@ -18,7 +20,7 @@ export const useReferralSystemEnabled = () => {
       const { data, error } = await supabase
         .from("app_settings")
         .select("key, value")
-        .in("key", ["referral_system_enabled", "earn_money_enabled"]);
+        .in("key", ["referral_system_enabled", "earn_money_enabled", "your_balance_enabled"]);
 
       if (error) {
         console.error("Error fetching referral system settings:", error);
@@ -33,6 +35,9 @@ export const useReferralSystemEnabled = () => {
         }
         if (setting.key === "earn_money_enabled") {
           settings.earnMoneyEnabled = setting.value === true;
+        }
+        if (setting.key === "your_balance_enabled") {
+          settings.yourBalanceEnabled = setting.value === true;
         }
       });
 
