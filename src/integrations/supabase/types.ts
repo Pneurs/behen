@@ -775,6 +775,9 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          phone_verification_code: string | null
+          phone_verification_sent_at: string | null
+          phone_verified: boolean
           profile_picture: string | null
           push_token: string | null
           role: string
@@ -789,6 +792,9 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          phone_verification_code?: string | null
+          phone_verification_sent_at?: string | null
+          phone_verified?: boolean
           profile_picture?: string | null
           push_token?: string | null
           role: string
@@ -803,6 +809,9 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          phone_verification_code?: string | null
+          phone_verification_sent_at?: string | null
+          phone_verified?: boolean
           profile_picture?: string | null
           push_token?: string | null
           role?: string
