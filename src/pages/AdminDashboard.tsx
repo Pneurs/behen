@@ -1353,12 +1353,13 @@ export default function AdminDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Role Management Tab */}
-            {currentRole === "super_admin" && (
+            {/* WhatsApp Verifications Tab */}
             <TabsContent value="verifications">
               <AdminPhoneVerifications />
             </TabsContent>
 
+            {/* Role Management Tab */}
+            {currentRole === "super_admin" && (
               <TabsContent value="roles">
                 <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
