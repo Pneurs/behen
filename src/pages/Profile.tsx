@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Phone, MapPin, Mail, Save, Camera, Info, Lock, Eye, EyeOff } from "lucide-react";
 import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
+import { PhoneVerificationCard } from "@/components/PhoneVerificationCard";
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -408,6 +409,14 @@ export default function Profile() {
                 </>
               )}
             </Button>
+
+            {/* WhatsApp Verification (Bari Behens only) */}
+            {profile.role === "bari" && user && (
+              <div className="border-t pt-6 mt-6">
+                <PhoneVerificationCard userId={user.id} />
+              </div>
+            )}
+
 
             {/* Password Change Section */}
             <div className="border-t pt-6 mt-6">

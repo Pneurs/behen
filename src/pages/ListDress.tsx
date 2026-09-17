@@ -44,6 +44,7 @@ const ListDress = () => {
   const [user, setUser] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(true);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
   
@@ -169,6 +170,17 @@ const ListDress = () => {
       if (profileRole !== "bari" && !userIsSuperAdmin) {
         toast.error("Only Bari Behens can list dresses");
         navigate("/browse");
+        return;
+      }
+
+      // Check WhatsApp verification for Bari Behens (super admins are exempt)
+      if (profileRole === "bari" && !userIsSuperAdmin) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone_verified")
+          .eq("user_id", session.user.id)
+          .single();
+        setPhoneVerified(!!profile?.phone_verified);
       }
     };
     
@@ -566,6 +578,14 @@ const ListDress = () => {
       toast.error("Please generate and confirm the AI Image first");
       return;
     }
+
+    // Gate: Bari Behens must verify their WhatsApp number before uploading
+    if (!isSuperAdmin && !phoneVerified) {
+      toast.error("Please verify your WhatsApp number before uploading products");
+      navigate("/profile");
+      return;
+    }
+
 
     try {
       // Validate form data
@@ -979,6 +999,18 @@ const ListDress = () => {
   // Render Step 4: Product Details Form
   const renderDetailsStep = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {!isSuperAdmin && !phoneVerified && (
+        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            Your WhatsApp number is not verified yet. Please verify it from your{" "}
+            <button type="button" onClick={() => navigate("/profile")} className="underline font-medium">
+              profile page
+            </button>{" "}
+            before uploading products.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Add Product Details</CardTitle>
