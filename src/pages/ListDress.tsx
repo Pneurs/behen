@@ -44,6 +44,7 @@ const ListDress = () => {
   const [user, setUser] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(true);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
   
@@ -169,6 +170,17 @@ const ListDress = () => {
       if (profileRole !== "bari" && !userIsSuperAdmin) {
         toast.error("Only Bari Behens can list dresses");
         navigate("/browse");
+        return;
+      }
+
+      // Check WhatsApp verification for Bari Behens (super admins are exempt)
+      if (profileRole === "bari" && !userIsSuperAdmin) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone_verified")
+          .eq("user_id", session.user.id)
+          .single();
+        setPhoneVerified(!!profile?.phone_verified);
       }
     };
     
@@ -566,6 +578,14 @@ const ListDress = () => {
       toast.error("Please generate and confirm the AI Image first");
       return;
     }
+
+    // Gate: Bari Behens must verify their WhatsApp number before uploading
+    if (!isSuperAdmin && !phoneVerified) {
+      toast.error("Please verify your WhatsApp number before uploading products");
+      navigate("/profile");
+      return;
+    }
+
 
     try {
       // Validate form data
