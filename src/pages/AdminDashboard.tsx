@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
-  Shield, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
+  Shield, ShieldCheck, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
   Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift
 } from "lucide-react";
 import SEOContentManager from "@/components/admin/SEOContentManager";
@@ -25,6 +25,8 @@ import EarningsPromoSettings from "@/components/admin/EarningsPromoSettings";
 import HeroSettings from "@/components/admin/HeroSettings";
 import BuyRentSettings from "@/components/admin/BuyRentSettings";
 import ReferralSystemSettings from "@/components/admin/ReferralSystemSettings";
+import AdminPhoneVerifications from "@/components/admin/AdminPhoneVerifications";
+import WhatsAppSettings from "@/components/admin/WhatsAppSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -732,6 +734,10 @@ export default function AdminDashboard() {
               </TabsTrigger>
               <TabsTrigger value="chats" className="data-[state=active]:bg-primary">
                 Chats ({allChats.length})
+              </TabsTrigger>
+              <TabsTrigger value="verifications" className="data-[state=active]:bg-primary">
+                <ShieldCheck className="h-4 w-4 mr-1" />
+                Verifications
               </TabsTrigger>
               {currentRole === "super_admin" && (
                 <TabsTrigger value="roles" className="data-[state=active]:bg-primary">
