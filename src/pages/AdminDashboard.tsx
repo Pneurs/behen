@@ -1355,6 +1355,10 @@ export default function AdminDashboard() {
 
             {/* Role Management Tab */}
             {currentRole === "super_admin" && (
+            <TabsContent value="verifications">
+              <AdminPhoneVerifications />
+            </TabsContent>
+
               <TabsContent value="roles">
                 <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
@@ -1530,6 +1534,11 @@ export default function AdminDashboard() {
                 {/* Referral System Settings */}
                 <div className="mt-6">
                   <ReferralSystemSettings />
+                </div>
+
+                {/* WhatsApp Verification Number */}
+                <div className="mt-6">
+                  <WhatsAppSettings />
                 </div>
 
                 {/* Chat System Toggle */}
