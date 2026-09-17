@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Phone, Eye, EyeOff, User, AlertTriangle } from "lucide-react";
+import { Phone, Eye, EyeOff, User, AlertTriangle, ShieldCheck } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,6 +16,7 @@ interface OwnerContactCardProps {
     name: string;
     phone: string | null;
     role: string;
+    phone_verified?: boolean;
   };
   currentUser: any;
   onLoginClick: () => void;
@@ -69,8 +70,14 @@ export default function OwnerContactCard({ owner, currentUser, onLoginClick }: O
                   <div>
                     <p className="font-semibold text-foreground">{owner.name || "Bari Behen"}</p>
                     <p className="text-sm text-muted-foreground">
-                      {owner.role === "bari" ? "Verified Seller" : "Member"}
+                      {owner.role === "bari" ? "Seller" : "Member"}
                     </p>
+                    {owner.phone_verified && (
+                      <p className="text-xs font-medium text-green-600 dark:text-green-500 flex items-center gap-1 mt-0.5">
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                        WhatsApp Verified
+                      </p>
+                    )}
                   </div>
                 </div>
 

@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User, Phone, MapPin, Mail, Save, Camera, Info, Lock, Eye, EyeOff } from "lucide-react";
+import { PAKISTAN_LOCATIONS, CITIES, getAreasForCity } from "@/data/locations";
 import { PhoneVerificationCard } from "@/components/PhoneVerificationCard";
 
 export default function Profile() {
