@@ -999,6 +999,18 @@ const ListDress = () => {
   // Render Step 4: Product Details Form
   const renderDetailsStep = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {!isSuperAdmin && !phoneVerified && (
+        <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            Your WhatsApp number is not verified yet. Please verify it from your{" "}
+            <button type="button" onClick={() => navigate("/profile")} className="underline font-medium">
+              profile page
+            </button>{" "}
+            before uploading products.
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>Add Product Details</CardTitle>
