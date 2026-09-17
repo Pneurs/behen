@@ -8,6 +8,13 @@
       "when": 1789624173374,
       "tag": "0000_phone_verification_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789624240334,
+      "tag": "0001_phone_verification_security",
+      "breakpoints": true
     }
   ]
 }
