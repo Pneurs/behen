@@ -29,6 +29,7 @@ import { useEarningsPromoSettings } from "@/hooks/useEarningsPromoSettings";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 import EarningsPromoPopup from "@/components/EarningsPromoPopup";
 import PaymentInfoCard from "@/components/PaymentInfoCard";
+import { PhoneVerificationCard } from "@/components/PhoneVerificationCard";
 import OrderStageView from "@/components/OrderStageView";
 
 export default function BariBehenDashboard() {
@@ -289,6 +290,13 @@ export default function BariBehenDashboard() {
               Add New Product
             </Button>
           </div>
+
+          {/* WhatsApp Verification */}
+          {user && (
+            <div className="mb-8">
+              <PhoneVerificationCard userId={user.id} />
+            </div>
+          )}
 
           {/* Earnings & Ambassador Section - Only show if referral system is enabled */}
           {referralSettings?.referralSystemEnabled && (
