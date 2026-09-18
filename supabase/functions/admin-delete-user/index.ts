@@ -103,6 +103,11 @@ serve(async (req) => {
 
     console.log(`Deleting user: ${userId}`);
 
+    // Clear references that block deletion (no cascade on app_settings.updated_by)
+    await supabaseAdmin.from('app_settings').update({ updated_by: null }).eq('updated_by', userId);
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+
+
     // Delete user from auth.users (cascades to profiles due to ON DELETE CASCADE)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
