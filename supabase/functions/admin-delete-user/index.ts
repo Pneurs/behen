@@ -34,13 +34,10 @@ serve(async (req) => {
       );
     }
 
-    // Get requesting user
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Get requesting user from the bearer token
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError || !requestingUser) {
       console.log('User error:', userError);
@@ -105,6 +102,11 @@ serve(async (req) => {
     }
 
     console.log(`Deleting user: ${userId}`);
+
+    // Clear references that block deletion (no cascade on app_settings.updated_by)
+    await supabaseAdmin.from('app_settings').update({ updated_by: null }).eq('updated_by', userId);
+    await supabaseAdmin.from('user_roles').delete().eq('user_id', userId);
+
 
     // Delete user from auth.users (cascades to profiles due to ON DELETE CASCADE)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);

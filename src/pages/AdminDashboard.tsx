@@ -349,8 +349,17 @@ export default function AdminDashboard() {
     }
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        toast({ title: "Session Expired", description: "Please sign in again and retry", variant: "destructive" });
+        return;
+      }
+
       const response = await supabase.functions.invoke('admin-delete-user', {
         body: { userId },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (response.error) {
