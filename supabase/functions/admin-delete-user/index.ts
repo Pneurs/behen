@@ -34,13 +34,10 @@ serve(async (req) => {
       );
     }
 
-    // Get requesting user
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Get requesting user from the bearer token
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    const { data: { user: requestingUser }, error: userError } = await supabaseClient.auth.getUser();
     
     if (userError || !requestingUser) {
       console.log('User error:', userError);
