@@ -1242,6 +1242,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_my_verification_code: { Args: { _token: string }; Returns: string }
       get_owner_average_rating: {
         Args: { owner_uuid: string }
         Returns: number
@@ -1258,6 +1259,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      verify_phone_with_code: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
       app_role:

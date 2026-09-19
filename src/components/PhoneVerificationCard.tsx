@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, MessageCircle, RefreshCw, Clock, Copy } from "lucide-react";
-import { useWhatsAppBusinessNumber, normalizePhoneForWhatsApp } from "@/hooks/useWhatsAppBusinessNumber";
+import { Loader2, ShieldCheck, MessageCircle } from "lucide-react";
+import { useWhatsAppBusinessNumber } from "@/hooks/useWhatsAppBusinessNumber";
 
 interface PhoneVerificationCardProps {
   userId: string;
@@ -14,26 +15,23 @@ interface PhoneVerificationCardProps {
 
 export function PhoneVerificationCard({ userId, compact = false }: PhoneVerificationCardProps) {
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [phone, setPhone] = useState("");
   const [verified, setVerified] = useState(false);
-  const [code, setCode] = useState<string | null>(null);
-  const [sentAt, setSentAt] = useState<string | null>(null);
+  const [entered, setEntered] = useState("");
   const { businessNumber } = useWhatsAppBusinessNumber();
 
   const fetchStatus = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("phone, phone_verified, phone_verification_code, phone_verification_sent_at")
+        .select("phone, phone_verified")
         .eq("user_id", userId)
         .single();
 
       if (error) throw error;
       setPhone(data.phone || "");
       setVerified(data.phone_verified || false);
-      setCode(data.phone_verification_code);
-      setSentAt(data.phone_verification_sent_at);
     } catch (e) {
       console.error("Error fetching verification status:", e);
     } finally {
@@ -45,47 +43,37 @@ export function PhoneVerificationCard({ userId, compact = false }: PhoneVerifica
     fetchStatus();
   }, [fetchStatus]);
 
-  const generateCode = async () => {
-    if (!phone.trim()) {
-      toast.error("Please add and save your phone number above first");
-      return;
-    }
-    setGenerating(true);
-    try {
-      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          phone_verification_code: newCode,
-          phone_verification_sent_at: new Date().toISOString(),
-        })
-        .eq("user_id", userId);
-
-      if (error) throw error;
-      setCode(newCode);
-      setSentAt(new Date().toISOString());
-      toast.success("Verification code generated! Send it to us on WhatsApp.");
-    } catch (e: any) {
-      console.error("Error generating code:", e);
-      toast.error("Failed to generate code. Please try again.");
-    } finally {
-      setGenerating(false);
-    }
-  };
-
   const openWhatsApp = () => {
     if (!businessNumber) {
       toast.error("WhatsApp verification is not available right now. Please contact support.");
       return;
     }
-    const message = `Hello Behen.pk! My WhatsApp verification code is: ${code}`;
+    const message = "Hi Behen.pk! Please send me my WhatsApp verification link.";
     window.open(`https://wa.me/${businessNumber}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
-  const copyCode = () => {
-    if (code) {
-      navigator.clipboard.writeText(code);
-      toast.success("Code copied!");
+  const submitCode = async () => {
+    if (!entered.trim()) {
+      toast.error("Please enter the code from your WhatsApp link");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data, error } = await supabase.rpc("verify_phone_with_code", {
+        _code: entered.trim(),
+      });
+      if (error) throw error;
+      if (data === true) {
+        setVerified(true);
+        toast.success("Your WhatsApp number is verified!");
+      } else {
+        toast.error("That code doesn't match. Please open your WhatsApp link again.");
+      }
+    } catch (e: any) {
+      console.error("Error verifying code:", e);
+      toast.error("Verification failed. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -130,52 +118,32 @@ export function PhoneVerificationCard({ userId, compact = false }: PhoneVerifica
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!code ? (
-          <>
-            <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Save your WhatsApp number in your profile above</li>
-              <li>Generate your unique code</li>
-              <li>Send it to us on WhatsApp — that's it!</li>
-            </ol>
-            <Button onClick={generateCode} disabled={generating} className="w-full">
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate Verification Code"
-              )}
-            </Button>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center justify-center gap-3 p-4 bg-muted rounded-lg">
-              <span className="text-3xl font-mono font-bold tracking-widest">{code}</span>
-              <Button variant="ghost" size="icon" onClick={copyCode}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button
-              onClick={openWhatsApp}
-              className="w-full bg-green-600 hover:bg-green-700 text-white"
-            >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Send Code via WhatsApp
-            </Button>
-            <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <p>
-                Awaiting confirmation{sentAt ? ` since ${new Date(sentAt).toLocaleString()}` : ""}.
-                Our team will verify your number shortly after you send the code.
-              </p>
-            </div>
-            <Button variant="outline" onClick={generateCode} disabled={generating} className="w-full">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Generate New Code
-            </Button>
-          </>
-        )}
+        <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+          <li>Make sure your WhatsApp number is saved in your profile</li>
+          <li>Tap the button below and send us the WhatsApp message</li>
+          <li>You'll instantly get a reply with a link — open it to see your code</li>
+          <li>Paste the code here to verify right away</li>
+        </ol>
+        <Button
+          onClick={openWhatsApp}
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          Message Us on WhatsApp
+        </Button>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Paste your code here"
+            value={entered}
+            onChange={(e) => setEntered(e.target.value)}
+          />
+          <Button onClick={submitCode} disabled={submitting}>
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Send the message from the same WhatsApp number saved in your profile.
+        </p>
       </CardContent>
     </Card>
   );
