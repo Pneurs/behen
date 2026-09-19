@@ -101,6 +101,7 @@ const App = () => (
               <Route path="/earn-money" element={<EarnMoney />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/sitemap.xml" element={<Sitemap />} />
+              <Route path="/verify-whatsapp" element={<VerifyWhatsApp />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
