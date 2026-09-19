@@ -25,11 +25,27 @@ export default function WhatsAppSettings() {
           .select("key, value")
           .in("key", ["whatsapp_business_number", "whatsapp_verify_link_token"]);
 
+        let existingToken = "";
         for (const row of data || []) {
           const value = row.value as { number?: string; token?: string };
           if (row.key === "whatsapp_business_number") setNumber(value.number || "");
-          if (row.key === "whatsapp_verify_link_token") setToken(value.token || "");
+          if (row.key === "whatsapp_verify_link_token") existingToken = value.token || "";
         }
+
+        // Auto-create the verification link token if missing so the link always shows
+        if (!existingToken) {
+          existingToken =
+            Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+          const { error } = await supabase.from("app_settings").upsert(
+            { key: "whatsapp_verify_link_token", value: { token: existingToken } },
+            { onConflict: "key" }
+          );
+          if (error) {
+            console.error("Error creating verification token:", error);
+            existingToken = "";
+          }
+        }
+        setToken(existingToken);
       } catch (e) {
         console.error("Error fetching WhatsApp settings:", e);
       } finally {
