@@ -29,6 +29,7 @@ const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const EarnMoney = lazy(() => import("./pages/EarnMoney"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Sitemap = lazy(() => import("./pages/Sitemap"));
+const VerifyWhatsApp = lazy(() => import("./pages/VerifyWhatsApp"));
 
 // Loading fallback component
 const PageLoader = () => (
