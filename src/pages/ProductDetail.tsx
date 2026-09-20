@@ -485,6 +485,7 @@ const ProductDetail = () => {
                       <OwnerContactCard 
                         owner={owner} 
                         currentUser={currentUser}
+                        productId={product.id}
                         onLoginClick={() => {
                           localStorage.setItem("auth_redirect", `/product/${product.id}`);
                           toast.info("Please sign in to view contact details");

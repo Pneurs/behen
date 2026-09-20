@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Phone, Eye, EyeOff, User, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Phone, Eye, EyeOff, User, AlertTriangle, ShieldCheck, Lock, Coins, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,6 +11,8 @@ import {
   AlertDialogFooter,
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { useCreditSettings, useCreditBalance, useContactUnlocked, useUnlockContact } from "@/hooks/useCredits";
 
 interface OwnerContactCardProps {
   owner: {
@@ -19,18 +22,58 @@ interface OwnerContactCardProps {
     phone_verified?: boolean;
   };
   currentUser: any;
+  productId?: string;
   onLoginClick: () => void;
 }
 
-export default function OwnerContactCard({ owner, currentUser, onLoginClick }: OwnerContactCardProps) {
+export default function OwnerContactCard({ owner, currentUser, productId, onLoginClick }: OwnerContactCardProps) {
+  const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
+  const [unlocking, setUnlocking] = useState(false);
 
-  const handleShowContact = () => {
+  const { data: settings } = useCreditSettings();
+  const { data: balance = 0 } = useCreditBalance();
+  const { data: unlocked = false, refetch: refetchUnlocked } = useContactUnlocked(productId);
+  const { unlock } = useUnlockContact();
+
+  const creditsEnabled = !!settings?.enabled && !!productId;
+  const cost = settings?.costPerUnlock || 1;
+  const needsCredits = creditsEnabled && !unlocked;
+
+  const handleShowContact = async () => {
     if (!currentUser) {
       onLoginClick();
       return;
     }
-    setShowDialog(true);
+
+    if (!needsCredits) {
+      setShowDialog(true);
+      return;
+    }
+
+    if (balance < cost) {
+      toast.error(`You need ${cost} credit${cost > 1 ? "s" : ""} to see this seller's details`);
+      navigate("/credits");
+      return;
+    }
+
+    setUnlocking(true);
+    try {
+      const result = await unlock(productId!);
+      if (result?.success) {
+        await refetchUnlocked();
+        setShowDialog(true);
+      } else if (result?.reason === "insufficient_credits") {
+        toast.error("You don't have enough credits");
+        navigate("/credits");
+      } else {
+        toast.error("Could not unlock the contact details");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Could not unlock the contact details");
+    } finally {
+      setUnlocking(false);
+    }
   };
 
   return (
@@ -39,20 +82,41 @@ export default function OwnerContactCard({ owner, currentUser, onLoginClick }: O
         variant="outline"
         size="lg"
         onClick={handleShowContact}
+        disabled={unlocking}
         className="w-full"
       >
-        {currentUser ? (
+        {unlocking ? (
           <>
-            <Eye className="mr-2 h-5 w-5" />
-            Show Contact Details
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Unlocking...
           </>
-        ) : (
+        ) : !currentUser ? (
           <>
             <EyeOff className="mr-2 h-5 w-5" />
             Sign in to View Contact
           </>
+        ) : needsCredits ? (
+          <>
+            <Lock className="mr-2 h-5 w-5" />
+            Show Contact Details ({cost} credit{cost > 1 ? "s" : ""})
+          </>
+        ) : (
+          <>
+            <Eye className="mr-2 h-5 w-5" />
+            Show Contact Details
+          </>
         )}
       </Button>
+
+      {currentUser && needsCredits && (
+        <p className="text-xs text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+          <Coins className="h-3 w-3" />
+          You have {balance} credit{balance === 1 ? "" : "s"} ·{" "}
+          <button type="button" onClick={() => navigate("/credits")} className="underline">
+            Buy credits
+          </button>
+        </p>
+      )}
 
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent className="max-w-sm">
