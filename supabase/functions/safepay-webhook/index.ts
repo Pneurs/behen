@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     const type = typeof event?.type === 'string' ? event.type : ''
     console.log('safepay webhook event', type)
 
-    if (type === 'payment.succeeded') {
+    if (type === "payment.succeeded" || type === "payment.completed") {
       // Find the tracker token anywhere in the payload.
       const tracker = rawBody.match(/track_[0-9a-fA-F-]{10,}/)?.[0]
       if (!tracker) {
