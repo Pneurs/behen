@@ -80,15 +80,14 @@ Deno.serve(async (req) => {
     const expected = Array.from(new Uint8Array(mac))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('')
-    if (expected.length !== signature.length || !expected.toLowerCase().endsWith(signature.toLowerCase()) && expected.toLowerCase() !== signature.toLowerCase()) {
-      // constant-time-ish compare
-      let diff = 0
-      for (let i = 0; i < Math.min(expected.length, signature.length); i++) {
-        diff |= expected.charCodeAt(i) ^ signature.toLowerCase().charCodeAt(i)
-      }
-      if (diff !== 0 || expected.length !== signature.length) {
-        return json({ error: 'Invalid signature' }, 401)
-      }
+      .toLowerCase()
+    const received = signature.toLowerCase()
+    let diff = expected.length ^ received.length
+    for (let i = 0; i < Math.max(expected.length, received.length); i++) {
+      diff |= (expected.charCodeAt(i) || 0) ^ (received.charCodeAt(i) || 0)
+    }
+    if (diff !== 0) {
+      return json({ error: 'Invalid signature' }, 401)
     }
 
     let event: any
