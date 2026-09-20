@@ -27,6 +27,8 @@ import BuyRentSettings from "@/components/admin/BuyRentSettings";
 import ReferralSystemSettings from "@/components/admin/ReferralSystemSettings";
 import AdminPhoneVerifications from "@/components/admin/AdminPhoneVerifications";
 import WhatsAppSettings from "@/components/admin/WhatsAppSettings";
+import CreditSettings from "@/components/admin/CreditSettings";
+import AdminCreditPurchases from "@/components/admin/AdminCreditPurchases";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1550,6 +1552,17 @@ export default function AdminDashboard() {
                 <div className="mt-6">
                   <WhatsAppSettings />
                 </div>
+
+                {/* Credit System */}
+                <div className="mt-6">
+                  <CreditSettings />
+                </div>
+
+                {/* Credit Orders */}
+                <div className="mt-6">
+                  <AdminCreditPurchases />
+                </div>
+
 
                 {/* Chat System Toggle */}
                 <Card className="bg-slate-800/50 border-slate-700 mb-6">
