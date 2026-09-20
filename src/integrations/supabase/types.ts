@@ -321,6 +321,114 @@ export type Database = {
           },
         ]
       }
+      contact_unlocks: {
+        Row: {
+          created_at: string
+          credits_spent: number
+          id: string
+          product_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_spent?: number
+          id?: string
+          product_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_spent?: number
+          id?: string
+          product_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_unlocks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_unlocks_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_purchases: {
+        Row: {
+          admin_notes: string | null
+          amount_pkr: number
+          created_at: string
+          credits: number
+          id: string
+          payment_proof_url: string | null
+          payment_reference: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount_pkr: number
+          created_at?: string
+          credits: number
+          id?: string
+          payment_proof_url?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount_pkr?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          payment_proof_url?: string | null
+          payment_reference?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       earning_transactions: {
         Row: {
           amount: number
@@ -927,6 +1035,30 @@ export type Database = {
           },
         ]
       }
+      user_credits: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_earnings: {
         Row: {
           balance: number
@@ -1242,6 +1374,14 @@ export type Database = {
       }
     }
     Functions: {
+      admin_add_credits: {
+        Args: { _credits: number; _notes?: string; _user_id: string }
+        Returns: Json
+      }
+      admin_approve_credit_purchase: {
+        Args: { _purchase_id: string }
+        Returns: Json
+      }
       get_my_verification_code: { Args: { _token: string }; Returns: string }
       get_owner_average_rating: {
         Args: { owner_uuid: string }
@@ -1259,6 +1399,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      unlock_contact: { Args: { _product_id: string }; Returns: Json }
       verify_phone_with_code: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
