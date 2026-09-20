@@ -770,7 +770,20 @@ const ListDress = () => {
 
   // Render Step 1: Image Upload
   const renderUploadStep = () => (
-    <Card className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto space-y-4">
+    {!isSuperAdmin && !phoneVerified && (
+      <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
+        <AlertCircle className="h-4 w-4 text-amber-600" />
+        <AlertDescription className="text-amber-800 dark:text-amber-200">
+          <strong>Your WhatsApp number is not verified yet.</strong> You need to verify it before you can publish a product.{" "}
+          <button type="button" onClick={() => navigate("/profile")} className="underline font-medium">
+            Verify now
+          </button>
+        </AlertDescription>
+      </Alert>
+    )}
+    <Card>
+
       <CardHeader>
         <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
         <CardDescription>
