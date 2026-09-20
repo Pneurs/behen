@@ -901,7 +901,9 @@ const ListDress = () => {
         </p>
       </CardContent>
     </Card>
+    </div>
   );
+
 
   // Render Step 2: Generating
   const renderGeneratingStep = () => (
