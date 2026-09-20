@@ -29,6 +29,13 @@
       "when": 1789904644141,
       "tag": "0003_credit_system",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789916171166,
+      "tag": "0004_safepay_credit_payments",
+      "breakpoints": true
     }
   ]
 }
