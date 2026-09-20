@@ -369,6 +369,8 @@ export type Database = {
           id: string
           payment_proof_url: string | null
           payment_reference: string | null
+          provider: string
+          safepay_tracker: string | null
           status: string
           updated_at: string
           user_id: string
@@ -381,6 +383,8 @@ export type Database = {
           id?: string
           payment_proof_url?: string | null
           payment_reference?: string | null
+          provider?: string
+          safepay_tracker?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -393,6 +397,8 @@ export type Database = {
           id?: string
           payment_proof_url?: string | null
           payment_reference?: string | null
+          provider?: string
+          safepay_tracker?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -1380,6 +1386,14 @@ export type Database = {
       }
       admin_approve_credit_purchase: {
         Args: { _purchase_id: string }
+        Returns: Json
+      }
+      complete_credit_purchase: {
+        Args: {
+          _provider_reference: string
+          _purchase_id: string
+          _tracker: string
+        }
         Returns: Json
       }
       get_my_verification_code: { Args: { _token: string }; Returns: string }
