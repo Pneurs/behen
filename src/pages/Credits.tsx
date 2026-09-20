@@ -1,4 +1,3 @@
-// ============= Full file contents =============
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
