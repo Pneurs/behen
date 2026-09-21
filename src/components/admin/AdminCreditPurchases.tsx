@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Check, X, Coins, Loader2, Plus, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -154,7 +155,7 @@ export default function AdminCreditPurchases() {
           <CardTitle>Credit Orders</CardTitle>
           <CardDescription>Approve an order to add the credits to the buyer's balance.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -162,45 +163,73 @@ export default function AdminCreditPurchases() {
           ) : purchases.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No credit orders yet.</p>
           ) : (
-            purchases.map((p: any) => (
-              <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 border rounded-lg p-3">
-                <div className="space-y-0.5">
-                  <p className="font-medium">
-                    {p.profile?.name || "Buyer"} — {p.credits} credits (PKR {Number(p.amount_pkr).toLocaleString()})
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.profile?.phone || "no phone"} · {format(new Date(p.created_at), "dd MMM yyyy, h:mm a")}
-                    {p.payment_reference ? ` · TXN ${p.payment_reference}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {p.payment_proof_url && (
-                    <Button size="sm" variant="outline" onClick={() => viewProof(p.payment_proof_url)}>
-                      <ImageIcon className="h-4 w-4 mr-1" />
-                      Screenshot
-                    </Button>
-                  )}
-                  <Badge variant="outline">
-                    {p.admin_notes?.includes("Auto-approved") ? "Auto" : "Manual"}
-                  </Badge>
-                  <Badge variant={p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"}>
-                    {p.status}
-                  </Badge>
-                  {p.status === "pending" && (
-                    <>
-                      <Button size="sm" onClick={() => approve(p.id)} disabled={busyId === p.id}>
-                        <Check className="h-4 w-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => reject(p.id)} disabled={busyId === p.id}>
-                        <X className="h-4 w-4 mr-1" />
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Buyer</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Credits</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Transaction ID</TableHead>
+                    <TableHead>Screenshot</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {purchases.map((p: any) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium whitespace-nowrap">{p.profile?.name || "Buyer"}</TableCell>
+                      <TableCell className="whitespace-nowrap">{p.profile?.phone || "—"}</TableCell>
+                      <TableCell>{p.credits}</TableCell>
+                      <TableCell className="whitespace-nowrap">PKR {Number(p.amount_pkr).toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-xs">{p.payment_reference || "—"}</TableCell>
+                      <TableCell>
+                        {p.payment_proof_url ? (
+                          <Button size="sm" variant="outline" onClick={() => viewProof(p.payment_proof_url)}>
+                            <ImageIcon className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">none</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {format(new Date(p.created_at), "dd MMM yyyy, h:mm a")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"
+                          }
+                        >
+                          {p.status}
+                        </Badge>
+                        {p.admin_notes?.includes("Auto-approved") && (
+                          <span className="block text-[10px] text-muted-foreground mt-1">auto</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        {p.status === "pending" ? (
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" onClick={() => approve(p.id)} disabled={busyId === p.id}>
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => reject(p.id)} disabled={busyId === p.id}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
