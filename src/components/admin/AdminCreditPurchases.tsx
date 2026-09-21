@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, X, Coins, Loader2, Plus } from "lucide-react";
+import { Check, X, Coins, Loader2, Plus, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,7 @@ export default function AdminCreditPurchases() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_purchases")
-        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, created_at")
+        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, payment_proof_url, admin_notes, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -42,6 +42,17 @@ export default function AdminCreditPurchases() {
       return (data || []).map((p) => ({ ...p, profile: profileMap[p.user_id] }));
     },
   });
+
+  const viewProof = async (path: string) => {
+    const { data, error } = await supabase.storage
+      .from("payment-proofs")
+      .createSignedUrl(path, 60 * 10);
+    if (error || !data?.signedUrl) {
+      toast.error("Could not open the screenshot");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
 
   const approve = async (id: string) => {
     setBusyId(id);
@@ -163,8 +174,14 @@ export default function AdminCreditPurchases() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {p.payment_proof_url && (
+                    <Button size="sm" variant="outline" onClick={() => viewProof(p.payment_proof_url)}>
+                      <ImageIcon className="h-4 w-4 mr-1" />
+                      Screenshot
+                    </Button>
+                  )}
                   <Badge variant="outline">
-                    {p.provider === "safepay" ? "SafePay" : "Manual"}
+                    {p.admin_notes?.includes("Auto-approved") ? "Auto" : "Manual"}
                   </Badge>
                   <Badge variant={p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"}>
                     {p.status}
