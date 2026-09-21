@@ -22,7 +22,7 @@ export default function AdminCreditPurchases() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_purchases")
-        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, created_at")
+        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, payment_proof_url, admin_notes, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -163,8 +163,14 @@ export default function AdminCreditPurchases() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {p.payment_proof_url && (
+                    <Button size="sm" variant="outline" onClick={() => viewProof(p.payment_proof_url)}>
+                      <ImageIcon className="h-4 w-4 mr-1" />
+                      Screenshot
+                    </Button>
+                  )}
                   <Badge variant="outline">
-                    {p.provider === "safepay" ? "SafePay" : "Manual"}
+                    {p.admin_notes?.includes("Auto-approved") ? "Auto" : "Manual"}
                   </Badge>
                   <Badge variant={p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"}>
                     {p.status}
