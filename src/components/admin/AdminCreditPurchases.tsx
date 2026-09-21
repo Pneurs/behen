@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, X, Coins, Loader2, Plus } from "lucide-react";
+import { Check, X, Coins, Loader2, Plus, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +42,17 @@ export default function AdminCreditPurchases() {
       return (data || []).map((p) => ({ ...p, profile: profileMap[p.user_id] }));
     },
   });
+
+  const viewProof = async (path: string) => {
+    const { data, error } = await supabase.storage
+      .from("payment-proofs")
+      .createSignedUrl(path, 60 * 10);
+    if (error || !data?.signedUrl) {
+      toast.error("Could not open the screenshot");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  };
 
   const approve = async (id: string) => {
     setBusyId(id);
