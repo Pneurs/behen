@@ -72,6 +72,10 @@ export default function Credits() {
       toast.error("Please attach the payment screenshot first");
       return;
     }
+    if (!reference.trim()) {
+      toast.error("Please enter the transaction ID");
+      return;
+    }
     setSubmitting(true);
     try {
       const ext = proofFile.name.split(".").pop() || "jpg";
@@ -85,7 +89,7 @@ export default function Credits() {
         user_id: user.id,
         credits: selected.credits,
         amount_pkr: selected.price,
-        payment_reference: reference || null,
+        payment_reference: reference.trim(),
         payment_proof_url: path,
       });
       if (error) throw error;
