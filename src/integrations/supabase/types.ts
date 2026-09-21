@@ -1388,6 +1388,7 @@ export type Database = {
         Args: { _purchase_id: string }
         Returns: Json
       }
+      auto_approve_due_credit_purchases: { Args: never; Returns: number }
       complete_credit_purchase: {
         Args: {
           _provider_reference: string

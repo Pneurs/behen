@@ -36,6 +36,13 @@
       "when": 1789916171166,
       "tag": "0004_safepay_credit_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789991495064,
+      "tag": "0005_manual_credit_payments_auto_approve",
+      "breakpoints": true
     }
   ]
 }
