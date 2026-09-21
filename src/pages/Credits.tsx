@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ const PAYMENT_NUMBER = "0332 813 3263";
 
 export default function Credits() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const { data: settings } = useCreditSettings();
@@ -27,13 +26,9 @@ export default function Credits() {
 
   const [selected, setSelected] = useState<CreditPackage | null>(null);
   const [reference, setReference] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
-
-  // A tracker in the URL means the buyer just came back from SafePay checkout.
-  const returnTracker = searchParams.get("tracker");
-  const [confirming, setConfirming] = useState<string | null>(returnTracker);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,71 +41,60 @@ export default function Credits() {
     queryKey: ["my-credit-purchases", user?.id],
     queryFn: async () => {
       if (!user) return [];
+      // Give waiting orders a chance to clear themselves before we read them.
+      await supabase.rpc("auto_approve_due_credit_purchases");
       const { data } = await supabase
         .from("credit_purchases")
-        .select("id, credits, amount_pkr, status, provider, safepay_tracker, created_at")
+        .select("id, credits, amount_pkr, status, provider, payment_reference, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: confirming ? 3000 : false,
   });
 
-  // When the tracked purchase turns approved, celebrate and clean the URL.
+  const pendingCount = (purchases as any[]).filter((p) => p.status === "pending").length;
+
+  // While an order is waiting, keep checking so the credits appear on their own.
   useEffect(() => {
-    if (!confirming) return;
-    const match = (purchases as any[]).find(
-      (p) => p.safepay_tracker === confirming && p.status === "approved"
-    );
-    if (match) {
-      toast.success(`${match.credits} credits added to your balance!`);
-      setConfirming(null);
-      setSearchParams({}, { replace: true });
+    if (!pendingCount) return;
+    const id = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["my-credit-purchases"] });
       queryClient.invalidateQueries({ queryKey: ["credit-balance"] });
       queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
-    }
-  }, [confirming, purchases, queryClient, setSearchParams]);
-
-  const payNow = async (pkg: CreditPackage) => {
-    setPaying(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      if (!token) {
-        toast.error("Please sign in again");
-        return;
-      }
-      const { data, error } = await supabase.functions.invoke("safepay-create-checkout", {
-        body: { credits: pkg.credits },
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (error || !data?.checkout_url) {
-        throw new Error(data?.error || error?.message || "Could not start the payment");
-      }
-      toast.info("Redirecting to secure checkout…");
-      window.location.href = data.checkout_url;
-    } catch (e: any) {
-      toast.error(e.message || "Could not start the payment");
-    } finally {
-      setPaying(false);
-    }
-  };
+    }, 20000);
+    return () => clearInterval(id);
+  }, [pendingCount, queryClient]);
 
   const handleSubmitPurchase = async () => {
     if (!user || !selected) return;
+    if (!proofFile) {
+      toast.error("Please attach the payment screenshot first");
+      return;
+    }
     setSubmitting(true);
     try {
+      const ext = proofFile.name.split(".").pop() || "jpg";
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(path, proofFile, { contentType: proofFile.type });
+      if (uploadError) throw uploadError;
+
       const { error } = await supabase.from("credit_purchases").insert({
         user_id: user.id,
         credits: selected.credits,
         amount_pkr: selected.price,
         payment_reference: reference || null,
+        payment_proof_url: path,
       });
       if (error) throw error;
-      toast.success("Order placed! Your credits are added as soon as the payment is confirmed.");
+
+      toast.success("Screenshot received! Your credits are added automatically in a few minutes.");
       setSelected(null);
       setReference("");
+      setProofFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       queryClient.invalidateQueries({ queryKey: ["my-credit-purchases"] });
     } catch (e: any) {
       toast.error(e.message || "Could not place the order");
@@ -118,11 +102,6 @@ export default function Credits() {
       setSubmitting(false);
     }
   };
-
-  const confirmingPurchase = useMemo(
-    () => (confirming ? (purchases as any[]).find((p) => p.safepay_tracker === confirming) : null),
-    [confirming, purchases]
-  );
 
   if (authLoading) {
     return (
@@ -151,16 +130,14 @@ export default function Credits() {
           </CardContent>
         </Card>
 
-        {confirming && (
+        {pendingCount > 0 && (
           <Card className="border-primary/40">
             <CardContent className="flex items-center gap-3 py-4">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <div className="text-sm">
-                <p className="font-medium">Confirming your payment…</p>
+                <p className="font-medium">Checking your payment…</p>
                 <p className="text-muted-foreground">
-                  {confirmingPurchase?.status === "failed"
-                    ? "The payment didn't go through. Please try again or pay manually below."
-                    : "As soon as SafePay confirms it, your credits appear here automatically. This usually takes a few seconds."}
+                  Keep this page open — your credits are added automatically within a few minutes.
                 </p>
               </div>
             </CardContent>
@@ -170,86 +147,86 @@ export default function Credits() {
         <Card>
           <CardHeader>
             <CardTitle>Buy credits</CardTitle>
-            <CardDescription>Pick a package, pay instantly, and your credits are added automatically.</CardDescription>
+            <CardDescription>
+              Pick a package, send the money, upload the screenshot — credits land in your account automatically.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {(settings?.packages || []).map((pkg, i) => (
-                <div
+                <button
                   key={i}
-                  className={`rounded-lg border-2 p-4 transition-colors ${
+                  type="button"
+                  onClick={() => setSelected(pkg)}
+                  className={`text-left rounded-lg border-2 p-4 transition-colors ${
                     selected?.credits === pkg.credits ? "border-primary bg-primary/5" : "border-border"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-2xl font-bold">{pkg.credits} credits</p>
-                    {i === (settings?.packages.length || 0) - 1 && (
-                      <Badge variant="secondary">Best value</Badge>
-                    )}
+                    {i === (settings?.packages.length || 0) - 1 && <Badge variant="secondary">Best value</Badge>}
                   </div>
                   <p className="text-primary font-semibold mt-1">PKR {pkg.price.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    See {pkg.credits} sellers' contact details
-                  </p>
-                  <Button
-                    onClick={() => payNow(pkg)}
-                    disabled={paying}
-                    className="w-full mt-3"
-                  >
-                    {paying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                    Pay now — instant
-                  </Button>
-                </div>
+                  <p className="text-xs text-muted-foreground mt-1">See {pkg.credits} sellers' contact details</p>
+                </button>
               ))}
             </div>
 
-            <div className="rounded-lg border">
-              <button
-                type="button"
-                onClick={() => setManualOpen((v) => !v)}
-                className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium"
-              >
-                Or pay manually with JazzCash / EasyPaisa
-                <ChevronDown className={`h-4 w-4 transition-transform ${manualOpen ? "rotate-180" : ""}`} />
-              </button>
-              {manualOpen && (
-                <div className="border-t p-4 space-y-4 bg-muted/40">
-                  {selected && (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <Phone className="h-4 w-4 mt-1 text-primary" />
-                        <div className="text-sm">
-                          <p className="font-medium">Send PKR {selected.price.toLocaleString()} to JazzCash / EasyPaisa</p>
-                          <p className="text-lg font-bold text-primary">{PAYMENT_NUMBER}</p>
-                          <p className="text-muted-foreground">Account title: Behen.pk</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="reference">Transaction ID (optional)</Label>
-                        <Input
-                          id="reference"
-                          value={reference}
-                          onChange={(e) => setReference(e.target.value)}
-                          placeholder="e.g. TXN123456789"
-                        />
-                      </div>
-                      <Button onClick={handleSubmitPurchase} disabled={submitting} className="w-full">
-                        {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        I have paid — add my {selected.credits} credits
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        Manual payments are added after the admin confirms the money arrived.
-                      </p>
-                    </>
-                  )}
-                  {!selected && (
-                    <p className="text-sm text-muted-foreground">
-                      Pick a package above first, then send the payment manually.
+            {selected ? (
+              <div className="rounded-lg border p-4 space-y-4 bg-muted/40">
+                <div className="flex items-start gap-2">
+                  <Phone className="h-4 w-4 mt-1 text-primary" />
+                  <div className="text-sm">
+                    <p className="font-medium">
+                      Step 1 — Send PKR {selected.price.toLocaleString()} to JazzCash / EasyPaisa
+                    </p>
+                    <p className="text-lg font-bold text-primary">{PAYMENT_NUMBER}</p>
+                    <p className="text-muted-foreground">Account title: Behen.pk</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="proof">Step 2 — Upload the payment screenshot</Label>
+                  <Input
+                    id="proof"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                  />
+                  {proofFile && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      {proofFile.name}
                     </p>
                   )}
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reference">Transaction ID (optional)</Label>
+                  <Input
+                    id="reference"
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="e.g. TXN123456789"
+                  />
+                </div>
+
+                <Button onClick={handleSubmitPurchase} disabled={submitting || !proofFile} className="w-full">
+                  {submitting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 h-4 w-4" />
+                  )}
+                  I have paid — add my {selected.credits} credits
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Your credits are added automatically a few minutes after the screenshot is uploaded.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Pick a package above to see the payment details.</p>
+            )}
           </CardContent>
         </Card>
 
@@ -262,19 +239,22 @@ export default function Credits() {
               {(purchases as any[]).map((p) => (
                 <div key={p.id} className="flex items-center justify-between text-sm border-b pb-2 last:border-0">
                   <div>
-                    <p className="font-medium">{p.credits} credits — PKR {Number(p.amount_pkr).toLocaleString()}</p>
+                    <p className="font-medium">
+                      {p.credits} credits — PKR {Number(p.amount_pkr).toLocaleString()}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(p.created_at), "dd MMM yyyy, h:mm a")}
-                      {p.provider === "safepay" ? " · instant" : " · manual"}
                     </p>
                   </div>
-                  <Badge variant={p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"}>
+                  <Badge
+                    variant={p.status === "approved" ? "default" : p.status === "rejected" ? "destructive" : "secondary"}
+                  >
                     {p.status === "approved" ? (
                       <CheckCircle2 className="h-3 w-3 mr-1" />
                     ) : (
                       <Clock className="h-3 w-3 mr-1" />
                     )}
-                    {p.status}
+                    {p.status === "pending" ? "checking" : p.status}
                   </Badge>
                 </div>
               ))}
