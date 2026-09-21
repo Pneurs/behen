@@ -203,16 +203,25 @@ export default function Credits() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reference">Transaction ID (optional)</Label>
+                  <Label htmlFor="reference">
+                    Step 3 — Transaction ID <span className="text-destructive">*</span>
+                  </Label>
                   <Input
                     id="reference"
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="e.g. TXN123456789"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    You'll find it in the JazzCash / EasyPaisa confirmation message.
+                  </p>
                 </div>
 
-                <Button onClick={handleSubmitPurchase} disabled={submitting || !proofFile} className="w-full">
+                <Button
+                  onClick={handleSubmitPurchase}
+                  disabled={submitting || !proofFile || !reference.trim()}
+                  className="w-full"
+                >
                   {submitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
