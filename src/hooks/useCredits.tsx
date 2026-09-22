@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export interface CreditPackage {
   credits: number;
   price: number;
+  originalPrice?: number;
 }
 
 export interface CreditSettings {
@@ -19,8 +20,8 @@ const DEFAULTS: CreditSettings = {
   costPerUnlock: 1,
   signupGrant: 0,
   packages: [
-    { credits: 3, price: 300 },
-    { credits: 5, price: 450 },
+    { credits: 3, price: 300, originalPrice: 600 },
+    { credits: 5, price: 450, originalPrice: 1000 },
   ],
 };
 
@@ -48,7 +49,11 @@ export const useCreditSettings = () => {
         if (row.key === "credit_signup_grant") result.signupGrant = Number(value?.credits ?? 0) || 0;
         if (row.key === "credit_packages" && Array.isArray(value)) {
           result.packages = value
-            .map((p: any) => ({ credits: Number(p?.credits) || 0, price: Number(p?.price) || 0 }))
+            .map((p: any) => ({
+              credits: Number(p?.credits) || 0,
+              price: Number(p?.price) || 0,
+              originalPrice: Number(p?.originalPrice) || undefined,
+            }))
             .filter((p: CreditPackage) => p.credits > 0);
         }
       });
