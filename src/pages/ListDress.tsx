@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
 import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
+import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -47,6 +48,7 @@ const ListDress = () => {
   const [phoneVerified, setPhoneVerified] = useState(true);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
+  const { aiImageEnabled } = useAiImageEnabled();
   
   // Multi-step wizard state
   const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
@@ -787,7 +789,9 @@ const ListDress = () => {
       <CardHeader>
         <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
         <CardDescription>
-          Upload 1-3 clear photos of your dress. We'll generate a public AI Image that keeps your real photos private.
+          {aiImageEnabled
+            ? "Upload 1-3 clear photos of your dress. We'll generate a public AI Image that keeps your real photos private."
+            : "Upload 1-3 clear original photos of your dress. Your first photo will be the main product photo."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
