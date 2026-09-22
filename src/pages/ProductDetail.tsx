@@ -279,7 +279,7 @@ const ProductDetail = () => {
               )}
               
               {/* AI Image Badge */}
-              {product.ai_cover_image && (
+              {aiImageEnabled && product.ai_cover_image && (
                 <div className="absolute top-4 right-4">
                   <Badge variant="secondary" className="bg-white/90 text-xs">
                     AI Image

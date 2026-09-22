@@ -28,6 +28,7 @@ import ReferralSystemSettings from "@/components/admin/ReferralSystemSettings";
 import AdminPhoneVerifications from "@/components/admin/AdminPhoneVerifications";
 import WhatsAppSettings from "@/components/admin/WhatsAppSettings";
 import CreditSettings from "@/components/admin/CreditSettings";
+import AiImageSettings from "@/components/admin/AiImageSettings";
 import AdminCreditPurchases from "@/components/admin/AdminCreditPurchases";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
@@ -1536,6 +1537,11 @@ export default function AdminDashboard() {
                 {/* Hero Section Settings */}
                 <div className="mt-6">
                   <HeroSettings />
+                </div>
+
+                {/* AI Cover Images */}
+                <div className="mt-6">
+                  <AiImageSettings />
                 </div>
 
                 {/* Buy & Rent Settings */}
