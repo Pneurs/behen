@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Tag, Star, Heart } from "lucide-react";
 import LocationDistancePopup from "./LocationDistancePopup";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 
 interface ProductCardProps {
   product: {
@@ -40,6 +41,7 @@ const ProductCard = memo(({
 }: ProductCardProps) => {
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(product.id);
+  const { aiImageEnabled } = useAiImageEnabled();
 
   const getCategoryLabel = (category: string) => {
     return category.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -71,11 +73,13 @@ const ProductCard = memo(({
               decoding="async"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
-            <div className="absolute top-2 right-2 flex gap-2">
-              <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
-                AI Generated
-              </Badge>
-            </div>
+            {aiImageEnabled && (
+              <div className="absolute top-2 right-2 flex gap-2">
+                <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
+                  AI Generated
+                </Badge>
+              </div>
+            )}
             <div className="absolute top-2 left-2">
               <Button
                 variant="ghost"

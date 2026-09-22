@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
 import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
+import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -47,6 +48,7 @@ const ListDress = () => {
   const [phoneVerified, setPhoneVerified] = useState(true);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
+  const { aiImageEnabled } = useAiImageEnabled();
   
   // Multi-step wizard state
   const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
@@ -677,7 +679,10 @@ const ListDress = () => {
           .insert({
             ...productData,
             owner_id: user.id,
-            ai_cover_image: aiCoverImage,
+            // When AI generation is off (or skipped), use the seller's own uploaded photo
+            ai_cover_image: aiCoverImage.startsWith("data:")
+              ? (realImageUrls[0] || null)
+              : (aiCoverImage || realImageUrls[0] || null),
             real_images: realImageUrls,
             ai_generation_attempts: 1,
             image_quality_validated: imageQualityChecked,
@@ -787,7 +792,9 @@ const ListDress = () => {
       <CardHeader>
         <CardTitle className="text-2xl">Upload Your Dress Photos</CardTitle>
         <CardDescription>
-          Upload 1-3 clear photos of your dress. We'll generate a public AI Image that keeps your real photos private.
+          {aiImageEnabled
+            ? "Upload 1-3 clear photos of your dress. We'll generate a public AI Image that keeps your real photos private."
+            : "Upload 1-3 clear original photos of your dress. Your first photo will be the main product photo."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -814,12 +821,14 @@ const ListDress = () => {
           </AlertDescription>
         </Alert>
 
-        <Alert>
-          <Check className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Privacy note:</strong> Your public AI Image will look ~98% similar to your real photo, but your real photo stays private so nobody can tell it’s rented or pre-loved.
-          </AlertDescription>
-        </Alert>
+        {aiImageEnabled && (
+          <Alert>
+            <Check className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Privacy note:</strong> Your public AI Image will look ~98% similar to your real photo, but your real photo stays private so nobody can tell it’s rented or pre-loved.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-4">
           <Label>Upload Images (1-3 photos)</Label>
@@ -869,36 +878,54 @@ const ListDress = () => {
           )}
         </div>
 
-        <Button
-          onClick={handleContinueToGeneration}
-          disabled={imageFiles.length < 1 || imageFiles.length > 3}
-          className="w-full"
-          size="lg"
-        >
-          Generate AI Image
-        </Button>
+        {aiImageEnabled ? (
+          <>
+            <Button
+              onClick={handleContinueToGeneration}
+              disabled={imageFiles.length < 1 || imageFiles.length > 3}
+              className="w-full"
+              size="lg"
+            >
+              Generate AI Image
+            </Button>
 
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">Or</span>
-          </div>
-        </div>
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
+              </div>
+            </div>
 
-        <Button
-          onClick={handleSkipAI}
-          disabled={imageFiles.length < 1}
-          variant="outline"
-          className="w-full"
-          size="lg"
-        >
-          Skip AI - Use My Image
-        </Button>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          If you have a very clear, professional-looking photo with plain background, you can use it directly as your main product image.
-        </p>
+            <Button
+              onClick={handleSkipAI}
+              disabled={imageFiles.length < 1}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              Skip AI - Use My Image
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              If you have a very clear, professional-looking photo with plain background, you can use it directly as your main product image.
+            </p>
+          </>
+        ) : (
+          <>
+            <Button
+              onClick={handleSkipAI}
+              disabled={imageFiles.length < 1 || imageFiles.length > 3}
+              className="w-full"
+              size="lg"
+            >
+              Continue with My Photos
+            </Button>
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Your first photo will be used as the main product photo.
+            </p>
+          </>
+        )}
       </CardContent>
     </Card>
     </div>

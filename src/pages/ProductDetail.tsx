@@ -14,6 +14,7 @@ import OwnerContactCard from "@/components/OwnerContactCard";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useBuyRentEnabled } from "@/hooks/useBuyRentEnabled";
+import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -52,6 +53,7 @@ const ProductDetail = () => {
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
   const { chatEnabled } = useChatEnabled();
   const { buyEnabled, rentEnabled } = useBuyRentEnabled();
+  const { aiImageEnabled } = useAiImageEnabled();
 
   // Check if current user is admin or super_admin
   useEffect(() => {
@@ -279,7 +281,7 @@ const ProductDetail = () => {
               )}
               
               {/* AI Image Badge */}
-              {product.ai_cover_image && (
+              {aiImageEnabled && product.ai_cover_image && (
                 <div className="absolute top-4 right-4">
                   <Badge variant="secondary" className="bg-white/90 text-xs">
                     AI Image
