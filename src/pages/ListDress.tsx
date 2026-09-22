@@ -679,7 +679,10 @@ const ListDress = () => {
           .insert({
             ...productData,
             owner_id: user.id,
-            ai_cover_image: aiCoverImage,
+            // When AI generation is off (or skipped), use the seller's own uploaded photo
+            ai_cover_image: aiCoverImage.startsWith("data:")
+              ? (realImageUrls[0] || null)
+              : (aiCoverImage || realImageUrls[0] || null),
             real_images: realImageUrls,
             ai_generation_attempts: 1,
             image_quality_validated: imageQualityChecked,
