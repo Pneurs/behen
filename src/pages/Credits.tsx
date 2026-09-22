@@ -94,7 +94,7 @@ export default function Credits() {
       });
       if (error) throw error;
 
-      toast.success("Screenshot received! Your credits are added automatically in a few minutes.");
+      toast.success("Screenshot received! Come back within 2 hours — we're verifying your payment.");
       setSelected(null);
       setReference("");
       setProofFile(null);
@@ -137,11 +137,11 @@ export default function Credits() {
         {pendingCount > 0 && (
           <Card className="border-primary/40">
             <CardContent className="flex items-center gap-3 py-4">
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <Clock className="h-5 w-5 text-primary" />
               <div className="text-sm">
-                <p className="font-medium">Checking your payment…</p>
+                <p className="font-medium">Verifying your payment…</p>
                 <p className="text-muted-foreground">
-                  Keep this page open — your credits are added automatically within a few minutes.
+                  Come back within 2 hours — we're verifying your payment and your credits will be added automatically.
                 </p>
               </div>
             </CardContent>
@@ -152,7 +152,7 @@ export default function Credits() {
           <CardHeader>
             <CardTitle>Buy credits</CardTitle>
             <CardDescription>
-              Pick a package, send the money, upload the screenshot — credits land in your account automatically.
+              Pick a package, send the money, upload the screenshot — credits land in your account within 2 hours after verification.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -246,7 +246,7 @@ export default function Credits() {
                   I have paid — add my {selected.credits} credits
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Your credits are added automatically a few minutes after the screenshot is uploaded.
+                  You can close this page — we verify each payment manually and your credits are added automatically within 2 hours.
                 </p>
               </div>
             ) : (

@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet, User, ChevronDown } from "lucide-react";
+import { Menu, Upload, MessageCircle, LogIn, Heart, CalendarDays, LogOut, Shield, Wallet, User, ChevronDown, Coins } from "lucide-react";
+import { useCreditBalance } from "@/hooks/useCredits";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HeaderSearchPopup } from "./HeaderSearchPopup";
@@ -26,6 +27,7 @@ export const EnhancedHeader = () => {
   const { user, userRole, isAdmin, signOut } = useAuth();
   const { earnings } = useEarnings();
   const { data: branding } = useBranding();
+  const { data: creditBalance } = useCreditBalance();
   const { data: referralSettings } = useReferralSystemEnabled();
 
   const [userName, setUserName] = useState<string>("");
@@ -210,6 +212,11 @@ export const EnhancedHeader = () => {
                 <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/credits")} className="cursor-pointer">
+                  <Coins className="mr-2 h-4 w-4" />
+                  Credits
+                  <span className="ml-auto font-semibold text-primary">{creditBalance ?? 0}</span>
                 </DropdownMenuItem>
                 {userRole === "bari" && referralSettings?.yourBalanceEnabled && (
                   <DropdownMenuItem 
