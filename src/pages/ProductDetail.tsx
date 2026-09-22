@@ -14,6 +14,7 @@ import OwnerContactCard from "@/components/OwnerContactCard";
 import { useWishlist } from "@/hooks/useWishlist";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 import { useBuyRentEnabled } from "@/hooks/useBuyRentEnabled";
+import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
