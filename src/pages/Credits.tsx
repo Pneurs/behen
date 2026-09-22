@@ -170,7 +170,19 @@ export default function Credits() {
                     <p className="text-2xl font-bold">{pkg.credits} credits</p>
                     {i === (settings?.packages.length || 0) - 1 && <Badge variant="secondary">Best value</Badge>}
                   </div>
-                  <p className="text-primary font-semibold mt-1">PKR {pkg.price.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {pkg.originalPrice && pkg.originalPrice > pkg.price && (
+                      <span className="text-sm text-muted-foreground line-through">
+                        PKR {pkg.originalPrice.toLocaleString()}
+                      </span>
+                    )}
+                    <p className="text-primary font-semibold">PKR {pkg.price.toLocaleString()}</p>
+                  </div>
+                  {pkg.originalPrice && pkg.originalPrice > pkg.price && (
+                    <Badge variant="destructive" className="mt-1">
+                      {Math.round(((pkg.originalPrice - pkg.price) / pkg.originalPrice) * 100)}% OFF
+                    </Badge>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1">See {pkg.credits} sellers' contact details</p>
                 </button>
               ))}

@@ -155,6 +155,23 @@ export default function CreditSettings() {
                   }}
                 />
               </div>
+              <div className="flex-1 space-y-1">
+                <Label className="text-xs">Original price (PKR, optional)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="e.g. 600"
+                  value={pkg.originalPrice ?? ""}
+                  onChange={(e) => {
+                    const next = [...packages];
+                    next[i] = {
+                      ...next[i],
+                      originalPrice: e.target.value === "" ? undefined : Number(e.target.value),
+                    };
+                    setPackages(next);
+                  }}
+                />
+              </div>
               <Button
                 type="button"
                 variant="ghost"
