@@ -53,6 +53,7 @@ const ProductDetail = () => {
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
   const { chatEnabled } = useChatEnabled();
   const { buyEnabled, rentEnabled } = useBuyRentEnabled();
+  const { aiImageEnabled } = useAiImageEnabled();
 
   // Check if current user is admin or super_admin
   useEffect(() => {
