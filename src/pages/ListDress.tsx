@@ -1286,7 +1286,9 @@ const ListDress = () => {
 
           {/* Pricing */}
           <div className={currentStep === "pricing" ? "space-y-4" : "hidden"}>
-            <h3 className="text-lg font-semibold">Pricing</h3>
+            {formData.listing_type && (
+              <h3 className="text-lg font-semibold">Price Details</h3>
+            )}
 
             <div>
               <Label htmlFor="listing_type">Listing Type *</Label>
