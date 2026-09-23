@@ -2003,6 +2003,11 @@ const ListDress = () => {
     setCurrentStep("upload");
     setImageFiles([]);
     setImagePreviews([]);
+    setPrivateImageFiles([]);
+    setPrivateImagePreviews([]);
+    setExistingPrivateImagePaths([]);
+    setVideoFile(null);
+    setExistingUploadedVideoPath(null);
     setImageQualityChecked(false);
     setAiCoverImage("");
     setAiGenerationAttempts(0);
@@ -2129,48 +2134,21 @@ const ListDress = () => {
       <Header />
       <div className="container py-8">
         {/* Progress Indicator */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="flex items-center justify-between">
-            {[
-              { step: "upload", label: "Upload Photos", num: 1 },
-              { step: "generating", label: "AI Generation", num: 2 },
-              { step: "confirm", label: "Confirm", num: 3 },
-              { step: "details", label: "Product Details", num: 4 },
-            ].map((item, index) => {
-              const getCurrentStepNum = () => {
-                if (currentStep === "upload") return 1;
-                if (currentStep === "generating") return 2;
-                if (currentStep === "confirm") return 3;
-                return 4;
-              };
-              
-              const currentStepNum = getCurrentStepNum();
-              const isActive = currentStep === item.step;
-              const isCompleted = item.num < currentStepNum;
-              
-              return (
-                <div key={item.step} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    isActive || isCompleted
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted bg-muted text-muted-foreground"
-                  }`}>
-                    {item.num}
-                  </div>
-                  {index < 3 && (
-                    <div className={`w-20 h-0.5 mx-2 ${
-                      isCompleted ? "bg-primary" : "bg-muted"
-                    }`} />
-                  )}
+        <div className="mx-auto mb-8 max-w-4xl overflow-x-auto pb-2">
+          <div className="flex min-w-[650px] items-start justify-between">
+            {wizardSteps.map((item, index) => {
+              const activeStep = currentStep === "generating" || currentStep === "confirm" ? "upload" : currentStep;
+              const currentIndex = wizardSteps.findIndex((entry) => entry.step === activeStep);
+              const isActive = item.step === activeStep;
+              const isCompleted = index < currentIndex;
+              return <div key={item.step} className="flex flex-1 items-start last:flex-none">
+                <div className="flex w-24 flex-col items-center gap-2 text-center">
+                  <div className={cn("flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold", isActive || isCompleted ? "border-primary bg-primary text-primary-foreground" : "border-muted bg-muted text-muted-foreground")}>{isCompleted ? <Check className="h-4 w-4" /> : index + 1}</div>
+                  <span className={cn("text-xs", isActive ? "font-semibold text-foreground" : "text-muted-foreground")}>{item.label}</span>
                 </div>
-              );
+                {index < wizardSteps.length - 1 && <div className={cn("mt-4 h-0.5 flex-1", isCompleted ? "bg-primary" : "bg-muted")} />}
+              </div>;
             })}
-          </div>
-          <div className="flex justify-between mt-2">
-            <span className="text-xs text-muted-foreground">Upload</span>
-            <span className="text-xs text-muted-foreground">Generate</span>
-            <span className="text-xs text-muted-foreground">Confirm</span>
-            <span className="text-xs text-muted-foreground">Details</span>
           </div>
         </div>
 
@@ -2178,7 +2156,7 @@ const ListDress = () => {
         {currentStep === "upload" && renderUploadStep()}
         {currentStep === "generating" && renderGeneratingStep()}
         {currentStep === "confirm" && renderConfirmStep()}
-        {currentStep === "details" && renderDetailsStep()}
+        {["details", "pricing", "instructions", "location", "video"].includes(currentStep) && renderDetailsStep()}
       </div>
     </div>
   );
