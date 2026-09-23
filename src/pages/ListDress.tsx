@@ -1155,12 +1155,12 @@ const ListDress = () => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Add Product Details</CardTitle>
-          <CardDescription>Fill in all required information about your product</CardDescription>
+          <CardTitle>{wizardSteps.find((item) => item.step === currentStep)?.label}</CardTitle>
+          <CardDescription>Complete this section, then continue to the next step.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Additional Real Images */}
-          <div className="space-y-4">
+          <div className="hidden">
             <h3 className="text-lg font-semibold">Product Images (Optional)</h3>
             <p className="text-sm text-muted-foreground">
               Add more real images of your product. These will only be visible to confirmed bookings.
@@ -1215,7 +1215,7 @@ const ListDress = () => {
           </div>
 
           {/* Gender & Category Selection */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Who is this for?</h3>
             
             <GenderCategorySelector
@@ -1248,10 +1248,10 @@ const ListDress = () => {
           </div>
 
           {/* Basic Details */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Basic Details</h3>
             
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
@@ -1302,7 +1302,7 @@ const ListDress = () => {
           </div>
 
           {/* Pricing */}
-          <div className="space-y-4">
+          <div className={currentStep === "pricing" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Pricing</h3>
             
             {formData.listing_type === "rent" && (
@@ -1387,8 +1387,7 @@ const ListDress = () => {
                       placeholder="2000"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      💡 You can take Choti Behen's ID card only, or ID card with security deposit. 
-                      Security will be deposited in your account and returned when the dress is returned.
+                      You can take Choti Behen's ID card only, or ID card with security deposit. Behen.pk is only responsible to contact you both it's not our responsibility to check returned clothes and security returns
                     </p>
                   </div>
                 </div>
@@ -1433,7 +1432,7 @@ const ListDress = () => {
           </div>
 
           {/* Description */}
-          <div>
+          <div className={currentStep === "details" ? "block" : "hidden"}>
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
@@ -1446,7 +1445,7 @@ const ListDress = () => {
           </div>
 
           {/* Fabric & Details */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Fabric & Details</h3>
             
             <div className="grid grid-cols-3 gap-4">
@@ -1481,7 +1480,7 @@ const ListDress = () => {
           </div>
 
           {/* Size & Fit - NOW REQUIRED */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Size & Fit *</h3>
             
             <div className="grid grid-cols-2 gap-4">
@@ -1562,10 +1561,10 @@ const ListDress = () => {
           </div>
 
           {/* NEW: Dry Clean Option */}
-          <div className="space-y-4">
+          <div className={currentStep === "instructions" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Care Instructions *</h3>
             
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label>Requires Dry Cleaning After Use? *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Let renters know if this item must be professionally dry cleaned after use
@@ -1657,7 +1656,7 @@ const ListDress = () => {
           </div>
 
           {/* NEW: Included Accessories */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Included Accessories</h3>
             
             <div className="space-y-2">
@@ -1710,7 +1709,7 @@ const ListDress = () => {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className={currentStep === "location" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Location *</h3>
             
             <div className="grid grid-cols-2 gap-4">
@@ -1814,7 +1813,7 @@ const ListDress = () => {
 
           {/* Pickup & Contact Details - Conditional based on listing type */}
           {formData.listing_type && (
-            <div className="space-y-4">
+            <div className={currentStep === "location" ? "space-y-4" : "hidden"}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
                 {formData.listing_type === "sale" ? "Contact & Pickup Details *" : "Pickup & Dropoff Details *"}
@@ -1903,7 +1902,7 @@ const ListDress = () => {
           )}
 
           {/* Availability Calendar (only for rentals) */}
-          {formData.listing_type === "rent" && (
+          {currentStep === "pricing" && formData.listing_type === "rent" && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Availability Calendar</h3>
               <p className="text-sm text-muted-foreground">
@@ -1917,7 +1916,7 @@ const ListDress = () => {
           )}
 
           {/* Style Tips */}
-          <div>
+          <div className={currentStep === "instructions" ? "block" : "hidden"}>
             <Label htmlFor="style_tips">Style Tips (Optional)</Label>
             <Textarea
               id="style_tips"
@@ -1929,15 +1928,15 @@ const ListDress = () => {
           </div>
 
           {/* Product Video URL */}
-          <div className="space-y-3">
+          <div className={currentStep === "video" ? "space-y-5" : "hidden"}>
             <div className="flex items-center gap-2">
               <Video className="h-5 w-5 text-primary" />
-              <Label htmlFor="video_url">Product Video (Optional)</Label>
+              <Label htmlFor="video_url">Product Video *</Label>
             </div>
             <Alert className="bg-primary/5 border-primary/20">
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">
-                <strong className="text-primary">Products with videos have higher chances of selling!</strong>
+                <strong className="text-primary">A product video is required.</strong>
                 <br />
                 Upload your video to YouTube, Google Drive, or Vimeo and paste the link below.
               </AlertDescription>
@@ -1949,6 +1948,19 @@ const ListDress = () => {
               placeholder="e.g., https://www.youtube.com/watch?v=... or https://drive.google.com/..."
               type="url"
             />
+            <div className="relative py-1 text-center text-xs text-muted-foreground">OR</div>
+            <div className="space-y-2">
+              <Label htmlFor="video-file">Upload video file</Label>
+              <Input
+                id="video-file"
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(event) => setVideoFile(event.target.files?.[0] || null)}
+              />
+              {(videoFile || existingUploadedVideoPath) && (
+                <p className="text-xs text-muted-foreground">{videoFile?.name || "A private video is already saved."}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <ExternalLink className="h-3 w-3" />
               Supported: YouTube, Google Drive, Vimeo, or any public video link
@@ -1957,31 +1969,30 @@ const ListDress = () => {
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
-          onClick={handleBackToUpload}
-          className="w-32"
+          onClick={() => {
+            const index = wizardSteps.findIndex((item) => item.step === currentStep);
+            if (index > 0) goToStep(wizardSteps[index - 1].step);
+          }}
+          disabled={currentStep === "details"}
         >
-          Start Over
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
         </Button>
-        <Button
-          type="submit"
-          disabled={loading || uploadingImages}
-          className="flex-1"
-          size="lg"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {uploadingImages ? "Uploading images..." : "Publishing..."}
-            </>
-          ) : (
-            "Publish Listing"
-          )}
-        </Button>
+        {currentStep !== "video" ? (
+          <Button type="button" className="flex-1" onClick={() => {
+            if (currentStep === "details") continueFromDetails();
+            else if (currentStep === "pricing") continueFromPricing();
+            else if (currentStep === "instructions") goToStep("location");
+            else if (currentStep === "location") continueFromLocation();
+          }}>Continue <ChevronRight className="ml-2 h-4 w-4" /></Button>
+        ) : (
+          <Button type="submit" disabled={loading || uploadingImages || (!formData.video_url && !videoFile && !existingUploadedVideoPath)} className="flex-1" size="lg">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uploadingImages ? "Uploading..." : "Publishing..."}</> : "Publish Listing"}
+          </Button>
+        )}
       </div>
     </form>
   );
