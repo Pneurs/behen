@@ -19,6 +19,10 @@ interface VideoProduct {
   uploaded_video_path: string | null;
   public_images: string[] | null;
   ai_cover_image: string | null;
+  city: string | null;
+  listing_type: string | null;
+  rental_price_4days: number | null;
+  sale_price: number | null;
 }
 
 export default function AdminProductVideos() {
@@ -31,7 +35,7 @@ export default function AdminProductVideos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image")
+        .select("id, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price")
         .or("video_url.not.is.null,uploaded_video_path.not.is.null")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -72,8 +76,25 @@ export default function AdminProductVideos() {
 
   const HASHTAGS = "#behen.pk #Pakistan #Bridaldresses #Partywear";
 
-  const buildCaption = (p: VideoProduct) =>
-    `${p.title}\n\nAvailable now on Behen.pk 💗\nBuy or rent here: ${productLink(p.id)}\n\n${HASHTAGS}`;
+  const money = (n: number) => `PKR ${Number(n).toLocaleString("en-PK")}`;
+
+  const buildCaption = (p: VideoProduct) => {
+    const type = (p.listing_type || "").toLowerCase();
+    const hasRent = (type.includes("rent") || type === "both") && !!p.rental_price_4days;
+    const hasSale = (type.includes("sale") || type.includes("sell") || type === "both") && !!p.sale_price;
+
+    const priceParts: string[] = [];
+    if (hasRent) priceParts.push(`Rent: ${money(p.rental_price_4days as number)} (4 days)`);
+    if (hasSale) priceParts.push(hasRent ? `Sale: ${money(p.sale_price as number)}` : `Price: ${money(p.sale_price as number)}`);
+
+    const lines = [p.title];
+    if (priceParts.length) lines.push(`💰 ${priceParts.join(" | ")}`);
+    if (p.city) lines.push(`📍 ${p.city}`);
+
+    const cta = hasRent && hasSale ? "Rent or buy here" : hasRent ? "Rent here" : "Buy here";
+
+    return `${lines.join("\n")}\n\nAvailable now on Behen.pk 💗\n${cta}: ${productLink(p.id)}\n\n${HASHTAGS}`;
+  };
 
   const copyCaption = async (p: VideoProduct) => {
     try {
