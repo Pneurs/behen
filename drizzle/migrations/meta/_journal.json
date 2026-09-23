@@ -78,6 +78,13 @@
       "when": 1790132097667,
       "tag": "0010_protect_anonymous_product_media",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790133835802,
+      "tag": "0011_super_admin_email_and_credit_notification",
+      "breakpoints": true
     }
   ]
 }

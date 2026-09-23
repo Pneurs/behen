@@ -11,7 +11,7 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "referral_bonus" | "offer_rejected";
+  type: "booking_confirmation" | "payment_verification" | "return_reminder" | "new_message" | "payment_uploaded" | "new_order" | "welcome" | "new_review" | "security_deposit" | "referral_bonus" | "offer_rejected" | "credits_added";
   recipientEmail?: string;
   recipientName?: string;
   data?: any;
@@ -379,6 +379,26 @@ const handler = async (req: Request): Promise<Response> => {
               </ul>
             </div>
             <p><a href="${data?.chatLink || 'https://behen.pk/all-chats'}" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Continue Chat</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>
+        `;
+        break;
+
+      case "credits_added":
+        subject = "Your credits are ready 🎉 - Behen.pk";
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #FF69B4;">Payment Verified — Credits Added!</h1>
+            <p>Hi ${recipientName || 'Behen'},</p>
+            <p>We've verified your payment and added <strong>${data?.credits || ''} credits</strong> to your account.</p>
+            <div style="background: #fdf2f8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FF69B4;">
+              <p style="margin: 5px 0;"><strong>Credits added:</strong> ${data?.credits || ''}</p>
+              ${data?.amount ? `<p style="margin: 5px 0;"><strong>Amount paid:</strong> PKR ${data.amount}</p>` : ''}
+              ${data?.reference ? `<p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${data.reference}</p>` : ''}
+              ${data?.balance !== undefined ? `<p style="margin: 5px 0;"><strong>New balance:</strong> ${data.balance} credits</p>` : ''}
+            </div>
+            <p>You can now use your credits to view seller contact details.</p>
+            <p><a href="https://behen.pk/credits" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View My Credits</a></p>
             <p>Best regards,<br>Behen.pk Team</p>
           </div>
         `;

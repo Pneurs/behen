@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useCreditTransactions, CreditPackage } from "@/hooks/useCredits";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { sendEmailNotification } from "@/lib/emailNotifications";
 
 const PAYMENT_NUMBER = "0332 813 3263";
 
@@ -54,6 +55,37 @@ export default function Credits() {
   });
 
   const pendingCount = (purchases as any[]).filter((p) => p.status === "pending").length;
+
+  // Email the buyer once, as soon as an order we were watching gets approved.
+  const watchedPending = useRef<Set<string>>(new Set());
+  const emailedApproved = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!user) return;
+    (purchases as any[]).forEach((p) => {
+      if (p.status === "pending") {
+        watchedPending.current.add(p.id);
+        return;
+      }
+      if (
+        p.status === "approved" &&
+        watchedPending.current.has(p.id) &&
+        !emailedApproved.current.has(p.id)
+      ) {
+        emailedApproved.current.add(p.id);
+        watchedPending.current.delete(p.id);
+        sendEmailNotification({
+          type: "credits_added",
+          recipientEmail: user.email || "",
+          recipientName: (user.user_metadata as any)?.name || "Behen",
+          data: {
+            credits: p.credits,
+            amount: p.amount_pkr,
+            reference: p.payment_reference,
+          },
+        });
+      }
+    });
+  }, [purchases, user]);
 
   // While an order is waiting, keep checking so the credits appear on their own.
   useEffect(() => {

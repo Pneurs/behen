@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, ShieldCheck, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video
 } from "lucide-react";
+import AdminProductVideos from "@/components/admin/AdminProductVideos";
 import SEOContentManager from "@/components/admin/SEOContentManager";
 import AdminLocationManager from "@/components/admin/AdminLocationManager";
 import AdminCategoryManager from "@/components/admin/AdminCategoryManager";
@@ -779,6 +780,12 @@ export default function AdminDashboard() {
                 <TabsTrigger value="settings" className="data-[state=active]:bg-primary">
                   <Settings className="h-4 w-4 mr-1" />
                   Settings
+                </TabsTrigger>
+              )}
+              {currentRole === "super_admin" && (
+                <TabsTrigger value="product-videos" className="data-[state=active]:bg-primary">
+                  <Video className="h-4 w-4 mr-1" />
+                  Videos
                 </TabsTrigger>
               )}
               {currentRole === "super_admin" && (
@@ -1740,6 +1747,13 @@ export default function AdminDashboard() {
             {currentRole === "super_admin" && (
               <TabsContent value="locations">
                 <AdminLocationManager />
+              </TabsContent>
+            )}
+
+            {/* Product Videos Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="product-videos">
+                <AdminProductVideos />
               </TabsContent>
             )}
 
