@@ -20,6 +20,7 @@ interface ProductCardProps {
     original_price?: number;
     ai_cover_image?: string;
     real_images?: string[];
+    public_images?: string[];
     city?: string;
     area?: string;
     latitude?: number;
@@ -64,10 +65,10 @@ const ProductCard = memo(({
       onClick={onClick}
     >
       <div className="aspect-[3/4] overflow-hidden bg-muted relative">
-        {product.ai_cover_image ? (
+        {(product.public_images?.[0] || product.ai_cover_image) ? (
           <>
             <img
-              src={product.ai_cover_image}
+              src={product.public_images?.[0] || product.ai_cover_image || ""}
               alt={product.title}
               loading="lazy"
               decoding="async"
@@ -99,14 +100,6 @@ const ProductCard = memo(({
               </Button>
             </div>
           </>
-        ) : product.real_images && product.real_images.length > 0 ? (
-          <img
-            src={product.real_images[0]}
-            alt={product.title}
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
             <Tag className="h-16 w-16 text-muted-foreground" />

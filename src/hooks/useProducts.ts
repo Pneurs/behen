@@ -12,6 +12,7 @@ export interface Product {
   listing_type: string;
   ai_cover_image: string | null;
   real_images: string[] | null;
+  public_images?: string[] | null;
   city: string;
   area: string;
   original_price: number | null;
@@ -37,7 +38,7 @@ interface UseProductsOptions {
 const PRODUCT_CARD_FIELDS = `
   id, title, category, condition, 
   rental_price_per_day, rental_price_4days, sale_price, 
-  listing_type, ai_cover_image, real_images, 
+  listing_type, ai_cover_image, public_images, 
   city, area, original_price, status, owner_id
 `;
 

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info, Video, ExternalLink, Sparkles } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -51,12 +51,18 @@ const ListDress = () => {
   const { aiImageEnabled } = useAiImageEnabled();
   
   // Multi-step wizard state
-  const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
+  type WizardStep = "upload" | "details" | "pricing" | "instructions" | "location" | "video";
+  const [currentStep, setCurrentStep] = useState<WizardStep | "generating" | "confirm" | "success">("upload");
   const [createdProduct, setCreatedProduct] = useState<{id: string; title: string; image: string; price: string} | null>(null);
   
   // Step 1: Image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [privateImageFiles, setPrivateImageFiles] = useState<File[]>([]);
+  const [privateImagePreviews, setPrivateImagePreviews] = useState<string[]>([]);
+  const [existingPrivateImagePaths, setExistingPrivateImagePaths] = useState<string[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [existingUploadedVideoPath, setExistingUploadedVideoPath] = useState<string | null>(null);
   const [imageQualityChecked, setImageQualityChecked] = useState(false);
   
   // Step 2 & 3: AI generation
@@ -211,6 +217,12 @@ const ListDress = () => {
           if (product) {
             setIsEditMode(true);
             setAiCoverImage(product.ai_cover_image || "");
+            const publicImages = product.public_images?.length
+              ? product.public_images
+              : (product.ai_cover_image ? [product.ai_cover_image] : (product.real_images || []).slice(0, 3));
+            setImagePreviews(publicImages);
+            setExistingPrivateImagePaths(product.private_image_paths || []);
+            setExistingUploadedVideoPath(product.uploaded_video_path || null);
             
             // Load form data
             setFormData({
@@ -269,8 +281,7 @@ const ListDress = () => {
               }
             }
 
-            // Skip to details step when editing
-            setCurrentStep("details");
+            setCurrentStep("upload");
           }
         } catch (error: any) {
           console.error("Error loading product:", error);
@@ -336,17 +347,17 @@ const ListDress = () => {
     setImageFiles(validFiles);
   };
 
-  // STEP 1B (Details step): Optional additional real images (up to 5 total)
+  // Registered-only original photos (up to 6)
   const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    if (files.length + imageFiles.length > 5) {
-      toast.error("Maximum 5 images allowed");
+    if (files.length + privateImageFiles.length + existingPrivateImagePaths.length > 6) {
+      toast.error("Maximum 6 registered-only images allowed");
       return;
     }
 
-    const newFiles = files.slice(0, 5 - imageFiles.length);
+    const newFiles = files.slice(0, 6 - privateImageFiles.length - existingPrivateImagePaths.length);
 
     // Basic quality check
     const validFiles: File[] = [];
@@ -375,18 +386,23 @@ const ListDress = () => {
       reader.onloadend = () => {
         validPreviews.push(reader.result as string);
         if (validPreviews.length === validFiles.length) {
-          setImagePreviews((prev) => [...prev, ...validPreviews]);
+          setPrivateImagePreviews((prev) => [...prev, ...validPreviews]);
         }
       };
       reader.readAsDataURL(file);
     });
 
-    setImageFiles((prev) => [...prev, ...validFiles]);
+    setPrivateImageFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeImage = (index: number) => {
     setImageFiles(imageFiles.filter((_, i) => i !== index));
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+  };
+
+  const removePrivateImage = (index: number) => {
+    setPrivateImageFiles((files) => files.filter((_, i) => i !== index));
+    setPrivateImagePreviews((previews) => previews.filter((_, i) => i !== index));
   };
 
   const validateImageQuality = () => {
@@ -538,6 +554,50 @@ const ListDress = () => {
     }
   };
 
+  const wizardSteps: Array<{ step: WizardStep; label: string }> = [
+    { step: "upload", label: "Images" },
+    { step: "details", label: "Details" },
+    { step: "pricing", label: "Pricing" },
+    { step: "instructions", label: "Instructions" },
+    { step: "location", label: "Location & Delivery" },
+    { step: "video", label: "Video" },
+  ];
+
+  const goToStep = (step: WizardStep) => setCurrentStep(step);
+
+  const continueFromImages = () => {
+    if (!isEditMode && !validateImageQuality()) return;
+    if (imagePreviews.length === 0) {
+      toast.error("Please add at least one main image");
+      return;
+    }
+    if (!aiCoverImage) setAiCoverImage(imagePreviews[0]);
+    goToStep("details");
+  };
+
+  const continueFromDetails = () => {
+    const result = listingSchema.pick({ title: true, category: true, condition: true, description: true, size: true }).safeParse(formData);
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || "Please complete the required details");
+      return;
+    }
+    goToStep("pricing");
+  };
+
+  const continueFromPricing = () => {
+    if (!formData.listing_type) return void toast.error("Please select rent or sale");
+    if (formData.listing_type === "rent" && !formData.rental_price_4days) return void toast.error("Please enter the 4-day rental price");
+    if (formData.listing_type === "sale" && !formData.sale_price) return void toast.error("Please enter the sale price");
+    goToStep("instructions");
+  };
+
+  const continueFromLocation = () => {
+    if (!formData.city || !formData.area || !formData.pickup_location) return void toast.error("Please complete the required location details");
+    if (formData.listing_type === "sale" && !formData.contact_phone) return void toast.error("Please enter a contact phone number");
+    if (formData.listing_type === "rent" && !formData.dropoff_location) return void toast.error("Please enter the drop-off location");
+    goToStep("video");
+  };
+
   const handleBackToUpload = () => {
     setCurrentStep("upload");
     setAiCoverImage("");
@@ -572,12 +632,32 @@ const ListDress = () => {
     return uploadedUrls;
   };
 
+  const uploadPrivateFiles = async () => {
+    if (!user) throw new Error("Please sign in again");
+    const paths: string[] = [];
+    for (const file of privateImageFiles) {
+      const extension = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/images/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("product-private-media").upload(path, file);
+      if (error) throw error;
+      paths.push(path);
+    }
+    let uploadedVideoPath: string | null = null;
+    if (videoFile) {
+      const extension = videoFile.name.split(".").pop() || "mp4";
+      uploadedVideoPath = `${user.id}/videos/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("product-private-media").upload(uploadedVideoPath, videoFile);
+      if (error) throw error;
+    }
+    return { paths, uploadedVideoPath };
+  };
+
   // STEP 4: Final form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!aiCoverImage && !isEditMode) {
-      toast.error("Please generate and confirm the AI Image first");
+    if (!formData.video_url && !videoFile && !existingUploadedVideoPath) {
+      toast.error("Please upload a product video or paste a public video link");
       return;
     }
 
@@ -605,6 +685,7 @@ const ListDress = () => {
         realImageUrls = await uploadImages();
         setUploadingImages(false);
       }
+      const privateUploads = await uploadPrivateFiles();
 
       // Prepare availability data
       const availabilityData = {
@@ -652,6 +733,9 @@ const ListDress = () => {
         dry_cleaned: formData.listing_type === "rent" ? formData.dry_cleaned : null,
         alterations_allowed: formData.listing_type === "rent" ? formData.alterations_allowed : null,
         video_url: formData.video_url || null,
+        public_images: realImageUrls.length > 0 ? realImageUrls.slice(0, 3) : imagePreviews.slice(0, 3),
+        private_image_paths: [...existingPrivateImagePaths, ...privateUploads.paths].slice(0, 6),
+        uploaded_video_path: privateUploads.uploadedVideoPath || existingUploadedVideoPath,
         updated_at: new Date().toISOString(),
       };
 
@@ -831,7 +915,8 @@ const ListDress = () => {
         )}
 
         <div className="space-y-4">
-          <Label>Upload Images (1-3 photos)</Label>
+          <Label>Main Images (1-3 photos)</Label>
+          <p className="text-sm text-muted-foreground">These images will be shown to non-registered users.</p>
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <input
               type="file"
@@ -878,6 +963,33 @@ const ListDress = () => {
           )}
         </div>
 
+        <div className="space-y-4 border-t pt-6">
+          <div>
+            <Label>More Original Images (up to 6)</Label>
+            <p className="text-sm text-muted-foreground">These images will only be seen by registered users.</p>
+          </div>
+          <div className="border-2 border-dashed rounded-lg p-6 text-center">
+            <input id="private-image-upload" type="file" accept="image/*" multiple className="hidden" onChange={handleAdditionalImagesChange} />
+            <label htmlFor="private-image-upload" className="cursor-pointer flex flex-col items-center gap-2">
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Upload members-only photos</span>
+            </label>
+          </div>
+          {privateImagePreviews.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {privateImagePreviews.map((preview, index) => (
+                <div key={preview} className="relative">
+                  <img src={preview} alt={`Members-only preview ${index + 1}`} className="h-28 w-full rounded-md object-cover" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute right-1 top-1 h-7 w-7" onClick={() => removePrivateImage(index)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {existingPrivateImagePaths.length > 0 && <p className="text-xs text-muted-foreground">{existingPrivateImagePaths.length} protected image(s) already saved.</p>}
+        </div>
+
         {aiImageEnabled ? (
           <>
             <Button
@@ -899,8 +1011,8 @@ const ListDress = () => {
             </div>
 
             <Button
-              onClick={handleSkipAI}
-              disabled={imageFiles.length < 1}
+              onClick={continueFromImages}
+              disabled={imagePreviews.length < 1}
               variant="outline"
               className="w-full"
               size="lg"
@@ -914,8 +1026,8 @@ const ListDress = () => {
         ) : (
           <>
             <Button
-              onClick={handleSkipAI}
-              disabled={imageFiles.length < 1 || imageFiles.length > 3}
+              onClick={continueFromImages}
+              disabled={imagePreviews.length < 1 || imagePreviews.length > 3}
               className="w-full"
               size="lg"
             >
@@ -1043,12 +1155,12 @@ const ListDress = () => {
     <form onSubmit={handleSubmit} className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Add Product Details</CardTitle>
-          <CardDescription>Fill in all required information about your product</CardDescription>
+          <CardTitle>{wizardSteps.find((item) => item.step === currentStep)?.label}</CardTitle>
+          <CardDescription>Complete this section, then continue to the next step.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Additional Real Images */}
-          <div className="space-y-4">
+          <div className="hidden">
             <h3 className="text-lg font-semibold">Product Images (Optional)</h3>
             <p className="text-sm text-muted-foreground">
               Add more real images of your product. These will only be visible to confirmed bookings.
@@ -1103,7 +1215,7 @@ const ListDress = () => {
           </div>
 
           {/* Gender & Category Selection */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Who is this for?</h3>
             
             <GenderCategorySelector
@@ -1136,7 +1248,7 @@ const ListDress = () => {
           </div>
 
           {/* Basic Details */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Basic Details</h3>
             
             <div>
@@ -1171,7 +1283,7 @@ const ListDress = () => {
               </div>
             </div>
 
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label htmlFor="listing_type">Listing Type *</Label>
               <Select
                 value={formData.listing_type}
@@ -1190,7 +1302,7 @@ const ListDress = () => {
           </div>
 
           {/* Pricing */}
-          <div className="space-y-4">
+          <div className={currentStep === "pricing" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Pricing</h3>
             
             {formData.listing_type === "rent" && (
@@ -1275,8 +1387,7 @@ const ListDress = () => {
                       placeholder="2000"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      💡 You can take Choti Behen's ID card only, or ID card with security deposit. 
-                      Security will be deposited in your account and returned when the dress is returned.
+                      You can take Choti Behen's ID card only, or ID card with security deposit. Behen.pk is only responsible to contact you both it's not our responsibility to check returned clothes and security returns
                     </p>
                   </div>
                 </div>
@@ -1321,7 +1432,7 @@ const ListDress = () => {
           </div>
 
           {/* Description */}
-          <div>
+          <div className={currentStep === "details" ? "block" : "hidden"}>
             <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
@@ -1334,7 +1445,7 @@ const ListDress = () => {
           </div>
 
           {/* Fabric & Details */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Fabric & Details</h3>
             
             <div className="grid grid-cols-3 gap-4">
@@ -1369,7 +1480,7 @@ const ListDress = () => {
           </div>
 
           {/* Size & Fit - NOW REQUIRED */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Size & Fit *</h3>
             
             <div className="grid grid-cols-2 gap-4">
@@ -1450,7 +1561,7 @@ const ListDress = () => {
           </div>
 
           {/* NEW: Dry Clean Option */}
-          <div className="space-y-4">
+          <div className={currentStep === "instructions" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Care Instructions *</h3>
             
             <div>
@@ -1475,7 +1586,7 @@ const ListDress = () => {
             </div>
 
             {/* Negotiation Toggle */}
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label>Allow Price Negotiation? *</Label>
               <RadioGroup
                 value={formData.negotiation_allowed ? "yes" : "no"}
@@ -1545,7 +1656,7 @@ const ListDress = () => {
           </div>
 
           {/* NEW: Included Accessories */}
-          <div className="space-y-4">
+          <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Included Accessories</h3>
             
             <div className="space-y-2">
@@ -1598,7 +1709,7 @@ const ListDress = () => {
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className={currentStep === "location" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Location *</h3>
             
             <div className="grid grid-cols-2 gap-4">
@@ -1702,7 +1813,7 @@ const ListDress = () => {
 
           {/* Pickup & Contact Details - Conditional based on listing type */}
           {formData.listing_type && (
-            <div className="space-y-4">
+            <div className={currentStep === "location" ? "space-y-4" : "hidden"}>
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
                 {formData.listing_type === "sale" ? "Contact & Pickup Details *" : "Pickup & Dropoff Details *"}
@@ -1791,7 +1902,7 @@ const ListDress = () => {
           )}
 
           {/* Availability Calendar (only for rentals) */}
-          {formData.listing_type === "rent" && (
+          {currentStep === "pricing" && formData.listing_type === "rent" && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Availability Calendar</h3>
               <p className="text-sm text-muted-foreground">
@@ -1805,7 +1916,7 @@ const ListDress = () => {
           )}
 
           {/* Style Tips */}
-          <div>
+          <div className={currentStep === "instructions" ? "block" : "hidden"}>
             <Label htmlFor="style_tips">Style Tips (Optional)</Label>
             <Textarea
               id="style_tips"
@@ -1817,15 +1928,15 @@ const ListDress = () => {
           </div>
 
           {/* Product Video URL */}
-          <div className="space-y-3">
+          <div className={currentStep === "video" ? "space-y-5" : "hidden"}>
             <div className="flex items-center gap-2">
               <Video className="h-5 w-5 text-primary" />
-              <Label htmlFor="video_url">Product Video (Optional)</Label>
+              <Label htmlFor="video_url">Product Video *</Label>
             </div>
             <Alert className="bg-primary/5 border-primary/20">
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">
-                <strong className="text-primary">Products with videos have higher chances of selling!</strong>
+                <strong className="text-primary">A product video is required.</strong>
                 <br />
                 Upload your video to YouTube, Google Drive, or Vimeo and paste the link below.
               </AlertDescription>
@@ -1837,6 +1948,19 @@ const ListDress = () => {
               placeholder="e.g., https://www.youtube.com/watch?v=... or https://drive.google.com/..."
               type="url"
             />
+            <div className="relative py-1 text-center text-xs text-muted-foreground">OR</div>
+            <div className="space-y-2">
+              <Label htmlFor="video-file">Upload video file</Label>
+              <Input
+                id="video-file"
+                type="file"
+                accept="video/mp4,video/webm,video/quicktime"
+                onChange={(event) => setVideoFile(event.target.files?.[0] || null)}
+              />
+              {(videoFile || existingUploadedVideoPath) && (
+                <p className="text-xs text-muted-foreground">{videoFile?.name || "A private video is already saved."}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <ExternalLink className="h-3 w-3" />
               Supported: YouTube, Google Drive, Vimeo, or any public video link
@@ -1845,31 +1969,30 @@ const ListDress = () => {
         </CardContent>
       </Card>
 
-      {/* Submit Button */}
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         <Button
           type="button"
           variant="outline"
-          onClick={handleBackToUpload}
-          className="w-32"
+          onClick={() => {
+            const index = wizardSteps.findIndex((item) => item.step === currentStep);
+            if (index > 0) goToStep(wizardSteps[index - 1].step);
+          }}
+          disabled={currentStep === "details"}
         >
-          Start Over
+          <ChevronLeft className="mr-2 h-4 w-4" /> Back
         </Button>
-        <Button
-          type="submit"
-          disabled={loading || uploadingImages}
-          className="flex-1"
-          size="lg"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              {uploadingImages ? "Uploading images..." : "Publishing..."}
-            </>
-          ) : (
-            "Publish Listing"
-          )}
-        </Button>
+        {currentStep !== "video" ? (
+          <Button type="button" className="flex-1" onClick={() => {
+            if (currentStep === "details") continueFromDetails();
+            else if (currentStep === "pricing") continueFromPricing();
+            else if (currentStep === "instructions") goToStep("location");
+            else if (currentStep === "location") continueFromLocation();
+          }}>Continue <ChevronRight className="ml-2 h-4 w-4" /></Button>
+        ) : (
+          <Button type="submit" disabled={loading || uploadingImages || (!formData.video_url && !videoFile && !existingUploadedVideoPath)} className="flex-1" size="lg">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uploadingImages ? "Uploading..." : "Publishing..."}</> : "Publish Listing"}
+          </Button>
+        )}
       </div>
     </form>
   );
@@ -1880,6 +2003,11 @@ const ListDress = () => {
     setCurrentStep("upload");
     setImageFiles([]);
     setImagePreviews([]);
+    setPrivateImageFiles([]);
+    setPrivateImagePreviews([]);
+    setExistingPrivateImagePaths([]);
+    setVideoFile(null);
+    setExistingUploadedVideoPath(null);
     setImageQualityChecked(false);
     setAiCoverImage("");
     setAiGenerationAttempts(0);
@@ -2006,48 +2134,21 @@ const ListDress = () => {
       <Header />
       <div className="container py-8">
         {/* Progress Indicator */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="flex items-center justify-between">
-            {[
-              { step: "upload", label: "Upload Photos", num: 1 },
-              { step: "generating", label: "AI Generation", num: 2 },
-              { step: "confirm", label: "Confirm", num: 3 },
-              { step: "details", label: "Product Details", num: 4 },
-            ].map((item, index) => {
-              const getCurrentStepNum = () => {
-                if (currentStep === "upload") return 1;
-                if (currentStep === "generating") return 2;
-                if (currentStep === "confirm") return 3;
-                return 4;
-              };
-              
-              const currentStepNum = getCurrentStepNum();
-              const isActive = currentStep === item.step;
-              const isCompleted = item.num < currentStepNum;
-              
-              return (
-                <div key={item.step} className="flex items-center">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                    isActive || isCompleted
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted bg-muted text-muted-foreground"
-                  }`}>
-                    {item.num}
-                  </div>
-                  {index < 3 && (
-                    <div className={`w-20 h-0.5 mx-2 ${
-                      isCompleted ? "bg-primary" : "bg-muted"
-                    }`} />
-                  )}
+        <div className="mx-auto mb-8 max-w-4xl overflow-x-auto pb-2">
+          <div className="flex min-w-[650px] items-start justify-between">
+            {wizardSteps.map((item, index) => {
+              const activeStep = currentStep === "generating" || currentStep === "confirm" ? "upload" : currentStep;
+              const currentIndex = wizardSteps.findIndex((entry) => entry.step === activeStep);
+              const isActive = item.step === activeStep;
+              const isCompleted = index < currentIndex;
+              return <div key={item.step} className="flex flex-1 items-start last:flex-none">
+                <div className="flex w-24 flex-col items-center gap-2 text-center">
+                  <div className={cn("flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-semibold", isActive || isCompleted ? "border-primary bg-primary text-primary-foreground" : "border-muted bg-muted text-muted-foreground")}>{isCompleted ? <Check className="h-4 w-4" /> : index + 1}</div>
+                  <span className={cn("text-xs", isActive ? "font-semibold text-foreground" : "text-muted-foreground")}>{item.label}</span>
                 </div>
-              );
+                {index < wizardSteps.length - 1 && <div className={cn("mt-4 h-0.5 flex-1", isCompleted ? "bg-primary" : "bg-muted")} />}
+              </div>;
             })}
-          </div>
-          <div className="flex justify-between mt-2">
-            <span className="text-xs text-muted-foreground">Upload</span>
-            <span className="text-xs text-muted-foreground">Generate</span>
-            <span className="text-xs text-muted-foreground">Confirm</span>
-            <span className="text-xs text-muted-foreground">Details</span>
           </div>
         </div>
 
@@ -2055,7 +2156,7 @@ const ListDress = () => {
         {currentStep === "upload" && renderUploadStep()}
         {currentStep === "generating" && renderGeneratingStep()}
         {currentStep === "confirm" && renderConfirmStep()}
-        {currentStep === "details" && renderDetailsStep()}
+        {["details", "pricing", "instructions", "location", "video"].includes(currentStep) && renderDetailsStep()}
       </div>
     </div>
   );

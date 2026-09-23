@@ -50,6 +50,8 @@ const ProductDetail = () => {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [isAdminOrSuperAdmin, setIsAdminOrSuperAdmin] = useState(false);
+  const [protectedImages, setProtectedImages] = useState<string[]>([]);
+  const [protectedVideoUrl, setProtectedVideoUrl] = useState<string | null>(null);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(id);
   const { chatEnabled } = useChatEnabled();
   const { buyEnabled, rentEnabled } = useBuyRentEnabled();
@@ -87,15 +89,28 @@ const ProductDetail = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      // Load product
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data: { session } } = await supabase.auth.getSession();
+      const productResult = session
+        ? await supabase.from("products").select("*").eq("id", id).single()
+        : await supabase.rpc("get_public_product", { _product_id: id });
+      const productData = productResult.data as any;
+      const productError = productResult.error;
 
       if (productError) throw productError;
       setProduct(productData);
+
+      if (session && productData.private_image_paths?.length) {
+        const { data: signedImages } = await supabase.storage
+          .from("product-private-media")
+          .createSignedUrls(productData.private_image_paths, 600);
+        setProtectedImages((signedImages || []).flatMap((item) => item.signedUrl ? [item.signedUrl] : []));
+      }
+      if (session && productData.uploaded_video_path) {
+        const { data: signedVideo } = await supabase.storage
+          .from("product-private-media")
+          .createSignedUrl(productData.uploaded_video_path, 600);
+        setProtectedVideoUrl(signedVideo?.signedUrl || null);
+      }
 
       // Load owner profile
       const { data: ownerData, error: ownerError } = await supabase
@@ -227,11 +242,13 @@ const ProductDetail = () => {
   if (!product) return null;
 
   // Show AI cover first if available, determine which images to show
-  const displayImages = product.ai_cover_image 
-    ? [product.ai_cover_image]
-    : (product.real_images || []);
+  const displayImages = product.public_images?.length
+    ? product.public_images
+    : product.ai_cover_image
+      ? [product.ai_cover_image]
+      : (product.real_images || []).slice(0, 3);
   
-  const hasRealImages = product.real_images && product.real_images.length > 0;
+  const hasRealImages = protectedImages.length > 0;
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
 
@@ -325,7 +342,7 @@ const ProductDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2">
-                    {product.real_images.slice(0, 6).map((img: string, index: number) => (
+                    {protectedImages.slice(0, 6).map((img: string, index: number) => (
                       <div 
                         key={index}
                         className="aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover:opacity-80 transition-opacity"
@@ -339,16 +356,16 @@ const ProductDetail = () => {
                       </div>
                     ))}
                   </div>
-                  {product.real_images.length > 6 && (
+                  {protectedImages.length > 6 && (
                     <Button 
                       variant="ghost" 
                       className="w-full mt-2"
                       onClick={handleViewRealImages}
                     >
-                      View All {product.real_images.length} Images
+                      View All {protectedImages.length} Images
                     </Button>
                   )}
-                  {product.real_images.length <= 6 && (
+                  {protectedImages.length <= 6 && (
                     <Button 
                       variant="ghost" 
                       className="w-full mt-2"
@@ -581,7 +598,7 @@ const ProductDetail = () => {
             )}
 
             {/* Product Video - Only visible to Admin/Super Admin */}
-            {product.video_url && isAdminOrSuperAdmin && (
+            {(product.video_url || protectedVideoUrl) && (currentUser || isAdminOrSuperAdmin) && (
               <Card className="border-primary/30 bg-primary/5">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -598,7 +615,7 @@ const ProductDetail = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(product.video_url, '_blank')}
+                      onClick={() => window.open(protectedVideoUrl || product.video_url, '_blank')}
                       className="flex items-center gap-2"
                     >
                       <ExternalLink className="h-4 w-4" />
@@ -608,7 +625,7 @@ const ProductDetail = () => {
                       variant="secondary"
                       size="sm"
                       onClick={() => {
-                        navigator.clipboard.writeText(product.video_url);
+                        navigator.clipboard.writeText(protectedVideoUrl || product.video_url);
                         toast.success("Video URL copied to clipboard");
                       }}
                       className="flex items-center gap-2"
@@ -618,7 +635,7 @@ const ProductDetail = () => {
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground break-all bg-muted p-2 rounded">
-                    {product.video_url}
+                    {protectedVideoUrl || product.video_url}
                   </p>
                 </CardContent>
               </Card>
@@ -812,8 +829,7 @@ const ProductDetail = () => {
           setImageViewerOpen(false);
           setShowRealImages(false);
         }}
-        images={product.real_images || []}
-        aiCoverImage={showRealImages ? undefined : product.ai_cover_image}
+        images={showRealImages ? protectedImages : displayImages}
         productTitle={product.title}
       />
     </div>
