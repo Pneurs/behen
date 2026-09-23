@@ -50,6 +50,13 @@
       "when": 1789991514102,
       "tag": "0006_cron_auto_approve_credits_hourly",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790131812285,
+      "tag": "0007_private_product_media",
+      "breakpoints": true
     }
   ]
 }

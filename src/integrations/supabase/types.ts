@@ -754,7 +754,9 @@ export type Database = {
           original_price: number | null
           owner_id: string
           pickup_location: string | null
+          private_image_paths: string[] | null
           product_type: string | null
+          public_images: string[] | null
           real_images: string[] | null
           rental_price_4days: number | null
           rental_price_per_day: number | null
@@ -767,6 +769,7 @@ export type Database = {
           times_rented: number | null
           title: string
           updated_at: string
+          uploaded_video_path: string | null
           video_url: string | null
           waist_size: string | null
           weight_range: string | null
@@ -807,7 +810,9 @@ export type Database = {
           original_price?: number | null
           owner_id: string
           pickup_location?: string | null
+          private_image_paths?: string[] | null
           product_type?: string | null
+          public_images?: string[] | null
           real_images?: string[] | null
           rental_price_4days?: number | null
           rental_price_per_day?: number | null
@@ -820,6 +825,7 @@ export type Database = {
           times_rented?: number | null
           title: string
           updated_at?: string
+          uploaded_video_path?: string | null
           video_url?: string | null
           waist_size?: string | null
           weight_range?: string | null
@@ -860,7 +866,9 @@ export type Database = {
           original_price?: number | null
           owner_id?: string
           pickup_location?: string | null
+          private_image_paths?: string[] | null
           product_type?: string | null
+          public_images?: string[] | null
           real_images?: string[] | null
           rental_price_4days?: number | null
           rental_price_per_day?: number | null
@@ -873,6 +881,7 @@ export type Database = {
           times_rented?: number | null
           title?: string
           updated_at?: string
+          uploaded_video_path?: string | null
           video_url?: string | null
           waist_size?: string | null
           weight_range?: string | null
