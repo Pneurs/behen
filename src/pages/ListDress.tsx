@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, Info, Video, ExternalLink, Sparkles } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -51,12 +51,18 @@ const ListDress = () => {
   const { aiImageEnabled } = useAiImageEnabled();
   
   // Multi-step wizard state
-  const [currentStep, setCurrentStep] = useState<"upload" | "generating" | "confirm" | "details" | "success">("upload");
+  type WizardStep = "upload" | "details" | "pricing" | "instructions" | "location" | "video";
+  const [currentStep, setCurrentStep] = useState<WizardStep | "generating" | "confirm" | "success">("upload");
   const [createdProduct, setCreatedProduct] = useState<{id: string; title: string; image: string; price: string} | null>(null);
   
   // Step 1: Image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [privateImageFiles, setPrivateImageFiles] = useState<File[]>([]);
+  const [privateImagePreviews, setPrivateImagePreviews] = useState<string[]>([]);
+  const [existingPrivateImagePaths, setExistingPrivateImagePaths] = useState<string[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [existingUploadedVideoPath, setExistingUploadedVideoPath] = useState<string | null>(null);
   const [imageQualityChecked, setImageQualityChecked] = useState(false);
   
   // Step 2 & 3: AI generation
@@ -211,6 +217,12 @@ const ListDress = () => {
           if (product) {
             setIsEditMode(true);
             setAiCoverImage(product.ai_cover_image || "");
+            const publicImages = product.public_images?.length
+              ? product.public_images
+              : (product.ai_cover_image ? [product.ai_cover_image] : (product.real_images || []).slice(0, 3));
+            setImagePreviews(publicImages);
+            setExistingPrivateImagePaths(product.private_image_paths || []);
+            setExistingUploadedVideoPath(product.uploaded_video_path || null);
             
             // Load form data
             setFormData({
@@ -269,8 +281,7 @@ const ListDress = () => {
               }
             }
 
-            // Skip to details step when editing
-            setCurrentStep("details");
+            setCurrentStep("upload");
           }
         } catch (error: any) {
           console.error("Error loading product:", error);
@@ -336,17 +347,17 @@ const ListDress = () => {
     setImageFiles(validFiles);
   };
 
-  // STEP 1B (Details step): Optional additional real images (up to 5 total)
+  // Registered-only original photos (up to 6)
   const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    if (files.length + imageFiles.length > 5) {
-      toast.error("Maximum 5 images allowed");
+    if (files.length + privateImageFiles.length + existingPrivateImagePaths.length > 6) {
+      toast.error("Maximum 6 registered-only images allowed");
       return;
     }
 
-    const newFiles = files.slice(0, 5 - imageFiles.length);
+    const newFiles = files.slice(0, 6 - privateImageFiles.length - existingPrivateImagePaths.length);
 
     // Basic quality check
     const validFiles: File[] = [];
@@ -375,18 +386,23 @@ const ListDress = () => {
       reader.onloadend = () => {
         validPreviews.push(reader.result as string);
         if (validPreviews.length === validFiles.length) {
-          setImagePreviews((prev) => [...prev, ...validPreviews]);
+          setPrivateImagePreviews((prev) => [...prev, ...validPreviews]);
         }
       };
       reader.readAsDataURL(file);
     });
 
-    setImageFiles((prev) => [...prev, ...validFiles]);
+    setPrivateImageFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeImage = (index: number) => {
     setImageFiles(imageFiles.filter((_, i) => i !== index));
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+  };
+
+  const removePrivateImage = (index: number) => {
+    setPrivateImageFiles((files) => files.filter((_, i) => i !== index));
+    setPrivateImagePreviews((previews) => previews.filter((_, i) => i !== index));
   };
 
   const validateImageQuality = () => {
@@ -538,6 +554,50 @@ const ListDress = () => {
     }
   };
 
+  const wizardSteps: Array<{ step: WizardStep; label: string }> = [
+    { step: "upload", label: "Images" },
+    { step: "details", label: "Details" },
+    { step: "pricing", label: "Pricing" },
+    { step: "instructions", label: "Instructions" },
+    { step: "location", label: "Location & Delivery" },
+    { step: "video", label: "Video" },
+  ];
+
+  const goToStep = (step: WizardStep) => setCurrentStep(step);
+
+  const continueFromImages = () => {
+    if (!isEditMode && !validateImageQuality()) return;
+    if (imagePreviews.length === 0) {
+      toast.error("Please add at least one main image");
+      return;
+    }
+    if (!aiCoverImage) setAiCoverImage(imagePreviews[0]);
+    goToStep("details");
+  };
+
+  const continueFromDetails = () => {
+    const result = listingSchema.pick({ title: true, category: true, condition: true, description: true, size: true }).safeParse(formData);
+    if (!result.success) {
+      toast.error(result.error.errors[0]?.message || "Please complete the required details");
+      return;
+    }
+    goToStep("pricing");
+  };
+
+  const continueFromPricing = () => {
+    if (!formData.listing_type) return void toast.error("Please select rent or sale");
+    if (formData.listing_type === "rent" && !formData.rental_price_4days) return void toast.error("Please enter the 4-day rental price");
+    if (formData.listing_type === "sale" && !formData.sale_price) return void toast.error("Please enter the sale price");
+    goToStep("instructions");
+  };
+
+  const continueFromLocation = () => {
+    if (!formData.city || !formData.area || !formData.pickup_location) return void toast.error("Please complete the required location details");
+    if (formData.listing_type === "sale" && !formData.contact_phone) return void toast.error("Please enter a contact phone number");
+    if (formData.listing_type === "rent" && !formData.dropoff_location) return void toast.error("Please enter the drop-off location");
+    goToStep("video");
+  };
+
   const handleBackToUpload = () => {
     setCurrentStep("upload");
     setAiCoverImage("");
@@ -572,12 +632,32 @@ const ListDress = () => {
     return uploadedUrls;
   };
 
+  const uploadPrivateFiles = async () => {
+    if (!user) throw new Error("Please sign in again");
+    const paths: string[] = [];
+    for (const file of privateImageFiles) {
+      const extension = file.name.split(".").pop() || "jpg";
+      const path = `${user.id}/images/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("product-private-media").upload(path, file);
+      if (error) throw error;
+      paths.push(path);
+    }
+    let uploadedVideoPath: string | null = null;
+    if (videoFile) {
+      const extension = videoFile.name.split(".").pop() || "mp4";
+      uploadedVideoPath = `${user.id}/videos/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("product-private-media").upload(uploadedVideoPath, videoFile);
+      if (error) throw error;
+    }
+    return { paths, uploadedVideoPath };
+  };
+
   // STEP 4: Final form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!aiCoverImage && !isEditMode) {
-      toast.error("Please generate and confirm the AI Image first");
+    if (!formData.video_url && !videoFile && !existingUploadedVideoPath) {
+      toast.error("Please upload a product video or paste a public video link");
       return;
     }
 
@@ -605,6 +685,7 @@ const ListDress = () => {
         realImageUrls = await uploadImages();
         setUploadingImages(false);
       }
+      const privateUploads = await uploadPrivateFiles();
 
       // Prepare availability data
       const availabilityData = {
@@ -652,6 +733,9 @@ const ListDress = () => {
         dry_cleaned: formData.listing_type === "rent" ? formData.dry_cleaned : null,
         alterations_allowed: formData.listing_type === "rent" ? formData.alterations_allowed : null,
         video_url: formData.video_url || null,
+        public_images: realImageUrls.length > 0 ? realImageUrls.slice(0, 3) : imagePreviews.slice(0, 3),
+        private_image_paths: [...existingPrivateImagePaths, ...privateUploads.paths].slice(0, 6),
+        uploaded_video_path: privateUploads.uploadedVideoPath || existingUploadedVideoPath,
         updated_at: new Date().toISOString(),
       };
 
