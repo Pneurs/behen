@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ExternalLink, Loader2, Video } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Copy, Download, ExternalLink, Loader2, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 interface VideoProduct {
@@ -22,6 +24,7 @@ interface VideoProduct {
 export default function AdminProductVideos() {
   const [search, setSearch] = useState("");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-product-videos"],
@@ -67,6 +70,51 @@ export default function AdminProductVideos() {
 
   const productLink = (id: string) => `${window.location.origin}/product/${id}`;
 
+  const HASHTAGS = "#behen.pk #Pakistan #Bridaldresses #Partywear";
+
+  const buildCaption = (p: VideoProduct) =>
+    `${p.title}\n\nAvailable now on Behen.pk 💗\nBuy or rent here: ${productLink(p.id)}\n\n${HASHTAGS}`;
+
+  const copyCaption = async (p: VideoProduct) => {
+    try {
+      await navigator.clipboard.writeText(buildCaption(p));
+      toast.success("Caption copied — paste it on Instagram, TikTok or Facebook.");
+    } catch {
+      toast.error("Could not copy. Select the caption text and copy it manually.");
+    }
+  };
+
+  const slugify = (title: string) =>
+    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "behen-video";
+
+  const downloadVideo = async (p: VideoProduct) => {
+    const url = signedUrls[p.id];
+    if (!url) {
+      toast.error("Video is still loading, please try again in a moment.");
+      return;
+    }
+    setDownloadingId(p.id);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`status ${res.status}`);
+      const blob = await res.blob();
+      const ext = (p.uploaded_video_path?.split(".").pop() || "mp4").split("?")[0];
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = `${slugify(p.title)}.${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+      toast.success("Video downloaded.");
+    } catch {
+      toast.error("Download failed. Try opening the video and saving it.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -110,11 +158,28 @@ export default function AdminProductVideos() {
 
                 {p.uploaded_video_path ? (
                   signedUrls[p.id] ? (
-                    <video
-                      src={signedUrls[p.id]}
-                      controls
-                      className="w-full rounded-md bg-black max-h-64"
-                    />
+                    <div className="space-y-2">
+                      <video
+                        src={signedUrls[p.id]}
+                        controls
+                        className="w-full rounded-md bg-black max-h-64"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={downloadingId === p.id}
+                        onClick={() => downloadVideo(p)}
+                      >
+                        {downloadingId === p.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-2" />
+                        )}
+                        Download video
+                      </Button>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Loading video...
@@ -144,6 +209,7 @@ export default function AdminProductVideos() {
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(productLink(p.id));
+                        toast.success("Product link copied.");
                       }}
                     >
                       Copy
@@ -154,6 +220,23 @@ export default function AdminProductVideos() {
                       </a>
                     </Button>
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Caption for Instagram / TikTok / Facebook
+                  </p>
+                  <Textarea readOnly value={buildCaption(p)} rows={5} className="text-xs" />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => copyCaption(p)}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy caption
+                  </Button>
                 </div>
               </div>
             ))}
