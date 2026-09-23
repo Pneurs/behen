@@ -35,7 +35,7 @@ export default function AdminProductVideos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image")
+        .select("id, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price")
         .or("video_url.not.is.null,uploaded_video_path.not.is.null")
         .order("created_at", { ascending: false })
         .limit(200);
