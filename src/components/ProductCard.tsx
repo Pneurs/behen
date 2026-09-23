@@ -20,6 +20,7 @@ interface ProductCardProps {
     original_price?: number;
     ai_cover_image?: string;
     real_images?: string[];
+    public_images?: string[];
     city?: string;
     area?: string;
     latitude?: number;
