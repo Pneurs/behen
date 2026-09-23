@@ -89,17 +89,16 @@ const ProductDetail = () => {
   const loadProduct = async () => {
     setLoading(true);
     try {
-      // Load product
-      const { data: productData, error: productError } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data: { session } } = await supabase.auth.getSession();
+      const productResult = session
+        ? await supabase.from("products").select("*").eq("id", id).single()
+        : await supabase.rpc("get_public_product", { _product_id: id });
+      const productData = productResult.data as any;
+      const productError = productResult.error;
 
       if (productError) throw productError;
       setProduct(productData);
 
-      const { data: { session } } = await supabase.auth.getSession();
       if (session && productData.private_image_paths?.length) {
         const { data: signedImages } = await supabase.storage
           .from("product-private-media")
