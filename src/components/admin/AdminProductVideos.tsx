@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { ExternalLink, Loader2, Video } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Copy, Download, ExternalLink, Loader2, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { format } from "date-fns";
 
 interface VideoProduct {
