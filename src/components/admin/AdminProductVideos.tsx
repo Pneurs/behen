@@ -24,6 +24,7 @@ interface VideoProduct {
 export default function AdminProductVideos() {
   const [search, setSearch] = useState("");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-product-videos"],
