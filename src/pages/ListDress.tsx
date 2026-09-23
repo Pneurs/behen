@@ -915,7 +915,8 @@ const ListDress = () => {
         )}
 
         <div className="space-y-4">
-          <Label>Upload Images (1-3 photos)</Label>
+          <Label>Main Images (1-3 photos)</Label>
+          <p className="text-sm text-muted-foreground">These images will be shown to non-registered users.</p>
           <div className="border-2 border-dashed rounded-lg p-8 text-center">
             <input
               type="file"
@@ -962,6 +963,33 @@ const ListDress = () => {
           )}
         </div>
 
+        <div className="space-y-4 border-t pt-6">
+          <div>
+            <Label>More Original Images (up to 6)</Label>
+            <p className="text-sm text-muted-foreground">These images will only be seen by registered users.</p>
+          </div>
+          <div className="border-2 border-dashed rounded-lg p-6 text-center">
+            <input id="private-image-upload" type="file" accept="image/*" multiple className="hidden" onChange={handleAdditionalImagesChange} />
+            <label htmlFor="private-image-upload" className="cursor-pointer flex flex-col items-center gap-2">
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Upload members-only photos</span>
+            </label>
+          </div>
+          {privateImagePreviews.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {privateImagePreviews.map((preview, index) => (
+                <div key={preview} className="relative">
+                  <img src={preview} alt={`Members-only preview ${index + 1}`} className="h-28 w-full rounded-md object-cover" />
+                  <Button type="button" variant="destructive" size="icon" className="absolute right-1 top-1 h-7 w-7" onClick={() => removePrivateImage(index)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {existingPrivateImagePaths.length > 0 && <p className="text-xs text-muted-foreground">{existingPrivateImagePaths.length} protected image(s) already saved.</p>}
+        </div>
+
         {aiImageEnabled ? (
           <>
             <Button
@@ -983,8 +1011,8 @@ const ListDress = () => {
             </div>
 
             <Button
-              onClick={handleSkipAI}
-              disabled={imageFiles.length < 1}
+              onClick={continueFromImages}
+              disabled={imagePreviews.length < 1}
               variant="outline"
               className="w-full"
               size="lg"
@@ -998,8 +1026,8 @@ const ListDress = () => {
         ) : (
           <>
             <Button
-              onClick={handleSkipAI}
-              disabled={imageFiles.length < 1 || imageFiles.length > 3}
+              onClick={continueFromImages}
+              disabled={imagePreviews.length < 1 || imagePreviews.length > 3}
               className="w-full"
               size="lg"
             >
