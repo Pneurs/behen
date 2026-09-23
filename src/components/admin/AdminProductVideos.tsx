@@ -19,6 +19,10 @@ interface VideoProduct {
   uploaded_video_path: string | null;
   public_images: string[] | null;
   ai_cover_image: string | null;
+  city: string | null;
+  listing_type: string | null;
+  rental_price_4days: number | null;
+  sale_price: number | null;
 }
 
 export default function AdminProductVideos() {
