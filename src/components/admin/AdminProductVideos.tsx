@@ -76,8 +76,25 @@ export default function AdminProductVideos() {
 
   const HASHTAGS = "#behen.pk #Pakistan #Bridaldresses #Partywear";
 
-  const buildCaption = (p: VideoProduct) =>
-    `${p.title}\n\nAvailable now on Behen.pk 💗\nBuy or rent here: ${productLink(p.id)}\n\n${HASHTAGS}`;
+  const money = (n: number) => `PKR ${Number(n).toLocaleString("en-PK")}`;
+
+  const buildCaption = (p: VideoProduct) => {
+    const type = (p.listing_type || "").toLowerCase();
+    const hasRent = (type.includes("rent") || type === "both") && !!p.rental_price_4days;
+    const hasSale = (type.includes("sale") || type.includes("sell") || type === "both") && !!p.sale_price;
+
+    const priceParts: string[] = [];
+    if (hasRent) priceParts.push(`Rent: ${money(p.rental_price_4days as number)} (4 days)`);
+    if (hasSale) priceParts.push(hasRent ? `Sale: ${money(p.sale_price as number)}` : `Price: ${money(p.sale_price as number)}`);
+
+    const lines = [p.title];
+    if (priceParts.length) lines.push(`💰 ${priceParts.join(" | ")}`);
+    if (p.city) lines.push(`📍 ${p.city}`);
+
+    const cta = hasRent && hasSale ? "Rent or buy here" : hasRent ? "Rent here" : "Buy here";
+
+    return `${lines.join("\n")}\n\nAvailable now on Behen.pk 💗\n${cta}: ${productLink(p.id)}\n\n${HASHTAGS}`;
+  };
 
   const copyCaption = async (p: VideoProduct) => {
     try {
