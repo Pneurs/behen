@@ -1750,6 +1750,13 @@ export default function AdminDashboard() {
               </TabsContent>
             )}
 
+            {/* Product Videos Tab - Super Admin Only */}
+            {currentRole === "super_admin" && (
+              <TabsContent value="product-videos">
+                <AdminProductVideos />
+              </TabsContent>
+            )}
+
             {/* Categories Tab - Super Admin Only */}
             {currentRole === "super_admin" && (
               <TabsContent value="categories">
