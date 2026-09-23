@@ -1251,7 +1251,7 @@ const ListDress = () => {
           <div className={currentStep === "details" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Basic Details</h3>
             
-            <div className={currentStep === "pricing" ? "block" : "hidden"}>
+            <div>
               <Label htmlFor="title">Title *</Label>
               <Input
                 id="title"
@@ -1283,7 +1283,7 @@ const ListDress = () => {
               </div>
             </div>
 
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label htmlFor="listing_type">Listing Type *</Label>
               <Select
                 value={formData.listing_type}
@@ -1564,7 +1564,7 @@ const ListDress = () => {
           <div className={currentStep === "instructions" ? "space-y-4" : "hidden"}>
             <h3 className="text-lg font-semibold">Care Instructions *</h3>
             
-            <div className={currentStep === "pricing" ? "block" : "hidden"}>
+            <div>
               <Label>Requires Dry Cleaning After Use? *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Let renters know if this item must be professionally dry cleaned after use
@@ -1586,7 +1586,7 @@ const ListDress = () => {
             </div>
 
             {/* Negotiation Toggle */}
-            <div>
+            <div className={currentStep === "pricing" ? "block" : "hidden"}>
               <Label>Allow Price Negotiation? *</Label>
               <RadioGroup
                 value={formData.negotiation_allowed ? "yes" : "no"}
