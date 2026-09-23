@@ -1281,9 +1281,14 @@ const ListDress = () => {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
+          </div>
+          </div>
 
-            <div className={currentStep === "pricing" ? "block" : "hidden"}>
+          {/* Pricing */}
+          <div className={currentStep === "pricing" ? "space-y-4" : "hidden"}>
+            <h3 className="text-lg font-semibold">Pricing</h3>
+
+            <div>
               <Label htmlFor="listing_type">Listing Type *</Label>
               <Select
                 value={formData.listing_type}
@@ -1291,19 +1296,17 @@ const ListDress = () => {
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select listing type" />
+                  <SelectValue placeholder="Rent or sale?" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="rent">For Rent</SelectItem>
                   <SelectItem value="sale">For Sale</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Choose first — the price fields below appear based on your choice
+              </p>
             </div>
-          </div>
-
-          {/* Pricing */}
-          <div className={currentStep === "pricing" ? "space-y-4" : "hidden"}>
-            <h3 className="text-lg font-semibold">Pricing</h3>
             
             {formData.listing_type === "rent" && (
               <div className="space-y-4">
