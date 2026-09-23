@@ -71,6 +71,13 @@
       "when": 1790132071809,
       "tag": "0009_safe_public_product_details",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790132097667,
+      "tag": "0010_protect_anonymous_product_media",
+      "breakpoints": true
     }
   ]
 }
