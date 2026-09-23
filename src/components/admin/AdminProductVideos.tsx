@@ -158,11 +158,28 @@ export default function AdminProductVideos() {
 
                 {p.uploaded_video_path ? (
                   signedUrls[p.id] ? (
-                    <video
-                      src={signedUrls[p.id]}
-                      controls
-                      className="w-full rounded-md bg-black max-h-64"
-                    />
+                    <div className="space-y-2">
+                      <video
+                        src={signedUrls[p.id]}
+                        controls
+                        className="w-full rounded-md bg-black max-h-64"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={downloadingId === p.id}
+                        onClick={() => downloadVideo(p)}
+                      >
+                        {downloadingId === p.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-2" />
+                        )}
+                        Download video
+                      </Button>
+                    </div>
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" /> Loading video...
@@ -192,6 +209,7 @@ export default function AdminProductVideos() {
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(productLink(p.id));
+                        toast.success("Product link copied.");
                       }}
                     >
                       Copy
@@ -202,6 +220,23 @@ export default function AdminProductVideos() {
                       </a>
                     </Button>
                   </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    Caption for Instagram / TikTok / Facebook
+                  </p>
+                  <Textarea readOnly value={buildCaption(p)} rows={5} className="text-xs" />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => copyCaption(p)}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy caption
+                  </Button>
                 </div>
               </div>
             ))}
