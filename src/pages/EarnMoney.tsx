@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ const EarnMoney = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Earn Money by Renting Your Dresses | Behen.pk" description="List your bridal and formal dresses on Behen.pk and earn by renting or selling them to women across Pakistan." path="/earn-money" />
       <EnhancedHeader />
       
       {/* Hero Section */}

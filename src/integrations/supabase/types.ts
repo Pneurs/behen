@@ -365,6 +365,7 @@ export type Database = {
           admin_notes: string | null
           amount_pkr: number
           created_at: string
+          credit_email_sent_at: string | null
           credits: number
           id: string
           payment_proof_url: string | null
@@ -379,6 +380,7 @@ export type Database = {
           admin_notes?: string | null
           amount_pkr: number
           created_at?: string
+          credit_email_sent_at?: string | null
           credits: number
           id?: string
           payment_proof_url?: string | null
@@ -393,6 +395,7 @@ export type Database = {
           admin_notes?: string | null
           amount_pkr?: number
           created_at?: string
+          credit_email_sent_at?: string | null
           credits?: number
           id?: string
           payment_proof_url?: string | null

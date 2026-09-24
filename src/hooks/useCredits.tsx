@@ -70,6 +70,10 @@ export const useCreditBalance = () => {
     queryKey: ["credit-balance", user?.id],
     queryFn: async () => {
       if (!user) return 0;
+      const { data: approved } = await supabase.rpc("auto_approve_due_credit_purchases");
+      if (approved && Number(approved) > 0) {
+        supabase.functions.invoke("send-notifications", { body: { type: "credit_email_sweep" } }).catch(() => {});
+      }
       const { data, error } = await supabase
         .from("user_credits")
         .select("balance")

@@ -1,5 +1,8 @@
 import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
+import Seo from "@/components/Seo";
+import SeoLinks from "@/components/SeoLinks";
+import { SITE_URL, slugToCategory, slugToCity } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
@@ -49,13 +52,22 @@ const CATEGORY_NAMES: Record<string, string> = {
 const Browse = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const routeParams = useParams<{ city?: string; category?: string }>();
+  const location = useLocation();
+  const routeType = location.pathname.startsWith("/rent") ? "rent" : location.pathname.startsWith("/buy") ? "sale" : null;
+  // Supports /rent/:city/:category and /rent/:category style paths
+  const routeCategory = slugToCategory(routeParams.category) || slugToCategory(routeParams.city);
+  const routeCity = routeParams.city && !slugToCategory(routeParams.city) ? slugToCity(routeParams.city) : undefined;
+  const pCity = routeCity || searchParams.get("city") || null;
+  const pArea = searchParams.get("area") || null;
+  const pCategory = routeCategory || searchParams.get("category") || null;
   const { user, userRole } = useAuth();
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
-  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
-  const [listingTypeFilter, setListingTypeFilter] = useState("all");
-  const [cityFilter, setCityFilter] = useState(searchParams.get("city") || "");
+  const [categoryFilter, setCategoryFilter] = useState(pCategory || "all");
+  const [listingTypeFilter, setListingTypeFilter] = useState<string>(routeType || "all");
+  const [cityFilter, setCityFilter] = useState(pCity || "");
   const [areaFilter, setAreaFilter] = useState(searchParams.get("area") || "");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showMap, setShowMap] = useState(false);
@@ -95,11 +107,11 @@ const Browse = () => {
 
   // SEO Content query
   const { data: seoContent } = useQuery({
-    queryKey: ["seo-content", searchParams.get("city"), searchParams.get("area"), searchParams.get("category")],
+    queryKey: ["seo-content", pCity, pArea, pCategory],
     queryFn: async () => {
-      const city = searchParams.get("city") || null;
-      const area = searchParams.get("area") || null;
-      const category = searchParams.get("category") || null;
+      const city = pCity;
+      const area = pArea;
+      const category = pCategory;
 
       const queries = [
         { city, area, category },
@@ -124,12 +136,6 @@ const Browse = () => {
         const { data } = await query.maybeSingle();
         
         if (data) {
-          if (data.meta_description) {
-            document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta_description);
-          }
-          if (data.heading) {
-            document.title = `${data.heading} | Behen.pk`;
-          }
           return data as SEOContent;
         }
       }
@@ -146,17 +152,18 @@ const Browse = () => {
     const city = cityFilter || null;
     const area = areaFilter || null;
 
+    const verb = listingTypeFilter === "rent" ? "on Rent" : listingTypeFilter === "sale" ? "for Sale" : "for Rent & Sale";
     if (city && category) {
-      return `${category} for Rent & Sale in ${area ? area + ", " : ""}${city}`;
+      return `${category} ${verb} in ${area ? area + ", " : ""}${city}`;
     }
     if (city) {
-      return `Dresses for Rent & Sale in ${area ? area + ", " : ""}${city}`;
+      return `Dresses ${verb} in ${area ? area + ", " : ""}${city}`;
     }
     if (category) {
       return `${category} Collection`;
     }
     return "Browse Collection";
-  }, [seoContent, categoryFilter, cityFilter, areaFilter]);
+  }, [seoContent, categoryFilter, cityFilter, areaFilter, listingTypeFilter]);
 
   // Memoized availability check
   const isProductAvailableForDates = useCallback((product: any, dateRange: DateRange | undefined) => {
@@ -262,6 +269,19 @@ const Browse = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${getPageHeading()} | Behen.pk`}
+        description={seoContent?.meta_description || `Browse ${getPageHeading().toLowerCase()} on Behen.pk — designer bridal, barat, walima and party wear from trusted sellers, at a fraction of the price.`}
+        path={location.pathname === "/browse" ? `/browse${pCity || pCategory ? `?${new URLSearchParams({ ...(pCity ? { city: pCity } : {}), ...(pCategory ? { category: pCategory } : {}) }).toString()}` : ""}` : location.pathname}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL + "/" },
+            { "@type": "ListItem", position: 2, name: getPageHeading(), item: SITE_URL + location.pathname },
+          ],
+        }}
+      />
       <Header />
       <Suspense fallback={null}>
         <EarningsPromoPopup userRole={userRole} />
@@ -435,6 +455,7 @@ const Browse = () => {
         {seoContent?.bottom_content && (
           <SEOBottomContent content={seoContent.bottom_content} />
         )}
+        <SeoLinks city={pCity || undefined} />
       </main>
     </div>
   );

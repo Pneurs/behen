@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
@@ -13,9 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useCreditTransactions, CreditPackage } from "@/hooks/useCredits";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { sendEmailNotification } from "@/lib/emailNotifications";
 
-const PAYMENT_NUMBER = "0332 813 3263";
+const BANK_ACCOUNT = "0611359113165";
 
 export default function Credits() {
   const navigate = useNavigate();
@@ -44,6 +44,7 @@ export default function Credits() {
       if (!user) return [];
       // Give waiting orders a chance to clear themselves before we read them.
       await supabase.rpc("auto_approve_due_credit_purchases");
+      supabase.functions.invoke("send-notifications", { body: { type: "credit_email_sweep" } }).catch(() => {});
       const { data } = await supabase
         .from("credit_purchases")
         .select("id, credits, amount_pkr, status, provider, payment_reference, created_at")
@@ -55,37 +56,6 @@ export default function Credits() {
   });
 
   const pendingCount = (purchases as any[]).filter((p) => p.status === "pending").length;
-
-  // Email the buyer once, as soon as an order we were watching gets approved.
-  const watchedPending = useRef<Set<string>>(new Set());
-  const emailedApproved = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!user) return;
-    (purchases as any[]).forEach((p) => {
-      if (p.status === "pending") {
-        watchedPending.current.add(p.id);
-        return;
-      }
-      if (
-        p.status === "approved" &&
-        watchedPending.current.has(p.id) &&
-        !emailedApproved.current.has(p.id)
-      ) {
-        emailedApproved.current.add(p.id);
-        watchedPending.current.delete(p.id);
-        sendEmailNotification({
-          type: "credits_added",
-          recipientEmail: user.email || "",
-          recipientName: (user.user_metadata as any)?.name || "Behen",
-          data: {
-            credits: p.credits,
-            amount: p.amount_pkr,
-            reference: p.payment_reference,
-          },
-        });
-      }
-    });
-  }, [purchases, user]);
 
   // While an order is waiting, keep checking so the credits appear on their own.
   useEffect(() => {
@@ -149,6 +119,7 @@ export default function Credits() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Behen.pk" path="/credits" noindex />
       <EnhancedHeader />
       <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
         <Card className="bg-gradient-to-br from-primary/10 to-accent/10">
@@ -220,16 +191,31 @@ export default function Credits() {
               ))}
             </div>
 
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+              <span className="font-semibold">Note:</span> Credits are essential to see sellers' data for security purposes.
+            </div>
+
             {selected ? (
               <div className="rounded-lg border p-4 space-y-4 bg-muted/40">
                 <div className="flex items-start gap-2">
                   <Phone className="h-4 w-4 mt-1 text-primary" />
-                  <div className="text-sm">
+                  <div className="text-sm space-y-0.5">
                     <p className="font-medium">
-                      Step 1 — Send PKR {selected.price.toLocaleString()} to JazzCash / EasyPaisa
+                      Step 1 — Transfer PKR {selected.price.toLocaleString()} to our bank account
                     </p>
-                    <p className="text-lg font-bold text-primary">{PAYMENT_NUMBER}</p>
-                    <p className="text-muted-foreground">Account title: Behen.pk</p>
+                    <p className="text-muted-foreground">Bank: <span className="font-medium text-foreground">UBL</span></p>
+                    <p className="text-muted-foreground">Account title: <span className="font-medium text-foreground">Behen.Pk</span></p>
+                    <p className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Account no.:</span>
+                      <span className="text-lg font-bold text-primary font-mono">{BANK_ACCOUNT}</span>
+                      <button
+                        type="button"
+                        className="text-xs underline text-primary"
+                        onClick={() => { navigator.clipboard.writeText(BANK_ACCOUNT); toast.success("Account number copied"); }}
+                      >
+                        Copy
+                      </button>
+                    </p>
                   </div>
                 </div>
 
@@ -261,7 +247,7 @@ export default function Credits() {
                     placeholder="e.g. TXN123456789"
                   />
                   <p className="text-xs text-muted-foreground">
-                    You'll find it in the JazzCash / EasyPaisa confirmation message.
+                    You'll find it in your bank transfer confirmation / receipt.
                   </p>
                 </div>
 

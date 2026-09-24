@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -248,6 +249,10 @@ const ProductDetail = () => {
       ? [product.ai_cover_image]
       : (product.real_images || []).slice(0, 3);
   
+  const legacyRealImages: string[] = currentUser ? (product.real_images || []) : [];
+  const galleryImages: string[] = Array.from(
+    new Set([...displayImages, ...(currentUser ? protectedImages : []), ...legacyRealImages].filter(Boolean))
+  );
   const hasRealImages = protectedImages.length > 0;
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
@@ -272,11 +277,40 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Meta tags for SEO - prevent indexing of real images */}
-      <head>
-        <meta name="robots" content="noindex, nofollow" data-image-protection="true" />
-      </head>
-      
+      <Seo
+        title={`${product.title} — ${product.listing_type === "sale" ? "for Sale" : product.listing_type === "rent" ? "on Rent" : "Rent or Buy"}${product.city ? ` in ${product.city}` : ""} | Behen.pk`}
+        description={`${product.title}${product.city ? ` in ${product.city}` : ""}. ${product.rental_price_4days ? `Rent for PKR ${Number(product.rental_price_4days).toLocaleString()} (4 days). ` : ""}${product.sale_price ? `Buy for PKR ${Number(product.sale_price).toLocaleString()}. ` : ""}${(product.description || "").slice(0, 90)}`}
+        path={`/product/${product.id}`}
+        image={displayImages[0]}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.title,
+            description: product.description || product.title,
+            image: displayImages.slice(0, 3),
+            category: product.category,
+            ...(product.designer ? { brand: { "@type": "Brand", name: product.designer } } : {}),
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "PKR",
+              price: Number(product.sale_price || product.rental_price_4days || product.rental_price_per_day || 0),
+              availability: "https://schema.org/InStock",
+              itemCondition: product.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+              url: `https://behen.pk/product/${product.id}`,
+            },
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://behen.pk/" },
+              ...(product.city ? [{ "@type": "ListItem", position: 2, name: `Dresses in ${product.city}`, item: `https://behen.pk/rent/${product.city.toLowerCase().replace(/\s+/g, "-")}` }] : []),
+              { "@type": "ListItem", position: product.city ? 3 : 2, name: product.title, item: `https://behen.pk/product/${product.id}` },
+            ],
+          },
+        ]}
+      />
       <Header />
 
       {/* Main Content */}
@@ -285,9 +319,9 @@ const ProductDetail = () => {
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted relative">
-              {displayImages.length > 0 ? (
+              {galleryImages.length > 0 ? (
                 <img
-                  src={displayImages[selectedImage]}
+                  src={galleryImages[selectedImage] || galleryImages[0]}
                   alt={product.title}
                   className="w-full h-full object-cover"
                 />
@@ -331,6 +365,25 @@ const ProductDetail = () => {
               )}
             </div>
             
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {galleryImages.map((img, index) => (
+                  <button
+                    key={img}
+                    type="button"
+                    onClick={() => setSelectedImage(index)}
+                    className={`h-20 w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === index ? "border-primary" : "border-transparent"}`}
+                    aria-label={`Show photo ${index + 1}`}
+                  >
+                    <img src={img} alt={`${product.title} photo ${index + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {!currentUser && (
+              <p className="text-xs text-muted-foreground">Sign in to see more original photos of this dress.</p>
+            )}
+
             {/* Real Images Section */}
             {hasRealImages && (
               <Card className="border-dashed">
@@ -502,7 +555,7 @@ const ProductDetail = () => {
                     {/* Show Contact Details Button - Above Chat */}
                     {owner && (
                       <OwnerContactCard 
-                        owner={owner} 
+                        owner={{ ...owner, phone: owner.phone || product.contact_phone || null }} 
                         currentUser={currentUser}
                         productId={product.id}
                         onLoginClick={() => {
@@ -829,7 +882,7 @@ const ProductDetail = () => {
           setImageViewerOpen(false);
           setShowRealImages(false);
         }}
-        images={showRealImages ? protectedImages : displayImages}
+        images={galleryImages}
         productTitle={product.title}
       />
     </div>

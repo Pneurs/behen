@@ -475,8 +475,9 @@ export default function Cart() {
                   <CardContent className="space-y-4">
                     <div className="bg-primary/5 p-4 rounded-lg border">
                       <p className="text-sm font-semibold mb-2">Send payment to:</p>
-                      <p className="text-sm">JazzCash/EasyPaisa: <strong>0332-8133263</strong></p>
-                      <p className="text-sm">Account Name: <strong>Behen.pk</strong></p>
+                      <p className="text-sm">Bank: <strong>UBL</strong></p>
+                      <p className="text-sm">Account Title: <strong>Behen.Pk</strong></p>
+                      <p className="text-sm">Account No.: <strong className="font-mono">0611359113165</strong></p>
                     </div>
 
                     {/* Upload Payment Proof */}

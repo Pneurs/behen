@@ -60,6 +60,7 @@ export default function AdminCreditPurchases() {
     try {
       const { error } = await supabase.rpc("admin_approve_credit_purchase", { _purchase_id: id });
       if (error) throw error;
+      supabase.functions.invoke("send-notifications", { body: { type: "credit_email_sweep" } }).catch(() => {});
       toast.success("Credits added to the buyer");
       queryClient.invalidateQueries({ queryKey: ["admin-credit-purchases"] });
     } catch (e: any) {

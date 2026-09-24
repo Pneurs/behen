@@ -1,0 +1,2 @@
+ALTER TABLE public.credit_purchases ADD COLUMN IF NOT EXISTS credit_email_sent_at timestamptz;
+UPDATE public.credit_purchases SET credit_email_sent_at = now() WHERE status = 'approved' AND credit_email_sent_at IS NULL;

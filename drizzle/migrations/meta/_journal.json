@@ -85,6 +85,13 @@
       "when": 1790133835802,
       "tag": "0011_super_admin_email_and_credit_notification",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790219891509,
+      "tag": "0012_credit_email_tracking",
+      "breakpoints": true
     }
   ]
 }

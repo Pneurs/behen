@@ -1,8 +1,10 @@
+import Seo from "@/components/Seo";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 
 const TermsAndConditions = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Terms & Conditions | Behen.pk" description="Terms of use for renting, buying and selling dresses on Behen.pk." path="/terms" />
       <EnhancedHeader />
       
       <main className="container mx-auto px-4 py-12 max-w-4xl">

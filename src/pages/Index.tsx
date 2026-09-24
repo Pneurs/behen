@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useState, useEffect, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,22 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Behen.pk — Rent & Buy Bridal, Barat & Party Wear in Pakistan"
+        description="Rent or buy designer bridal lehengas, barat, walima and party wear in Lahore, Karachi, Islamabad and across Pakistan. Trusted sellers, great prices on Behen.pk."
+        path="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Behen.pk",
+          url: "https://behen.pk/",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://behen.pk/browse?search={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
       <EnhancedHeader />
       <Suspense fallback={null}>
         <EarningsPromoPopup userRole={userRole} />

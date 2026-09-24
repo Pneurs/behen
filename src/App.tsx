@@ -28,7 +28,6 @@ const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const EarnMoney = lazy(() => import("./pages/EarnMoney"));
 const Profile = lazy(() => import("./pages/Profile"));
-const Sitemap = lazy(() => import("./pages/Sitemap"));
 const VerifyWhatsApp = lazy(() => import("./pages/VerifyWhatsApp"));
 const Credits = lazy(() => import("./pages/Credits"));
 
@@ -101,7 +100,12 @@ const App = () => (
               <Route path="/terms" element={<TermsAndConditions />} />
               <Route path="/earn-money" element={<EarnMoney />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/sitemap.xml" element={<Sitemap />} />
+              <Route path="/rent" element={<Browse />} />
+              <Route path="/rent/:city" element={<Browse />} />
+              <Route path="/rent/:city/:category" element={<Browse />} />
+              <Route path="/buy" element={<Browse />} />
+              <Route path="/buy/:city" element={<Browse />} />
+              <Route path="/buy/:city/:category" element={<Browse />} />
               <Route path="/verify-whatsapp" element={<VerifyWhatsApp />} />
               <Route path="/credits" element={<Credits />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
