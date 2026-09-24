@@ -43,6 +43,12 @@ const ProductCard = memo(({
   const [showLocationPopup, setShowLocationPopup] = useState(false);
   const { isInWishlist, loading: wishlistLoading, toggleWishlist } = useWishlist(product.id);
   const { aiImageEnabled } = useAiImageEnabled();
+  const [activeImg, setActiveImg] = useState(0);
+  const images = Array.from(
+    new Set(
+      [...(product.public_images || []), product.ai_cover_image].filter(Boolean) as string[]
+    )
+  ).slice(0, 5);
 
   const getCategoryLabel = (category: string) => {
     return category.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -65,15 +71,38 @@ const ProductCard = memo(({
       onClick={onClick}
     >
       <div className="aspect-[3/4] overflow-hidden bg-muted relative">
-        {(product.public_images?.[0] || product.ai_cover_image) ? (
+        {images.length > 0 ? (
           <>
-            <img
-              src={product.public_images?.[0] || product.ai_cover_image || ""}
-              alt={product.title}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
+            <div
+              className="flex h-full w-full overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                setActiveImg(Math.round(el.scrollLeft / el.clientWidth));
+              }}
+            >
+              {images.map((src, i) => (
+                <img
+                  key={src + i}
+                  src={src}
+                  alt={i === 0 ? product.title : `${product.title} photo ${i + 1}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full flex-none snap-center object-cover"
+                />
+              ))}
+            </div>
+            {images.length > 1 && (
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                {images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === activeImg ? "w-4 bg-primary" : "w-1.5 bg-background/80"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
             {aiImageEnabled && (
               <div className="absolute top-2 right-2 flex gap-2">
                 <Badge variant="secondary" className="text-xs bg-background/80 backdrop-blur-sm">
