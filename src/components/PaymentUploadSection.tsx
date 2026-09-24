@@ -335,7 +335,7 @@ export default function PaymentUploadSection({ booking, isRenter, onUploadComple
           {/* Payment methods info */}
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
             <p className="font-medium mb-1">Payment Methods:</p>
-            <p>JazzCash, EasyPaisa, Bank Transfer</p>
+            <p>Bank Transfer — UBL · Behen.Pk · 0611359113165</p>
             <p className="mt-2 text-xs">Contact details will be shared after payment verification.</p>
           </div>
 
