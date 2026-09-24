@@ -520,7 +520,7 @@ const ProductDetail = () => {
                     {/* Show Contact Details Button - Above Chat */}
                     {owner && (
                       <OwnerContactCard 
-                        owner={owner} 
+                        owner={{ ...owner, phone: owner.phone || product.contact_phone || null }} 
                         currentUser={currentUser}
                         productId={product.id}
                         onLoginClick={() => {

@@ -145,16 +145,25 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
                   </div>
                 </div>
 
-                {owner.phone && (
-                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <a 
-                      href={`tel:${owner.phone}`}
-                      className="text-primary hover:underline font-medium"
+                {owner.phone ? (
+                  <div className="flex items-center justify-between gap-2 p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <a href={`tel:${owner.phone}`} className="text-primary hover:underline font-medium text-base">
+                        {owner.phone}
+                      </a>
+                    </div>
+                    <a
+                      href={`https://wa.me/${owner.phone.replace(/\D/g, "").replace(/^0/, "92")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-primary underline"
                     >
-                      {owner.phone}
+                      WhatsApp
                     </a>
                   </div>
+                ) : (
+                  <p className="p-3 bg-muted rounded-lg text-sm">This seller hasn't added a phone number yet. Please message her through chat.</p>
                 )}
 
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm">
