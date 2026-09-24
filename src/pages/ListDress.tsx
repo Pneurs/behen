@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
 import GenderCategorySelector from "@/components/GenderCategorySelector";
-import { Header } from "@/components/Header";
+import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

@@ -15,7 +15,7 @@ import { useCreditSettings, useCreditBalance, useCreditTransactions, CreditPacka
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 
-const PAYMENT_NUMBER = "0332 813 3263";
+const BANK_ACCOUNT = "0611359113165";
 
 export default function Credits() {
   const navigate = useNavigate();
@@ -220,16 +220,31 @@ export default function Credits() {
               ))}
             </div>
 
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+              <span className="font-semibold">Note:</span> Credits are essential to see sellers' data for security purposes.
+            </div>
+
             {selected ? (
               <div className="rounded-lg border p-4 space-y-4 bg-muted/40">
                 <div className="flex items-start gap-2">
                   <Phone className="h-4 w-4 mt-1 text-primary" />
-                  <div className="text-sm">
+                  <div className="text-sm space-y-0.5">
                     <p className="font-medium">
-                      Step 1 — Send PKR {selected.price.toLocaleString()} to JazzCash / EasyPaisa
+                      Step 1 — Transfer PKR {selected.price.toLocaleString()} to our bank account
                     </p>
-                    <p className="text-lg font-bold text-primary">{PAYMENT_NUMBER}</p>
-                    <p className="text-muted-foreground">Account title: Behen.pk</p>
+                    <p className="text-muted-foreground">Bank: <span className="font-medium text-foreground">UBL</span></p>
+                    <p className="text-muted-foreground">Account title: <span className="font-medium text-foreground">Behen.Pk</span></p>
+                    <p className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Account no.:</span>
+                      <span className="text-lg font-bold text-primary font-mono">{BANK_ACCOUNT}</span>
+                      <button
+                        type="button"
+                        className="text-xs underline text-primary"
+                        onClick={() => { navigator.clipboard.writeText(BANK_ACCOUNT); toast.success("Account number copied"); }}
+                      >
+                        Copy
+                      </button>
+                    </p>
                   </div>
                 </div>
 
@@ -261,7 +276,7 @@ export default function Credits() {
                     placeholder="e.g. TXN123456789"
                   />
                   <p className="text-xs text-muted-foreground">
-                    You'll find it in the JazzCash / EasyPaisa confirmation message.
+                    You'll find it in your bank transfer confirmation / receipt.
                   </p>
                 </div>
 
