@@ -1,8 +1,10 @@
+import Seo from "@/components/Seo";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 
 const ReturnPolicy = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Return Policy | Behen.pk" description="How returns, security deposits and rental returns work on Behen.pk." path="/return-policy" />
       <EnhancedHeader />
       
       <main className="container mx-auto px-4 py-12 max-w-4xl">

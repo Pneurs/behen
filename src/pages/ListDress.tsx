@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -2126,7 +2127,8 @@ const ListDress = () => {
   if (currentStep === "success") {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        <Seo title="Behen.pk" path="/list-dress" noindex />
+      <Header />
         <div className="container py-8">
           {renderSuccessStep()}
         </div>
@@ -2136,6 +2138,7 @@ const ListDress = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Behen.pk" path="/list-dress" noindex />
       <Header />
       <div className="container py-8">
         {/* Progress Indicator */}

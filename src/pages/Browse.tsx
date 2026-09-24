@@ -269,6 +269,19 @@ const Browse = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${getPageHeading()} | Behen.pk`}
+        description={seoContent?.meta_description || `Browse ${getPageHeading().toLowerCase()} on Behen.pk — designer bridal, barat, walima and party wear from trusted sellers, at a fraction of the price.`}
+        path={location.pathname === "/browse" ? `/browse${pCity || pCategory ? `?${new URLSearchParams({ ...(pCity ? { city: pCity } : {}), ...(pCategory ? { category: pCategory } : {}) }).toString()}` : ""}` : location.pathname}
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          itemListElement: [
+            { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL + "/" },
+            { "@type": "ListItem", position: 2, name: getPageHeading(), item: SITE_URL + location.pathname },
+          ],
+        }}
+      />
       <Header />
       <Suspense fallback={null}>
         <EarningsPromoPopup userRole={userRole} />

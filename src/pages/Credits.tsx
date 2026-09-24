@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
@@ -118,6 +119,7 @@ export default function Credits() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Behen.pk" path="/credits" noindex />
       <EnhancedHeader />
       <div className="container mx-auto px-4 py-8 max-w-3xl space-y-6">
         <Card className="bg-gradient-to-br from-primary/10 to-accent/10">

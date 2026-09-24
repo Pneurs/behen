@@ -1,8 +1,10 @@
+import Seo from "@/components/Seo";
 import { EnhancedHeader } from "@/components/EnhancedHeader";
 
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Seo title="Privacy Policy | Behen.pk" description="How Behen.pk protects your personal information and privacy." path="/privacy-policy" />
       <EnhancedHeader />
       
       <main className="container mx-auto px-4 py-12 max-w-4xl">

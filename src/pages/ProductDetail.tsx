@@ -1,3 +1,4 @@
+import Seo from "@/components/Seo";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,6 +277,40 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${product.title} — ${product.listing_type === "sale" ? "for Sale" : product.listing_type === "rent" ? "on Rent" : "Rent or Buy"}${product.city ? ` in ${product.city}` : ""} | Behen.pk`}
+        description={`${product.title}${product.city ? ` in ${product.city}` : ""}. ${product.rental_price_4days ? `Rent for PKR ${Number(product.rental_price_4days).toLocaleString()} (4 days). ` : ""}${product.sale_price ? `Buy for PKR ${Number(product.sale_price).toLocaleString()}. ` : ""}${(product.description || "").slice(0, 90)}`}
+        path={`/product/${product.id}`}
+        image={displayImages[0]}
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.title,
+            description: product.description || product.title,
+            image: displayImages.slice(0, 3),
+            category: product.category,
+            ...(product.designer ? { brand: { "@type": "Brand", name: product.designer } } : {}),
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "PKR",
+              price: Number(product.sale_price || product.rental_price_4days || product.rental_price_per_day || 0),
+              availability: "https://schema.org/InStock",
+              itemCondition: product.condition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+              url: `https://behen.pk/product/${product.id}`,
+            },
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://behen.pk/" },
+              ...(product.city ? [{ "@type": "ListItem", position: 2, name: `Dresses in ${product.city}`, item: `https://behen.pk/rent/${product.city.toLowerCase().replace(/\s+/g, "-")}` }] : []),
+              { "@type": "ListItem", position: product.city ? 3 : 2, name: product.title, item: `https://behen.pk/product/${product.id}` },
+            ],
+          },
+        ]}
+      />
       <Header />
 
       {/* Main Content */}
