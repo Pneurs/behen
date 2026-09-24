@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useCreditTransactions, CreditPackage } from "@/hooks/useCredits";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { sendEmailNotification } from "@/lib/emailNotifications";
 
 const BANK_ACCOUNT = "0611359113165";
 
