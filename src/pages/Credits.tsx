@@ -44,6 +44,7 @@ export default function Credits() {
       if (!user) return [];
       // Give waiting orders a chance to clear themselves before we read them.
       await supabase.rpc("auto_approve_due_credit_purchases");
+      supabase.functions.invoke("send-notifications", { body: { type: "credit_email_sweep" } }).catch(() => {});
       const { data } = await supabase
         .from("credit_purchases")
         .select("id, credits, amount_pkr, status, provider, payment_reference, created_at")
@@ -55,37 +56,6 @@ export default function Credits() {
   });
 
   const pendingCount = (purchases as any[]).filter((p) => p.status === "pending").length;
-
-  // Email the buyer once, as soon as an order we were watching gets approved.
-  const watchedPending = useRef<Set<string>>(new Set());
-  const emailedApproved = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    if (!user) return;
-    (purchases as any[]).forEach((p) => {
-      if (p.status === "pending") {
-        watchedPending.current.add(p.id);
-        return;
-      }
-      if (
-        p.status === "approved" &&
-        watchedPending.current.has(p.id) &&
-        !emailedApproved.current.has(p.id)
-      ) {
-        emailedApproved.current.add(p.id);
-        watchedPending.current.delete(p.id);
-        sendEmailNotification({
-          type: "credits_added",
-          recipientEmail: user.email || "",
-          recipientName: (user.user_metadata as any)?.name || "Behen",
-          data: {
-            credits: p.credits,
-            amount: p.amount_pkr,
-            reference: p.payment_reference,
-          },
-        });
-      }
-    });
-  }, [purchases, user]);
 
   // While an order is waiting, keep checking so the credits appear on their own.
   useEffect(() => {

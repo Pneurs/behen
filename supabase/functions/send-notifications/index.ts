@@ -59,6 +59,60 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Email service not configured");
     }
 
+    // Sweep: email every buyer whose credit purchase was approved but not yet emailed
+    if ((type as string) === "credit_email_sweep") {
+      const admin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: due } = await admin
+        .from("credit_purchases")
+        .select("id, user_id, credits, amount_pkr, payment_reference")
+        .eq("status", "approved")
+        .is("credit_email_sent_at", null)
+        .limit(20);
+      let sent = 0;
+      for (const p of due || []) {
+        // Claim first so parallel sweeps don't double-send
+        const { data: claimed } = await admin
+          .from("credit_purchases")
+          .update({ credit_email_sent_at: new Date().toISOString() })
+          .eq("id", p.id)
+          .is("credit_email_sent_at", null)
+          .select("id");
+        if (!claimed?.length) continue;
+        const { data: u } = await admin.auth.admin.getUserById(p.user_id);
+        const email = u?.user?.email;
+        if (!email) continue;
+        const { data: prof } = await admin.from("profiles").select("name").eq("user_id", p.user_id).maybeSingle();
+        const { data: bal } = await admin.from("user_credits").select("balance").eq("user_id", p.user_id).maybeSingle();
+        const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background:#ffffff;">
+            <h1 style="color: #FF69B4;">Payment Verified — Credits Added!</h1>
+            <p>Hi ${esc(prof?.name || "Behen")},</p>
+            <p>We've verified your payment and added <strong>${p.credits} credits</strong> to your account.</p>
+            <div style="background: #fdf2f8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FF69B4;">
+              <p style="margin: 5px 0;"><strong>Credits added:</strong> ${p.credits}</p>
+              <p style="margin: 5px 0;"><strong>Amount paid:</strong> PKR ${Number(p.amount_pkr).toLocaleString()}</p>
+              ${p.payment_reference ? `<p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${esc(p.payment_reference)}</p>` : ""}
+              ${bal ? `<p style="margin: 5px 0;"><strong>Current balance:</strong> ${bal.balance} credits</p>` : ""}
+            </div>
+            <p>You can now use your credits to view seller contact details.</p>
+            <p><a href="https://behen.pk/credits" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">View My Credits</a></p>
+            <p>Best regards,<br>Behen.pk Team</p>
+          </div>`;
+        try {
+          await sendEmail(email, "Your credits are ready 🎉 - Behen.pk", html);
+          sent++;
+        } catch (e) {
+          console.error("credit email failed", p.id, e);
+          await admin.from("credit_purchases").update({ credit_email_sent_at: null }).eq("id", p.id);
+        }
+      }
+      return new Response(JSON.stringify({ success: true, sent }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     // Handle referral bonus notifications separately
     if (type === "referral_bonus") {
       const { referrer_id, new_user_id } = requestData;
