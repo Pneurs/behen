@@ -248,6 +248,10 @@ const ProductDetail = () => {
       ? [product.ai_cover_image]
       : (product.real_images || []).slice(0, 3);
   
+  const legacyRealImages: string[] = currentUser ? (product.real_images || []) : [];
+  const galleryImages: string[] = Array.from(
+    new Set([...displayImages, ...(currentUser ? protectedImages : []), ...legacyRealImages].filter(Boolean))
+  );
   const hasRealImages = protectedImages.length > 0;
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
@@ -272,11 +276,6 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Meta tags for SEO - prevent indexing of real images */}
-      <head>
-        <meta name="robots" content="noindex, nofollow" data-image-protection="true" />
-      </head>
-      
       <Header />
 
       {/* Main Content */}
@@ -285,9 +284,9 @@ const ProductDetail = () => {
           {/* Image Gallery */}
           <div className="space-y-4">
             <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted relative">
-              {displayImages.length > 0 ? (
+              {galleryImages.length > 0 ? (
                 <img
-                  src={displayImages[selectedImage]}
+                  src={galleryImages[selectedImage] || galleryImages[0]}
                   alt={product.title}
                   className="w-full h-full object-cover"
                 />
@@ -331,6 +330,25 @@ const ProductDetail = () => {
               )}
             </div>
             
+            {galleryImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {galleryImages.map((img, index) => (
+                  <button
+                    key={img}
+                    type="button"
+                    onClick={() => setSelectedImage(index)}
+                    className={`h-20 w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === index ? "border-primary" : "border-transparent"}`}
+                    aria-label={`Show photo ${index + 1}`}
+                  >
+                    <img src={img} alt={`${product.title} photo ${index + 1}`} loading="lazy" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {!currentUser && (
+              <p className="text-xs text-muted-foreground">Sign in to see more original photos of this dress.</p>
+            )}
+
             {/* Real Images Section */}
             {hasRealImages && (
               <Card className="border-dashed">
@@ -829,7 +847,7 @@ const ProductDetail = () => {
           setImageViewerOpen(false);
           setShowRealImages(false);
         }}
-        images={showRealImages ? protectedImages : displayImages}
+        images={galleryImages}
         productTitle={product.title}
       />
     </div>
