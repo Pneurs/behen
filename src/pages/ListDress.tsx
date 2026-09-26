@@ -1,3 +1,4 @@
+import { compressImage } from "@/lib/compressImage";
 import Seo from "@/components/Seo";
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
