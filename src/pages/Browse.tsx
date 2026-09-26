@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, lazy, Suspense, useEffect } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, useParams, useLocation } from "react-router-dom";
 import Seo from "@/components/Seo";
 import SeoLinks from "@/components/SeoLinks";
@@ -77,15 +77,34 @@ const Browse = () => {
 
   // React Query for products
   const {
-    data: products = [],
+    data: productPages,
     isLoading: loading,
     isError: productsError,
     refetch: refetchProducts,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
   } = useBrowseProducts({
     category: categoryFilter,
     listingType: listingTypeFilter,
     city: cityFilter,
   });
+  const products = useMemo(() => productPages?.pages.flat() ?? [], [productPages]);
+
+  // Auto-load the next batch when the user scrolls near the bottom
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !hasNextPage) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isFetchingNextPage) fetchNextPage();
+      },
+      { rootMargin: "600px" }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const [slowLoad, setSlowLoad] = useState(false);
   useEffect(() => {
@@ -449,6 +468,13 @@ const Browse = () => {
                 );
               })}
             </div>
+            {hasNextPage && (
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+                  {isFetchingNextPage ? "Loading more dresses…" : "Load more dresses"}
+                </Button>
+              </div>
+            )}
           </>
         )}
 

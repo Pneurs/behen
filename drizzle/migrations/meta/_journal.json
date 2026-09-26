@@ -92,6 +92,13 @@
       "when": 1790219891509,
       "tag": "0012_credit_email_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790400711507,
+      "tag": "0013_marketplace_scale_indexes_and_image_guard",
+      "breakpoints": true
     }
   ]
 }

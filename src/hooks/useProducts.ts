@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Product {
@@ -61,18 +61,23 @@ export const useHomeProducts = () => {
   });
 };
 
-// Fetch browse page products with filters
+export const BROWSE_PAGE_SIZE = 24;
+
+// Fetch browse page products with filters, 24 at a time
 export const useBrowseProducts = (options: UseProductsOptions = {}) => {
   const { category, listingType, city, status = "published" } = options;
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["products", "browse", { category, listingType, city, status }],
-    queryFn: async () => {
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const from = (pageParam as number) * BROWSE_PAGE_SIZE;
       let query = supabase
         .from("products")
         .select(PRODUCT_CARD_FIELDS)
         .eq("status", status)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .range(from, from + BROWSE_PAGE_SIZE - 1);
 
       if (category && category !== "all") {
         query = query.eq("category", category);
@@ -92,7 +97,9 @@ export const useBrowseProducts = (options: UseProductsOptions = {}) => {
       if (error) throw error;
       return data as Product[];
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes for browse (more dynamic)
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === BROWSE_PAGE_SIZE ? pages.length : undefined,
+    staleTime: 2 * 60 * 1000,
   });
 };
 
