@@ -1,0 +1,3 @@
+- Product photos must live in storage as URLs, never base64 in rows (DB trigger rejects `data:`); inline images once overloaded the database.
+- Browse loads products in pages of 24 via useInfiniteQuery; never fetch the full catalog in one query.
+- Photos are compressed client-side (src/lib/compressImage.ts, 1600px JPEG) before upload to keep storage and page weight small.
