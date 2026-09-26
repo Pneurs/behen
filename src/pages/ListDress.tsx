@@ -610,14 +610,15 @@ const ListDress = () => {
   const uploadImages = async (): Promise<string[]> => {
     const uploadedUrls: string[] = [];
 
-    for (const file of imageFiles) {
+    for (const original of imageFiles) {
+      const file = await compressImage(original);
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `real/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("product-images")
-        .upload(filePath, file);
+        .upload(filePath, file, { cacheControl: "31536000" });
 
       if (uploadError) {
         throw uploadError;
@@ -636,7 +637,8 @@ const ListDress = () => {
   const uploadPrivateFiles = async () => {
     if (!user) throw new Error("Please sign in again");
     const paths: string[] = [];
-    for (const file of privateImageFiles) {
+    for (const original of privateImageFiles) {
+      const file = await compressImage(original);
       const extension = file.name.split(".").pop() || "jpg";
       const path = `${user.id}/images/${crypto.randomUUID()}.${extension}`;
       const { error } = await supabase.storage.from("product-private-media").upload(path, file);
@@ -734,7 +736,9 @@ const ListDress = () => {
         dry_cleaned: formData.listing_type === "rent" ? formData.dry_cleaned : null,
         alterations_allowed: formData.listing_type === "rent" ? formData.alterations_allowed : null,
         video_url: formData.video_url || null,
-        public_images: realImageUrls.length > 0 ? realImageUrls.slice(0, 3) : imagePreviews.slice(0, 3),
+        public_images: realImageUrls.length > 0
+          ? realImageUrls.slice(0, 3)
+          : imagePreviews.filter((u) => !u.startsWith("data:")).slice(0, 3),
         private_image_paths: [...existingPrivateImagePaths, ...privateUploads.paths].slice(0, 6),
         uploaded_video_path: privateUploads.uploadedVideoPath || existingUploadedVideoPath,
         updated_at: new Date().toISOString(),
