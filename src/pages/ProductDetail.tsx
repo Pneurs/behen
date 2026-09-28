@@ -320,11 +320,57 @@ const ProductDetail = () => {
           <div className="space-y-4">
             <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-muted relative">
               {galleryImages.length > 0 ? (
-                <img
-                  src={galleryImages[selectedImage] || galleryImages[0]}
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
+                <>
+                  <div
+                    ref={galleryScrollRef}
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      setSelectedImage(Math.round(el.scrollLeft / el.clientWidth));
+                    }}
+                    className="flex h-full w-full overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  >
+                    {galleryImages.map((img, index) => (
+                      <img
+                        key={`${img}-${index}`}
+                        src={img}
+                        alt={`${product.title} photo ${index + 1}`}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        className="h-full w-full flex-shrink-0 snap-center object-cover"
+                      />
+                    ))}
+                  </div>
+
+                  {galleryImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="Previous photo"
+                        onClick={() => scrollGalleryTo(selectedImage - 1)}
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background"
+                      >
+                        <ChevronLeft className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Next photo"
+                        onClick={() => scrollGalleryTo(selectedImage + 1)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-background/80 backdrop-blur flex items-center justify-center shadow-md hover:bg-background"
+                      >
+                        <ChevronRight className="h-5 w-5" />
+                      </button>
+                      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+                        {galleryImages.map((_, index) => (
+                          <span
+                            key={index}
+                            className={`h-1.5 rounded-full transition-all ${
+                              selectedImage === index ? "w-4 bg-primary" : "w-1.5 bg-background/70"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10">
                   <Tag className="h-24 w-24 text-muted-foreground" />
