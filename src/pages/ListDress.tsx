@@ -588,6 +588,9 @@ const ListDress = () => {
 
   const continueFromPricing = () => {
     if (!formData.listing_type) return void toast.error("Please select rent or sale");
+    if (!formData.original_price || parseFloat(formData.original_price) <= 0) {
+      return void toast.error("Please enter the original price (market value)");
+    }
     if (formData.listing_type === "rent" && !formData.rental_price_4days) return void toast.error("Please enter the 4-day rental price");
     if (formData.listing_type === "sale" && !formData.sale_price) return void toast.error("Please enter the sale price");
     goToStep("instructions");
@@ -1408,14 +1411,16 @@ const ListDress = () => {
             {formData.listing_type === "sale" && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="original_price">Original Price</Label>
+                  <Label htmlFor="original_price">Original Price (Market Value) *</Label>
                   <Input
                     id="original_price"
                     type="number"
                     value={formData.original_price}
                     onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
                     placeholder="50000"
+                    required
                   />
+
                 </div>
                 <div>
                   <Label htmlFor="sale_price">Sale Price *</Label>
@@ -1948,6 +1953,8 @@ const ListDress = () => {
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">
                 <strong className="text-primary">A product video is required.</strong>
+                <br />
+                Please record the video <strong>vertically (portrait, 9:16)</strong> — like an Instagram Reel or TikTok — holding the phone upright so the full dress is visible.
                 <br />
                 Upload your video to YouTube, Google Drive, or Vimeo and paste the link below.
               </AlertDescription>
