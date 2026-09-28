@@ -45,6 +45,7 @@ const ProductDetail = () => {
   const [owner, setOwner] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const galleryScrollRef = useRef<HTMLDivElement | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showRealImages, setShowRealImages] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
