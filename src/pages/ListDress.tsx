@@ -668,6 +668,14 @@ const ListDress = () => {
       return;
     }
 
+    if (!formData.original_price || parseFloat(formData.original_price) <= 0) {
+      toast.error("Please enter the original price (market value)");
+      setCurrentStep("pricing");
+      return;
+    }
+
+
+
     // Gate: Bari Behens must verify their WhatsApp number before uploading
     if (!isSuperAdmin && !phoneVerified) {
       toast.error("Please verify your WhatsApp number before uploading products");
