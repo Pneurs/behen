@@ -1419,6 +1419,7 @@ export type Database = {
         Returns: number
       }
       get_public_product: { Args: { _product_id: string }; Returns: Json }
+      get_seller_contact: { Args: { _product_id: string }; Returns: Json }
       get_user_role_by_email: { Args: { user_email: string }; Returns: string }
       has_role: {
         Args: {
