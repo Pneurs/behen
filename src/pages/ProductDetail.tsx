@@ -1,5 +1,5 @@
 import Seo from "@/components/Seo";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,9 @@ import {
   ShoppingBag,
   Video,
   ExternalLink,
-  Download
+  Download,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 const ProductDetail = () => {
