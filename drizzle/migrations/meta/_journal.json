@@ -99,6 +99,13 @@
       "when": 1790400711507,
       "tag": "0013_marketplace_scale_indexes_and_image_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790582354972,
+      "tag": "0014_seller_contact_with_email",
+      "breakpoints": true
     }
   ]
 }

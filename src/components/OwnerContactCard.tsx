@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Phone, Eye, EyeOff, User, AlertTriangle, ShieldCheck, Lock, Coins, Loader2 } from "lucide-react";
+import { Phone, Eye, EyeOff, User, AlertTriangle, ShieldCheck, Lock, Coins, Loader2, Mail, Copy } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -12,6 +13,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useContactUnlocked, useUnlockContact } from "@/hooks/useCredits";
 
 interface OwnerContactCardProps {
@@ -30,15 +32,54 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
   const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
+  const [sellerEmail, setSellerEmail] = useState<string | null>(null);
 
   const { data: settings } = useCreditSettings();
   const { data: balance = 0 } = useCreditBalance();
   const { data: unlocked = false, refetch: refetchUnlocked } = useContactUnlocked(productId);
   const { unlock } = useUnlockContact();
 
+  // Admins and super admins never spend credits to see seller details
+  const { data: isPrivileged = false } = useQuery({
+    queryKey: ["is-privileged-viewer", currentUser?.id],
+    queryFn: async () => {
+      if (!currentUser?.id) return false;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", currentUser.id)
+        .in("role", ["admin", "super_admin"]);
+      return !!data && data.length > 0;
+    },
+    enabled: !!currentUser?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const creditsEnabled = !!settings?.enabled && !!productId;
   const cost = settings?.costPerUnlock || 1;
-  const needsCredits = creditsEnabled && !unlocked;
+  const needsCredits = creditsEnabled && !unlocked && !isPrivileged;
+
+  const loadEmail = async () => {
+    if (!productId) return;
+    const { data, error } = await supabase.rpc("get_seller_contact", { _product_id: productId });
+    if (error) return;
+    const result = data as any;
+    if (result?.allowed) setSellerEmail(result.email || null);
+  };
+
+  useEffect(() => {
+    if (showDialog) loadEmail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDialog, productId]);
+
+  const copy = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
 
   const handleShowContact = async () => {
     if (!currentUser) {
@@ -118,6 +159,12 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
         </p>
       )}
 
+      {currentUser && isPrivileged && creditsEnabled && !unlocked && (
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Admin access — no credits needed
+        </p>
+      )}
+
       <AlertDialog open={showDialog} onOpenChange={setShowDialog}>
         <AlertDialogContent className="max-w-sm">
           <AlertDialogHeader>
@@ -128,7 +175,7 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
             <AlertDialogDescription asChild>
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold">
                     {owner.name?.[0]?.toUpperCase() || "B"}
                   </div>
                   <div>
@@ -164,6 +211,28 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
                   </div>
                 ) : (
                   <p className="p-3 bg-muted rounded-lg text-sm">This seller hasn't added a phone number yet. Please message her through chat.</p>
+                )}
+
+                {sellerEmail && (
+                  <div className="flex items-center justify-between gap-2 p-3 bg-muted rounded-lg">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <a
+                        href={`mailto:${sellerEmail}`}
+                        className="text-primary hover:underline font-medium text-sm truncate"
+                      >
+                        {sellerEmail}
+                      </a>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copy(sellerEmail, "Email")}
+                      aria-label="Copy email address"
+                      className="text-muted-foreground hover:text-foreground flex-shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg text-sm">
