@@ -417,7 +417,7 @@ const ProductDetail = () => {
                   <button
                     key={img}
                     type="button"
-                    onClick={() => setSelectedImage(index)}
+                    onClick={() => scrollGalleryTo(index)}
                     className={`h-20 w-16 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === index ? "border-primary" : "border-transparent"}`}
                     aria-label={`Show photo ${index + 1}`}
                   >
