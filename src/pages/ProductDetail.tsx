@@ -257,6 +257,14 @@ const ProductDetail = () => {
     new Set([...displayImages, ...(currentUser ? protectedImages : []), ...legacyRealImages].filter(Boolean))
   );
   const hasRealImages = protectedImages.length > 0;
+
+  const scrollGalleryTo = (index: number) => {
+    const el = galleryScrollRef.current;
+    const safeIndex = Math.max(0, Math.min(index, galleryImages.length - 1));
+    setSelectedImage(safeIndex);
+    if (el) el.scrollTo({ left: safeIndex * el.clientWidth, behavior: "smooth" });
+  };
+
   const blackoutDates = getBlackoutDates();
   const isOwner = currentUser?.id === product.owner_id;
 
