@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search, UserCheck, Gift } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search, UserCheck, Gift, RefreshCw, CalendarClock } from "lucide-react";
+import { listingDaysLeft, isListingActive } from "@/lib/listingLifecycle";
 import { format, differenceInDays } from "date-fns";
 import {
   Select,
