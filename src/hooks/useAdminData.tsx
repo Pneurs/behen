@@ -56,6 +56,8 @@ export interface AdminProduct {
   sale_price: number | null;
   security_deposit: number | null;
   created_at: string;
+  listing_active?: boolean | null;
+  activated_at?: string | null;
 }
 
 export interface AdminUser {
