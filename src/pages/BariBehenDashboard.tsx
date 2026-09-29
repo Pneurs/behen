@@ -273,6 +273,38 @@ export default function BariBehenDashboard() {
     }
   };
 
+  const handleReactivate = async (productId: string) => {
+    const { data, error } = await supabase.rpc("reactivate_listing", { _product_id: productId });
+    const result = data as { success?: boolean } | null;
+
+    if (error || !result?.success) {
+      toast({ title: "Error", description: "Could not reactivate this listing", variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Listing is live again",
+      description: "It will stay active for another 15 days — free of cost.",
+    });
+
+    if (user) fetchProducts(user.id);
+  };
+
+  const handleMarkSold = async (productId: string) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ inventory_status: "unavailable", listing_active: false })
+      .eq("id", productId);
+
+    if (error) {
+      toast({ title: "Error", description: "Could not update this listing", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Thank you!", description: "We've marked this dress as sold and paused the listing." });
+    if (user) fetchProducts(user.id);
+  };
+
   if (loading) return <div>Loading...</div>;
 
   return (
