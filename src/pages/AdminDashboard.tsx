@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, ShieldCheck, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video, Power, PowerOff, CalendarClock
 } from "lucide-react";
+import { listingDaysLeft, isListingActive } from "@/lib/listingLifecycle";
 import AdminProductVideos from "@/components/admin/AdminProductVideos";
 import SEOContentManager from "@/components/admin/SEOContentManager";
 import AdminLocationManager from "@/components/admin/AdminLocationManager";
@@ -297,6 +298,29 @@ export default function AdminDashboard() {
     });
 
     refetchPendingProducts();
+    refetchAllProducts();
+  };
+
+  const handleToggleListingActive = async (productId: string, makeActive: boolean) => {
+    const { data, error } = await supabase.rpc("set_listing_active", {
+      _product_id: productId,
+      _active: makeActive,
+    });
+
+    const result = data as { success?: boolean; reason?: string } | null;
+
+    if (error || !result?.success) {
+      toast({ title: "Error", description: "Failed to change listing status", variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: makeActive ? "Listing activated" : "Listing deactivated",
+      description: makeActive
+        ? "The listing is live again for the next 15 days."
+        : "The listing is hidden from buyers.",
+    });
+
     refetchAllProducts();
   };
 
@@ -1104,8 +1128,26 @@ export default function AdminDashboard() {
                                     <Badge variant="outline" className="border-slate-600 text-slate-300">
                                       {product.listing_type}
                                     </Badge>
+                                    <Badge variant="outline" className={
+                                      isListingActive(product)
+                                        ? "border-emerald-500/50 text-emerald-400"
+                                        : "border-orange-500/50 text-orange-400"
+                                    }>
+                                      {isListingActive(product) ? "Active" : "Inactive"}
+                                    </Badge>
                                   </div>
                                   <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
+                                  <div className="flex flex-wrap gap-4 text-sm text-slate-300 mt-1">
+                                    <span className="flex items-center gap-1">
+                                      <CalendarClock className="h-3.5 w-3.5" />
+                                      Posted: {product.created_at ? format(new Date(product.created_at), "MMM dd, yyyy h:mm a") : "—"}
+                                    </span>
+                                    <span>
+                                      {isListingActive(product)
+                                        ? `${listingDaysLeft(product)} of 15 days left`
+                                        : "Waiting for seller to confirm sold or reactivate"}
+                                    </span>
+                                  </div>
                                   <div className="flex gap-4 text-sm text-slate-300 mt-1">
                                     <span>Category: {product.category}</span>
                                     <span>Size: {product.size}</span>
@@ -1135,6 +1177,20 @@ export default function AdminDashboard() {
                                   >
                                     <Pencil className="h-4 w-4 mr-1" />
                                     Edit
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleToggleListingActive(product.id, !isListingActive(product))}
+                                    className={isListingActive(product)
+                                      ? "border-orange-500/50 text-orange-400"
+                                      : "border-emerald-500/50 text-emerald-400"}
+                                  >
+                                    {isListingActive(product) ? (
+                                      <><PowerOff className="h-4 w-4 mr-1" />Deactivate</>
+                                    ) : (
+                                      <><Power className="h-4 w-4 mr-1" />Activate</>
+                                    )}
                                   </Button>
                                   <Button 
                                     size="sm" 

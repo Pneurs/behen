@@ -106,6 +106,13 @@
       "when": 1790582354972,
       "tag": "0014_seller_contact_with_email",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790714531761,
+      "tag": "0015_listing_lifecycle_and_social_reward",
+      "breakpoints": true
     }
   ]
 }

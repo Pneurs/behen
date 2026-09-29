@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
-import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search, UserCheck, Gift } from "lucide-react";
+import { Pencil, Trash2, Plus, Package, Wallet, Users, Copy, Share2, ShoppingBag, Clock, CheckCircle, Loader2, ArrowRight, Search, UserCheck, Gift, RefreshCw, CalendarClock } from "lucide-react";
+import { listingDaysLeft, isListingActive } from "@/lib/listingLifecycle";
 import { format, differenceInDays } from "date-fns";
 import {
   Select,
@@ -270,6 +271,38 @@ export default function BariBehenDashboard() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleReactivate = async (productId: string) => {
+    const { data, error } = await supabase.rpc("reactivate_listing", { _product_id: productId });
+    const result = data as { success?: boolean } | null;
+
+    if (error || !result?.success) {
+      toast({ title: "Error", description: "Could not reactivate this listing", variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: "Listing is live again",
+      description: "It will stay active for another 15 days — free of cost.",
+    });
+
+    if (user) fetchProducts(user.id);
+  };
+
+  const handleMarkSold = async (productId: string) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ inventory_status: "unavailable", listing_active: false })
+      .eq("id", productId);
+
+    if (error) {
+      toast({ title: "Error", description: "Could not update this listing", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Thank you!", description: "We've marked this dress as sold and paused the listing." });
+    if (user) fetchProducts(user.id);
   };
 
   if (loading) return <div>Loading...</div>;
@@ -620,6 +653,32 @@ export default function BariBehenDashboard() {
               {products.map((product) => (
                 <Card key={product.id}>
                   <CardContent className="pt-6">
+                    {/* 15-day listing timeline */}
+                    {isListingActive(product) ? (
+                      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarClock className="h-4 w-4" />
+                        Active — {listingDaysLeft(product)} of 15 days left
+                      </div>
+                    ) : (
+                      <div className="mb-4 rounded-lg border border-orange-300 bg-orange-50 p-4">
+                        <p className="font-semibold text-orange-900">
+                          This listing is paused after 15 days
+                        </p>
+                        <p className="text-sm text-orange-800 mt-1">
+                          Has this dress been sold or rented out?
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <Button size="sm" variant="outline" onClick={() => handleMarkSold(product.id)}>
+                            Yes, it's sold
+                          </Button>
+                          <Button size="sm" onClick={() => handleReactivate(product.id)}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            No, activate again free
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Desktop Layout */}
                     <div className="hidden md:flex items-start gap-4">
                       {product.ai_cover_image && (

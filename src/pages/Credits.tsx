@@ -14,6 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useCreditTransactions, CreditPackage } from "@/hooks/useCredits";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import SocialFollowRewardCard from "@/components/SocialFollowRewardCard";
 
 const BANK_ACCOUNT = "0611359113165";
 
@@ -136,6 +137,8 @@ export default function Credits() {
             </p>
           </CardContent>
         </Card>
+
+        <SocialFollowRewardCard />
 
         {pendingCount > 0 && (
           <Card className="border-primary/40">
