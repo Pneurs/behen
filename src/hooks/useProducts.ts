@@ -20,6 +20,8 @@ export interface Product {
   longitude?: number | null;
   status: string;
   owner_id: string;
+  listing_active?: boolean | null;
+  activated_at?: string | null;
   description?: string | null;
   size?: string;
   alteration_possible?: boolean;
