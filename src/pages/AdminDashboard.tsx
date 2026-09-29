@@ -1178,6 +1178,20 @@ export default function AdminDashboard() {
                                     <Pencil className="h-4 w-4 mr-1" />
                                     Edit
                                   </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleToggleListingActive(product.id, !isListingActive(product))}
+                                    className={isListingActive(product)
+                                      ? "border-orange-500/50 text-orange-400"
+                                      : "border-emerald-500/50 text-emerald-400"}
+                                  >
+                                    {isListingActive(product) ? (
+                                      <><PowerOff className="h-4 w-4 mr-1" />Deactivate</>
+                                    ) : (
+                                      <><Power className="h-4 w-4 mr-1" />Activate</>
+                                    )}
+                                  </Button>
                                   <Button 
                                     size="sm" 
                                     variant="destructive" 
