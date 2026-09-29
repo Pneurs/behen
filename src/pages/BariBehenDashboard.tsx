@@ -653,6 +653,32 @@ export default function BariBehenDashboard() {
               {products.map((product) => (
                 <Card key={product.id}>
                   <CardContent className="pt-6">
+                    {/* 15-day listing timeline */}
+                    {isListingActive(product) ? (
+                      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+                        <CalendarClock className="h-4 w-4" />
+                        Active — {listingDaysLeft(product)} of 15 days left
+                      </div>
+                    ) : (
+                      <div className="mb-4 rounded-lg border border-orange-300 bg-orange-50 p-4">
+                        <p className="font-semibold text-orange-900">
+                          This listing is paused after 15 days
+                        </p>
+                        <p className="text-sm text-orange-800 mt-1">
+                          Has this dress been sold or rented out?
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <Button size="sm" variant="outline" onClick={() => handleMarkSold(product.id)}>
+                            Yes, it's sold
+                          </Button>
+                          <Button size="sm" onClick={() => handleReactivate(product.id)}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            No, activate again free
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Desktop Layout */}
                     <div className="hidden md:flex items-start gap-4">
                       {product.ai_cover_image && (
