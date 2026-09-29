@@ -723,6 +723,7 @@ export type Database = {
       }
       products: {
         Row: {
+          activated_at: string | null
           ai_cover_image: string | null
           ai_generation_attempts: number | null
           alteration_possible: boolean | null
@@ -736,6 +737,7 @@ export type Database = {
           condition: string
           contact_phone: string | null
           created_at: string
+          deactivated_at: string | null
           description: string | null
           designer: string | null
           dropoff_location: string | null
@@ -751,6 +753,7 @@ export type Database = {
           inventory_status: string
           last_rented_on: string | null
           latitude: number | null
+          listing_active: boolean | null
           listing_type: string
           longitude: number | null
           negotiation_allowed: boolean | null
@@ -779,6 +782,7 @@ export type Database = {
           work_type: string | null
         }
         Insert: {
+          activated_at?: string | null
           ai_cover_image?: string | null
           ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
@@ -792,6 +796,7 @@ export type Database = {
           condition: string
           contact_phone?: string | null
           created_at?: string
+          deactivated_at?: string | null
           description?: string | null
           designer?: string | null
           dropoff_location?: string | null
@@ -807,6 +812,7 @@ export type Database = {
           inventory_status?: string
           last_rented_on?: string | null
           latitude?: number | null
+          listing_active?: boolean | null
           listing_type: string
           longitude?: number | null
           negotiation_allowed?: boolean | null
@@ -835,6 +841,7 @@ export type Database = {
           work_type?: string | null
         }
         Update: {
+          activated_at?: string | null
           ai_cover_image?: string | null
           ai_generation_attempts?: number | null
           alteration_possible?: boolean | null
@@ -848,6 +855,7 @@ export type Database = {
           condition?: string
           contact_phone?: string | null
           created_at?: string
+          deactivated_at?: string | null
           description?: string | null
           designer?: string | null
           dropoff_location?: string | null
@@ -863,6 +871,7 @@ export type Database = {
           inventory_status?: string
           last_rented_on?: string | null
           latitude?: number | null
+          listing_active?: boolean | null
           listing_type?: string
           longitude?: number | null
           negotiation_allowed?: boolean | null
@@ -1052,6 +1061,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      social_follow_claims: {
+        Row: {
+          created_at: string
+          credits_awarded: number
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_awarded?: number
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_awarded?: number
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_credits: {
         Row: {
@@ -1401,6 +1431,7 @@ export type Database = {
         Returns: Json
       }
       auto_approve_due_credit_purchases: { Args: never; Returns: number }
+      claim_social_follow_reward: { Args: never; Returns: Json }
       complete_credit_purchase: {
         Args: {
           _provider_reference: string
@@ -1409,6 +1440,7 @@ export type Database = {
         }
         Returns: Json
       }
+      expire_stale_listings: { Args: never; Returns: number }
       get_my_verification_code: { Args: { _token: string }; Returns: string }
       get_owner_average_rating: {
         Args: { owner_uuid: string }
@@ -1427,6 +1459,11 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      reactivate_listing: { Args: { _product_id: string }; Returns: Json }
+      set_listing_active: {
+        Args: { _active: boolean; _product_id: string }
+        Returns: Json
       }
       unlock_contact: { Args: { _product_id: string }; Returns: Json }
       verify_phone_with_code: { Args: { _code: string }; Returns: boolean }
