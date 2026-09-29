@@ -53,6 +53,7 @@ export const useHomeProducts = () => {
         .from("products")
         .select(PRODUCT_CARD_FIELDS)
         .eq("status", "published")
+        .neq("listing_active", false)
         .limit(8)
         .order("created_at", { ascending: false });
 
@@ -78,6 +79,7 @@ export const useBrowseProducts = (options: UseProductsOptions = {}) => {
         .from("products")
         .select(PRODUCT_CARD_FIELDS)
         .eq("status", status)
+        .neq("listing_active", false)
         .order("created_at", { ascending: false })
         .range(from, from + BROWSE_PAGE_SIZE - 1);
 
