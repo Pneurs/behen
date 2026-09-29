@@ -301,6 +301,29 @@ export default function AdminDashboard() {
     refetchAllProducts();
   };
 
+  const handleToggleListingActive = async (productId: string, makeActive: boolean) => {
+    const { data, error } = await supabase.rpc("set_listing_active", {
+      _product_id: productId,
+      _active: makeActive,
+    });
+
+    const result = data as { success?: boolean; reason?: string } | null;
+
+    if (error || !result?.success) {
+      toast({ title: "Error", description: "Failed to change listing status", variant: "destructive" });
+      return;
+    }
+
+    toast({
+      title: makeActive ? "Listing activated" : "Listing deactivated",
+      description: makeActive
+        ? "The listing is live again for the next 15 days."
+        : "The listing is hidden from buyers.",
+    });
+
+    refetchAllProducts();
+  };
+
   const handleAssignRole = async (userId: string, role: string) => {
     if (currentRole !== "super_admin") {
       toast({ title: "Access Denied", description: "Only super admins can assign roles", variant: "destructive" });
