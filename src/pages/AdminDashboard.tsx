@@ -14,8 +14,9 @@ import { Input } from "@/components/ui/input";
 import { 
   Users, Package, Calendar, TrendingUp, Check, X, Eye, CreditCard, Loader2, 
   Shield, ShieldCheck, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
-  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video
+  Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video, Power, PowerOff, CalendarClock
 } from "lucide-react";
+import { listingDaysLeft, isListingActive } from "@/lib/listingLifecycle";
 import AdminProductVideos from "@/components/admin/AdminProductVideos";
 import SEOContentManager from "@/components/admin/SEOContentManager";
 import AdminLocationManager from "@/components/admin/AdminLocationManager";
