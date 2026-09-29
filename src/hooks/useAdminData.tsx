@@ -186,17 +186,28 @@ async function fetchPendingProducts(): Promise<AdminProduct[]> {
 
 // Fetch all products using the database view
 async function fetchAllProducts(): Promise<AdminProduct[]> {
-  const { data, error } = await supabase
-    .from("admin_products_view" as any)
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [viewRes, lifecycleRes] = await Promise.all([
+    supabase
+      .from("admin_products_view" as any)
+      .select("*")
+      .order("created_at", { ascending: false }),
+    supabase.from("products").select("id, listing_active, activated_at"),
+  ]);
 
-  if (error) {
-    console.error("Error fetching all products:", error);
+  if (viewRes.error) {
+    console.error("Error fetching all products:", viewRes.error);
     return [];
   }
 
-  return (data || []) as unknown as AdminProduct[];
+  const lifecycle = new Map(
+    (lifecycleRes.data || []).map((row: any) => [row.id, row])
+  );
+
+  return ((viewRes.data || []) as any[]).map((product) => ({
+    ...product,
+    listing_active: lifecycle.get(product.id)?.listing_active ?? true,
+    activated_at: lifecycle.get(product.id)?.activated_at ?? product.created_at,
+  })) as unknown as AdminProduct[];
 }
 
 // Fetch users with roles and product counts - optimized with batch fetching
