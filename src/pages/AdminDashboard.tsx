@@ -1128,8 +1128,26 @@ export default function AdminDashboard() {
                                     <Badge variant="outline" className="border-slate-600 text-slate-300">
                                       {product.listing_type}
                                     </Badge>
+                                    <Badge variant="outline" className={
+                                      isListingActive(product)
+                                        ? "border-emerald-500/50 text-emerald-400"
+                                        : "border-orange-500/50 text-orange-400"
+                                    }>
+                                      {isListingActive(product) ? "Active" : "Inactive"}
+                                    </Badge>
                                   </div>
                                   <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
+                                  <div className="flex flex-wrap gap-4 text-sm text-slate-300 mt-1">
+                                    <span className="flex items-center gap-1">
+                                      <CalendarClock className="h-3.5 w-3.5" />
+                                      Posted: {product.created_at ? format(new Date(product.created_at), "MMM dd, yyyy h:mm a") : "—"}
+                                    </span>
+                                    <span>
+                                      {isListingActive(product)
+                                        ? `${listingDaysLeft(product)} of 15 days left`
+                                        : "Waiting for seller to confirm sold or reactivate"}
+                                    </span>
+                                  </div>
                                   <div className="flex gap-4 text-sm text-slate-300 mt-1">
                                     <span>Category: {product.category}</span>
                                     <span>Size: {product.size}</span>
