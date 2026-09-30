@@ -35,6 +35,7 @@ interface UseProductsOptions {
   city?: string;
   status?: string;
   limit?: number;
+  search?: string;
 }
 
 // Only select fields needed for product cards (performance optimization)
