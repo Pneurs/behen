@@ -75,6 +75,14 @@ const Browse = () => {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [alterationFilter, setAlterationFilter] = useState(false);
 
+  // Debounce the text search so each keystroke doesn't trigger a new request
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+
   // React Query for products
   const {
     data: productPages,
