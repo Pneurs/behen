@@ -88,6 +88,7 @@ const Browse = () => {
     category: categoryFilter,
     listingType: listingTypeFilter,
     city: cityFilter,
+    search: searchQuery,
   });
   const products = useMemo(() => productPages?.pages.flat() ?? [], [productPages]);
 
