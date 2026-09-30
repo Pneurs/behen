@@ -69,10 +69,11 @@ export const BROWSE_PAGE_SIZE = 24;
 
 // Fetch browse page products with filters, 24 at a time
 export const useBrowseProducts = (options: UseProductsOptions = {}) => {
-  const { category, listingType, city, status = "published" } = options;
+  const { category, listingType, city, status = "published", search } = options;
+  const searchTerm = (search || "").trim();
 
   return useInfiniteQuery({
-    queryKey: ["products", "browse", { category, listingType, city, status }],
+    queryKey: ["products", "browse", { category, listingType, city, status, searchTerm }],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const from = (pageParam as number) * BROWSE_PAGE_SIZE;
@@ -96,6 +97,14 @@ export const useBrowseProducts = (options: UseProductsOptions = {}) => {
 
       if (city) {
         query = query.eq("city", city);
+      }
+
+      if (searchTerm) {
+        const safe = searchTerm.replace(/[%,()]/g, " ").trim();
+        const digits = safe.replace(/\D/g, "");
+        const filters = [`title.ilike.%${safe}%`, `product_code.ilike.%${safe}%`];
+        if (digits) filters.push(`product_code.ilike.%${digits}%`);
+        query = query.or(filters.join(","));
       }
 
       const { data, error } = await query;
