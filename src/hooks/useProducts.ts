@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Product {
   id: string;
+  product_code?: string | null;
   title: string;
   category: string;
   condition: string;
@@ -38,7 +39,7 @@ interface UseProductsOptions {
 
 // Only select fields needed for product cards (performance optimization)
 const PRODUCT_CARD_FIELDS = `
-  id, title, category, condition, 
+  id, product_code, title, category, condition, 
   rental_price_per_day, rental_price_4days, sale_price, 
   listing_type, ai_cover_image, public_images, 
   city, area, original_price, status, owner_id

@@ -692,6 +692,9 @@ export default function BariBehenDashboard() {
                         <div className="flex items-start justify-between">
                           <div>
                             <h3 className="font-semibold text-lg">{product.title}</h3>
+                            {product.product_code && (
+                              <p className="text-xs font-semibold text-primary">Code: {product.product_code}</p>
+                            )}
                             <p className="text-sm text-muted-foreground">
                               {product.category} • {product.condition}
                             </p>

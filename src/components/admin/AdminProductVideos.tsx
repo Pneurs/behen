@@ -13,6 +13,7 @@ import { format } from "date-fns";
 interface VideoProduct {
   id: string;
   title: string;
+  product_code: string | null;
   status: string;
   created_at: string;
   video_url: string | null;
@@ -35,7 +36,7 @@ export default function AdminProductVideos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price")
+        .select("id, product_code, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price")
         .or("video_url.not.is.null,uploaded_video_path.not.is.null")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -68,9 +69,13 @@ export default function AdminProductVideos() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products]);
 
-  const filtered = products.filter((p) =>
-    p.title.toLowerCase().includes(search.trim().toLowerCase())
-  );
+  const filtered = products.filter((p) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const nq = q.replace(/[^a-z0-9]/g, "");
+    const code = (p.product_code || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return p.title.toLowerCase().includes(q) || (!!nq && code.includes(nq));
+  });
 
   const productLink = (id: string) => `${window.location.origin}/product/${id}`;
 
@@ -169,6 +174,7 @@ export default function AdminProductVideos() {
                   <div>
                     <p className="font-medium">{p.title}</p>
                     <p className="text-xs text-muted-foreground">
+                      {p.product_code ? `${p.product_code} · ` : ""}
                       {format(new Date(p.created_at), "MMM dd, yyyy")}
                     </p>
                   </div>

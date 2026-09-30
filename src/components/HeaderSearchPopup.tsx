@@ -176,7 +176,7 @@ export const HeaderSearchPopup = () => {
           {/* Keyword Search */}
           <div>
             <Input
-              placeholder="Search dresses, designers..."
+              placeholder="Search dresses, designers or code (BP-1001)..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={handleKeyDown}

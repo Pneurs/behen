@@ -1136,7 +1136,10 @@ export default function AdminDashboard() {
                                       {isListingActive(product) ? "Active" : "Inactive"}
                                     </Badge>
                                   </div>
-                                  <p className="text-sm text-slate-400">Owner: {product.owner_name}</p>
+                                  <p className="text-sm text-slate-400">
+                                    Code: <span className="font-semibold text-slate-200">{product.product_code || "—"}</span>
+                                    {"  ·  "}Owner: {product.owner_name}
+                                  </p>
                                   <div className="flex flex-wrap gap-4 text-sm text-slate-300 mt-1">
                                     <span className="flex items-center gap-1">
                                       <CalendarClock className="h-3.5 w-3.5" />
