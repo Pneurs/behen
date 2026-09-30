@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreditSettings, useCreditBalance, useContactUnlocked, useUnlockContact } from "@/hooks/useCredits";
+import { WhatsAppOpenButton } from "@/components/WhatsAppOpenButton";
 
 interface OwnerContactCardProps {
   owner: {
@@ -200,14 +201,7 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
                         {owner.phone}
                       </a>
                     </div>
-                    <a
-                      href={`https://wa.me/${owner.phone.replace(/\D/g, "").replace(/^0/, "92")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium text-primary underline"
-                    >
-                      WhatsApp
-                    </a>
+                    <WhatsAppOpenButton phone={owner.phone} />
                   </div>
                 ) : (
                   <p className="p-3 bg-muted rounded-lg text-sm">This seller hasn't added a phone number yet. Please message her through chat.</p>

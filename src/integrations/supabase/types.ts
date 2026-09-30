@@ -761,6 +761,7 @@ export type Database = {
           owner_id: string
           pickup_location: string | null
           private_image_paths: string[] | null
+          product_code: string | null
           product_type: string | null
           public_images: string[] | null
           real_images: string[] | null
@@ -820,6 +821,7 @@ export type Database = {
           owner_id: string
           pickup_location?: string | null
           private_image_paths?: string[] | null
+          product_code?: string | null
           product_type?: string | null
           public_images?: string[] | null
           real_images?: string[] | null
@@ -879,6 +881,7 @@ export type Database = {
           owner_id?: string
           pickup_location?: string | null
           private_image_paths?: string[] | null
+          product_code?: string | null
           product_type?: string | null
           public_images?: string[] | null
           real_images?: string[] | null

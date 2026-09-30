@@ -75,6 +75,14 @@ const Browse = () => {
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [alterationFilter, setAlterationFilter] = useState(false);
 
+  // Debounce the text search so each keystroke doesn't trigger a new request
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+
   // React Query for products
   const {
     data: productPages,
@@ -88,6 +96,7 @@ const Browse = () => {
     category: categoryFilter,
     listingType: listingTypeFilter,
     city: cityFilter,
+    search: debouncedSearch,
   });
   const products = useMemo(() => productPages?.pages.flat() ?? [], [productPages]);
 
@@ -247,9 +256,18 @@ const Browse = () => {
   // Memoized filtered products
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      const q = searchQuery.trim().toLowerCase();
+      const normalizedQ = q.replace(/[^a-z0-9]/g, "");
+      const code = (product.product_code || "").toLowerCase();
+      const normalizedCode = code.replace(/[^a-z0-9]/g, "");
       const matchesSearch =
-        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description?.toLowerCase().includes(searchQuery.toLowerCase());
+        !q ||
+        product.title.toLowerCase().includes(q) ||
+        product.description?.toLowerCase().includes(q) ||
+        (!!normalizedQ &&
+          (normalizedCode === normalizedQ ||
+            normalizedCode === `bp${normalizedQ}` ||
+            normalizedCode.includes(normalizedQ)));
 
       const matchesAvailability = isProductAvailableForDates(product, dateRange);
 
@@ -326,7 +344,7 @@ const Browse = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search dresses..."
+              placeholder="Search dresses or code (BP-1001)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"

@@ -37,7 +37,8 @@ import {
   ExternalLink,
   Download,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Copy
 } from "lucide-react";
 
 const ProductDetail = () => {
@@ -503,6 +504,20 @@ const ProductDetail = () => {
               <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
                 {product.title}
               </h1>
+              {product.product_code && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(product.product_code);
+                    toast.success(`Code ${product.product_code} copied`);
+                  }}
+                  className="inline-flex items-center gap-1.5 mb-2 px-2.5 py-1 rounded-md bg-muted text-xs font-semibold tracking-wide hover:bg-muted/70 transition-colors"
+                  title="Copy product code"
+                >
+                  <Copy className="h-3 w-3" />
+                  Code: {product.product_code}
+                </button>
+              )}
               {(product.city || product.area) && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <MapPin className="h-4 w-4" />

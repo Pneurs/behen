@@ -79,7 +79,7 @@ export const HomeSearch = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
             <Input
               type="text"
-              placeholder="Search dresses, designers..."
+              placeholder="Search dresses, designers or code (BP-1001)..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               className="!pl-10 h-12 bg-background border-input w-full"
