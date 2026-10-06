@@ -38,8 +38,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Copy,
-  Eye
+  Copy
 } from "lucide-react";
 
 const ProductDetail = () => {
