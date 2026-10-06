@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles, ShieldCheck, Share2, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -55,7 +55,7 @@ const ListDress = () => {
   // Multi-step wizard state
   type WizardStep = "upload" | "details" | "pricing" | "instructions" | "location" | "video";
   const [currentStep, setCurrentStep] = useState<WizardStep | "generating" | "confirm" | "success">("upload");
-  const [createdProduct, setCreatedProduct] = useState<{id: string; title: string; image: string; price: string} | null>(null);
+  const [createdProduct, setCreatedProduct] = useState<{id: string; code?: string | null; title: string; image: string; price: string} | null>(null);
   
   // Step 1: Image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -789,7 +789,7 @@ const ListDress = () => {
             image_quality_validated: imageQualityChecked,
             status: "published",
           })
-          .select("id")
+          .select("id, product_code")
           .single();
 
         if (insertError) throw insertError;
@@ -843,6 +843,7 @@ const ListDress = () => {
         
         setCreatedProduct({
           id: insertedProduct.id,
+          code: (insertedProduct as any).product_code || null,
           title: formData.title,
           image: aiCoverImage,
           price: priceDisplay,
@@ -2104,10 +2105,33 @@ const ListDress = () => {
             </div>
             <div>
               <h3 className="font-semibold truncate">{createdProduct.title}</h3>
+              {createdProduct.code && <p className="text-xs text-muted-foreground">Code: {createdProduct.code}</p>}
               <p className="text-primary font-medium">{createdProduct.price}</p>
             </div>
           </div>
         )}
+
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 text-left">
+          <p className="flex items-center gap-2 font-semibold text-foreground"><ShieldCheck className="h-5 w-5 text-primary" /> Your contact details are safe</p>
+          <p className="mt-1 text-sm text-muted-foreground">Your phone number and exact address are never shown publicly. Only genuine, interested buyers who use platform credits can see your contact details.</p>
+        </div>
+
+        {createdProduct && (() => {
+          const link = `https://behen.pk/product/${createdProduct.id}`;
+          const text = `Hi! I just listed my dress on Behen.pk: ${createdProduct.title}${createdProduct.code ? ` (Code: ${createdProduct.code})` : ""}. Check photos, price and availability here: ${link}`;
+          return (
+            <div className="space-y-3 text-left">
+              <p className="font-semibold flex items-center gap-2"><Share2 className="h-5 w-5 text-primary" /> Share to rent or sell faster</p>
+              <p className="text-sm text-muted-foreground">Share your listing with friends, family and groups to get more views.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button type="button" variant="outline" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")}>WhatsApp</Button>
+                <Button type="button" variant="outline" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`, "_blank")}>Facebook</Button>
+                <Button type="button" variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(link); toast.success("Listing link copied!"); } catch { toast.error("Could not copy link"); } }}><Copy className="mr-2 h-4 w-4" />Copy Link</Button>
+                <Button type="button" variant="outline" onClick={async () => { if (navigator.share) { try { await navigator.share({ title: createdProduct.title, text, url: link }); } catch {} } else { await navigator.clipboard.writeText(text); toast.success("Message copied — paste it anywhere!"); } }}><Share2 className="mr-2 h-4 w-4" />More</Button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-3">
