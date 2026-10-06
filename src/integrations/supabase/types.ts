@@ -778,6 +778,7 @@ export type Database = {
           updated_at: string
           uploaded_video_path: string | null
           video_url: string | null
+          views_count: number
           waist_size: string | null
           weight_range: string | null
           work_type: string | null
@@ -838,6 +839,7 @@ export type Database = {
           updated_at?: string
           uploaded_video_path?: string | null
           video_url?: string | null
+          views_count?: number
           waist_size?: string | null
           weight_range?: string | null
           work_type?: string | null
@@ -898,6 +900,7 @@ export type Database = {
           updated_at?: string
           uploaded_video_path?: string | null
           video_url?: string | null
+          views_count?: number
           waist_size?: string | null
           weight_range?: string | null
           work_type?: string | null
@@ -1462,6 +1465,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_product_views: {
+        Args: { _product_id: string }
+        Returns: number
       }
       reactivate_listing: { Args: { _product_id: string }; Returns: Json }
       set_listing_active: {
