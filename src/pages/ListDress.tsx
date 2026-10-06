@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles } from "lucide-react";
+import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles, ShieldCheck, Share2, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -55,7 +55,7 @@ const ListDress = () => {
   // Multi-step wizard state
   type WizardStep = "upload" | "details" | "pricing" | "instructions" | "location" | "video";
   const [currentStep, setCurrentStep] = useState<WizardStep | "generating" | "confirm" | "success">("upload");
-  const [createdProduct, setCreatedProduct] = useState<{id: string; title: string; image: string; price: string} | null>(null);
+  const [createdProduct, setCreatedProduct] = useState<{id: string; code?: string | null; title: string; image: string; price: string} | null>(null);
   
   // Step 1: Image upload
   const [imageFiles, setImageFiles] = useState<File[]>([]);
