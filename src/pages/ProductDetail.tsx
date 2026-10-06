@@ -38,7 +38,8 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Copy
+  Copy,
+  Eye
 } from "lucide-react";
 
 const ProductDetail = () => {
@@ -103,6 +104,15 @@ const ProductDetail = () => {
 
       if (productError) throw productError;
       setProduct(productData);
+
+      // Count one view per product per browser session (guests + members)
+      const viewKey = `viewed_${id}`;
+      if (id && !sessionStorage.getItem(viewKey)) {
+        sessionStorage.setItem(viewKey, "1");
+        supabase.rpc("increment_product_views" as any, { _product_id: id }).then(({ data }) => {
+          if (typeof data === "number") setProduct((prev: any) => prev ? { ...prev, views_count: data } : prev);
+        });
+      }
 
       if (session && productData.private_image_paths?.length) {
         const { data: signedImages } = await supabase.storage
@@ -517,6 +527,12 @@ const ProductDetail = () => {
                   <Copy className="h-3 w-3" />
                   Code: {product.product_code}
                 </button>
+              )}
+              {(product.views_count ?? 0) > 0 && (
+                <div className="inline-flex items-center gap-1.5 mb-2 ml-2 px-2.5 py-1 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                  <Eye className="h-3.5 w-3.5" />
+                  🔥 {product.views_count} {product.views_count === 1 ? "person has" : "people have"} viewed this dress
+                </div>
               )}
               {(product.city || product.area) && (
                 <div className="flex items-center gap-2 text-muted-foreground">

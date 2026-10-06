@@ -1138,7 +1138,7 @@ export default function AdminDashboard() {
                                   </div>
                                   <p className="text-sm text-slate-400">
                                     Code: <span className="font-semibold text-slate-200">{product.product_code || "—"}</span>
-                                    {"  ·  "}Owner: {product.owner_name}
+                                    {"  ·  "}<Eye className="inline h-3 w-3" /> {product.views_count ?? 0} views{"  ·  "}Owner: {product.owner_name}
                                   </p>
                                   <div className="flex flex-wrap gap-4 text-sm text-slate-300 mt-1">
                                     <span className="flex items-center gap-1">

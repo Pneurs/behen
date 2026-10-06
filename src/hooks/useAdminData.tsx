@@ -59,6 +59,7 @@ export interface AdminProduct {
   listing_active?: boolean | null;
   activated_at?: string | null;
   product_code?: string | null;
+  views_count?: number | null;
 }
 
 export interface AdminUser {
@@ -194,7 +195,7 @@ async function fetchAllProducts(): Promise<AdminProduct[]> {
       .from("admin_products_view" as any)
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase.from("products").select("id, listing_active, activated_at, product_code"),
+    supabase.from("products").select("id, listing_active, activated_at, product_code, views_count"),
   ]);
 
   if (viewRes.error) {
@@ -211,6 +212,7 @@ async function fetchAllProducts(): Promise<AdminProduct[]> {
     listing_active: lifecycle.get(product.id)?.listing_active ?? true,
     activated_at: lifecycle.get(product.id)?.activated_at ?? product.created_at,
     product_code: lifecycle.get(product.id)?.product_code ?? null,
+    views_count: (lifecycle.get(product.id) as any)?.views_count ?? 0,
   })) as unknown as AdminProduct[];
 }
 
