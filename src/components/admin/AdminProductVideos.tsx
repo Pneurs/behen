@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Copy, Download, ExternalLink, Loader2, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -24,19 +24,35 @@ interface VideoProduct {
   listing_type: string | null;
   rental_price_4days: number | null;
   sale_price: number | null;
+  inventory_status: string | null;
+  listing_active: boolean | null;
 }
 
 export default function AdminProductVideos() {
   const [search, setSearch] = useState("");
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [statusId, setStatusId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const setSold = async (p: VideoProduct, sold: boolean) => {
+    setStatusId(p.id);
+    const { data, error } = await supabase.rpc("set_product_sold_status", { _product_id: p.id, _sold: sold });
+    setStatusId(null);
+    if (error || !(data as { success?: boolean } | null)?.success) {
+      toast.error("Could not change the status");
+      return;
+    }
+    toast.success(sold ? "Marked as sold out" : "Listing is live again");
+    queryClient.invalidateQueries({ queryKey: ["admin-product-videos"] });
+  };
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-product-videos"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, product_code, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price")
+        .select("id, product_code, title, status, created_at, video_url, uploaded_video_path, public_images, ai_cover_image, city, listing_type, rental_price_4days, sale_price, inventory_status, listing_active")
         .or("video_url.not.is.null,uploaded_video_path.not.is.null")
         .order("created_at", { ascending: false })
         .limit(200);
@@ -76,6 +92,8 @@ export default function AdminProductVideos() {
     const code = (p.product_code || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     return p.title.toLowerCase().includes(q) || (!!nq && code.includes(nq));
   });
+
+  const isSold = (p: VideoProduct) => p.inventory_status === "unavailable" || p.listing_active === false;
 
   const productLink = (id: string) => `${window.location.origin}/product/${id}`;
 
@@ -178,10 +196,21 @@ export default function AdminProductVideos() {
                       {format(new Date(p.created_at), "MMM dd, yyyy")}
                     </p>
                   </div>
-                  <Badge variant={p.status === "published" ? "default" : "secondary"}>
-                    {p.status}
+                  <Badge variant={isSold(p) ? "secondary" : "default"}>
+                    {isSold(p) ? "Sold out" : "Live"}
                   </Badge>
                 </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isSold(p) ? "default" : "outline"}
+                  className="w-full"
+                  disabled={statusId === p.id}
+                  onClick={() => setSold(p, !isSold(p))}
+                >
+                  {statusId === p.id && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  {isSold(p) ? "Make live again" : "Mark as sold out"}
+                </Button>
 
                 {p.uploaded_video_path ? (
                   signedUrls[p.id] ? (

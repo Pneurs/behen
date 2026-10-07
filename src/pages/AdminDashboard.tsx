@@ -148,7 +148,7 @@ export default function AdminDashboard() {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .in("role", ["super_admin", "admin", "manager"]);
+      .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
     if (!roles || roles.length === 0) {
       toast({
@@ -161,7 +161,10 @@ export default function AdminDashboard() {
     }
 
     setCurrentUser(user);
-    setCurrentRole(roles[0].role);
+    const order = ["super_admin", "admin", "manager", "social_media_manager"];
+    const best = order.find((r) => roles.some((x) => x.role === r)) || roles[0].role;
+    setCurrentRole(best);
+    if (best === "social_media_manager") setActiveTab("product-videos");
     setIsAuthorized(true);
   };
 
@@ -748,6 +751,18 @@ export default function AdminDashboard() {
 
           {/* Management Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            {currentRole === "social_media_manager" ? (
+            <TabsList className="bg-slate-800 border-slate-700 flex-wrap h-auto gap-1">
+              <TabsTrigger value="product-videos" className="data-[state=active]:bg-primary">
+                <Video className="h-4 w-4 mr-1" />
+                Videos & Captions
+              </TabsTrigger>
+              <TabsTrigger value="smm-payments" className="data-[state=active]:bg-primary">
+                <CreditCard className="h-4 w-4 mr-1" />
+                Payment Verifications
+              </TabsTrigger>
+            </TabsList>
+            ) : (
             <TabsList className="bg-slate-800 border-slate-700 flex-wrap h-auto gap-1">
               <TabsTrigger value="bookings" className="data-[state=active]:bg-primary">
                 Payments ({pendingBookings.length})
@@ -819,6 +834,13 @@ export default function AdminDashboard() {
                 </TabsTrigger>
               )}
             </TabsList>
+            )}
+
+            {currentRole === "social_media_manager" && (
+              <TabsContent value="smm-payments">
+                <AdminCreditPurchases canGrant={false} />
+              </TabsContent>
+            )}
 
             {/* Pending Payments Tab */}
             <TabsContent value="bookings">
@@ -1244,7 +1266,7 @@ export default function AdminDashboard() {
                                     {user.role === 'bari' ? 'Bari Behen' : 'Choti Behen'}
                                   </Badge>
                                   {user.roles?.map((role: string) => (
-                                    <Badge key={role} className="bg-primary/20 text-primary border-primary/30">{role.replace("_", " ")}</Badge>
+                                    <Badge key={role} className="bg-primary/20 text-primary border-primary/30">{role.replace(/_/g, " ")}</Badge>
                                   ))}
                                 </div>
                                 {user.email && (
@@ -1463,7 +1485,7 @@ export default function AdminDashboard() {
                                         className="bg-primary/20 text-primary border-primary/30 cursor-pointer hover:bg-red-500/20"
                                         onClick={() => handleRemoveRole(user.user_id, role)}
                                       >
-                                        {role.replace("_", " ")} ×
+                                        {role.replace(/_/g, " ")} ×
                                       </Badge>
                                     ))}
                                     {(!user.roles || user.roles.length === 0) && (
@@ -1472,7 +1494,7 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
-                                  {["admin", "manager"].map((role) => (
+                                  {["admin", "manager", "social_media_manager"].map((role) => (
                                     <Button
                                       key={role}
                                       size="sm"
@@ -1632,7 +1654,7 @@ export default function AdminDashboard() {
 
                 {/* Credit Orders */}
                 <div className="mt-6">
-                  <AdminCreditPurchases />
+                  <AdminCreditPurchases canGrant />
                 </div>
 
 
@@ -1810,7 +1832,7 @@ export default function AdminDashboard() {
             )}
 
             {/* Product Videos Tab - Super Admin Only */}
-            {currentRole === "super_admin" && (
+            {(currentRole === "super_admin" || currentRole === "social_media_manager") && (
               <TabsContent value="product-videos">
                 <AdminProductVideos />
               </TabsContent>

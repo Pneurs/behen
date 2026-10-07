@@ -141,6 +141,20 @@
       "when": 1791274434199,
       "tag": "0019_product_views_count",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1791361586530,
+      "tag": "0020_add_social_media_manager_role",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791361632136,
+      "tag": "0021_smm_access_and_listing_spots",
+      "breakpoints": true
     }
   ]
 }
