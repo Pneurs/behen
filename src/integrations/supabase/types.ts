@@ -371,6 +371,7 @@ export type Database = {
           payment_proof_url: string | null
           payment_reference: string | null
           provider: string
+          purchase_type: string
           safepay_tracker: string | null
           status: string
           updated_at: string
@@ -386,6 +387,7 @@ export type Database = {
           payment_proof_url?: string | null
           payment_reference?: string | null
           provider?: string
+          purchase_type?: string
           safepay_tracker?: string | null
           status?: string
           updated_at?: string
@@ -401,6 +403,7 @@ export type Database = {
           payment_proof_url?: string | null
           payment_reference?: string | null
           provider?: string
+          purchase_type?: string
           safepay_tracker?: string | null
           status?: string
           updated_at?: string
@@ -498,6 +501,24 @@ export type Database = {
           password_hash?: string
           token?: string
           user_data?: Json | null
+        }
+        Relationships: []
+      }
+      listing_spots: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1437,6 +1458,7 @@ export type Database = {
         Returns: Json
       }
       auto_approve_due_credit_purchases: { Args: never; Returns: number }
+      claim_free_listing_spots: { Args: { _spots: number }; Returns: Json }
       claim_social_follow_reward: { Args: never; Returns: Json }
       complete_credit_purchase: {
         Args: {
@@ -1459,6 +1481,10 @@ export type Database = {
       get_public_product: { Args: { _product_id: string }; Returns: Json }
       get_seller_contact: { Args: { _product_id: string }; Returns: Json }
       get_user_role_by_email: { Args: { user_email: string }; Returns: string }
+      grant_purchase: {
+        Args: { _note: string; _purchase_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1470,9 +1496,14 @@ export type Database = {
         Args: { _product_id: string }
         Returns: number
       }
+      is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
       reactivate_listing: { Args: { _product_id: string }; Returns: Json }
       set_listing_active: {
         Args: { _active: boolean; _product_id: string }
+        Returns: Json
+      }
+      set_product_sold_status: {
+        Args: { _product_id: string; _sold: boolean }
         Returns: Json
       }
       unlock_contact: { Args: { _product_id: string }; Returns: Json }
