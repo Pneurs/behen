@@ -1654,7 +1654,7 @@ export default function AdminDashboard() {
 
                 {/* Credit Orders */}
                 <div className="mt-6">
-                  <AdminCreditPurchases canGrant={currentRole !== "social_media_manager"} />
+                  <AdminCreditPurchases canGrant />
                 </div>
 
 
