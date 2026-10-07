@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-export default function AdminCreditPurchases() {
+export default function AdminCreditPurchases({ canGrant = true }: { canGrant?: boolean }) {
   const queryClient = useQueryClient();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [grantEmail, setGrantEmail] = useState("");
@@ -23,7 +23,7 @@ export default function AdminCreditPurchases() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_purchases")
-        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, payment_proof_url, admin_notes, created_at")
+        .select("id, user_id, credits, amount_pkr, status, provider, payment_reference, payment_proof_url, admin_notes, created_at, purchase_type")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -153,8 +153,8 @@ export default function AdminCreditPurchases() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Credit Orders</CardTitle>
-          <CardDescription>Approve an order to add the credits to the buyer's balance.</CardDescription>
+          <CardTitle>Payment Orders</CardTitle>
+          <CardDescription>Check the screenshot and transaction ID, then approve to add credits (buyers) or listing spots (sellers).</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -170,7 +170,7 @@ export default function AdminCreditPurchases() {
                   <TableRow>
                     <TableHead>Buyer</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Credits</TableHead>
+                    <TableHead>Package</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Transaction ID</TableHead>
                     <TableHead>Screenshot</TableHead>
@@ -184,7 +184,7 @@ export default function AdminCreditPurchases() {
                     <TableRow key={p.id}>
                       <TableCell className="font-medium whitespace-nowrap">{p.profile?.name || "Buyer"}</TableCell>
                       <TableCell className="whitespace-nowrap">{p.profile?.phone || "—"}</TableCell>
-                      <TableCell>{p.credits}</TableCell>
+                      <TableCell>{p.credits} {p.purchase_type === "listing_spots" ? "listing spots" : "credits"}</TableCell>
                       <TableCell className="whitespace-nowrap">PKR {Number(p.amount_pkr).toLocaleString()}</TableCell>
                       <TableCell className="font-mono text-xs">{p.payment_reference || "—"}</TableCell>
                       <TableCell>
