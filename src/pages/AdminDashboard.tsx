@@ -148,7 +148,7 @@ export default function AdminDashboard() {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .in("role", ["super_admin", "admin", "manager"]);
+      .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
     if (!roles || roles.length === 0) {
       toast({
@@ -161,7 +161,10 @@ export default function AdminDashboard() {
     }
 
     setCurrentUser(user);
-    setCurrentRole(roles[0].role);
+    const order = ["super_admin", "admin", "manager", "social_media_manager"];
+    const best = order.find((r) => roles.some((x) => x.role === r)) || roles[0].role;
+    setCurrentRole(best);
+    if (best === "social_media_manager") setActiveTab("product-videos");
     setIsAuthorized(true);
   };
 
@@ -1472,7 +1475,7 @@ export default function AdminDashboard() {
                                   </div>
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
-                                  {["admin", "manager"].map((role) => (
+                                  {["admin", "manager", "social_media_manager"].map((role) => (
                                     <Button
                                       key={role}
                                       size="sm"
@@ -1632,7 +1635,7 @@ export default function AdminDashboard() {
 
                 {/* Credit Orders */}
                 <div className="mt-6">
-                  <AdminCreditPurchases />
+                  <AdminCreditPurchases canGrant={currentRole !== "social_media_manager"} />
                 </div>
 
 

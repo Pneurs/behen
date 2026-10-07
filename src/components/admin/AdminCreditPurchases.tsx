@@ -121,7 +121,7 @@ export default function AdminCreditPurchases({ canGrant = true }: { canGrant?: b
 
   return (
     <div className="space-y-6">
-      <Card>
+      {canGrant && (<Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -149,7 +149,7 @@ export default function AdminCreditPurchases({ canGrant = true }: { canGrant?: b
             Add
           </Button>
         </CardContent>
-      </Card>
+      </Card>)}
 
       <Card>
         <CardHeader>
