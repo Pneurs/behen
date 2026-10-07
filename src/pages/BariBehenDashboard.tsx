@@ -1,3 +1,4 @@
+import ListingSpotsCard from "@/components/ListingSpotsCard";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -330,6 +331,10 @@ export default function BariBehenDashboard() {
               <PhoneVerificationCard userId={user.id} />
             </div>
           )}
+
+          <div className="mb-8">
+            <ListingSpotsCard />
+          </div>
 
           {/* Earnings & Ambassador Section - Only show if referral system is enabled */}
           {referralSettings?.referralSystemEnabled && (

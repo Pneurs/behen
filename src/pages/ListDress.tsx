@@ -878,6 +878,11 @@ const ListDress = () => {
   // Render Step 1: Image Upload
   const renderUploadStep = () => (
     <div className="max-w-2xl mx-auto space-y-4">
+    <Alert className="border-primary/30 bg-primary/5">
+      <AlertDescription>
+        🎉 <strong>Launch offer:</strong> listing your dress is 100% FREE right now <span className="line-through text-muted-foreground">(normally PKR 500 per listing)</span>.
+      </AlertDescription>
+    </Alert>
     {!isSuperAdmin && !phoneVerified && (
       <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
         <AlertCircle className="h-4 w-4 text-amber-600" />
