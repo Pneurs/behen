@@ -1485,6 +1485,7 @@ export type Database = {
         | "choti_behen"
         | "admin"
         | "manager"
+        | "social_media_manager"
       booking_status:
         | "pending_payment"
         | "payment_submitted"
@@ -1637,6 +1638,7 @@ export const Constants = {
         "choti_behen",
         "admin",
         "manager",
+        "social_media_manager",
       ],
       booking_status: [
         "pending_payment",
