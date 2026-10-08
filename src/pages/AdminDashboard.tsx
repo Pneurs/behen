@@ -32,6 +32,8 @@ import WhatsAppSettings from "@/components/admin/WhatsAppSettings";
 import CreditSettings from "@/components/admin/CreditSettings";
 import AiImageSettings from "@/components/admin/AiImageSettings";
 import AdminCreditPurchases from "@/components/admin/AdminCreditPurchases";
+import AdminCreateUser from "@/components/admin/AdminCreateUser";
+import ListingSpotSettings from "@/components/admin/ListingSpotSettings";
 import { format } from "date-fns";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import {
@@ -1461,6 +1463,7 @@ export default function AdminDashboard() {
             {/* Role Management Tab */}
             {currentRole === "super_admin" && (
               <TabsContent value="roles">
+                <div className="mb-6"><AdminCreateUser onCreated={() => refetchUsers()} /></div>
                 <Card className="bg-slate-800/50 border-slate-700">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center gap-2">
@@ -1650,6 +1653,10 @@ export default function AdminDashboard() {
                 {/* Credit System */}
                 <div className="mt-6">
                   <CreditSettings />
+                </div>
+
+                <div className="mt-6">
+                  <ListingSpotSettings />
                 </div>
 
                 {/* Credit Orders */}
