@@ -144,7 +144,7 @@ const AdminAuth = () => {
           .from("user_roles")
           .select("role")
           .eq("user_id", data.user.id)
-          .in("role", ["super_admin", "admin", "manager"]);
+          .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
         if (!roles || roles.length === 0) {
           await supabase.auth.signOut();
@@ -222,7 +222,7 @@ const AdminAuth = () => {
           .from("user_roles")
           .select("role")
           .eq("user_id", signInData.user.id)
-          .in("role", ["super_admin", "admin", "manager"]);
+          .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
         if (!roles || roles.length === 0) {
           await supabase.auth.signOut();
@@ -242,7 +242,7 @@ const AdminAuth = () => {
           .from("user_roles")
           .select("role")
           .eq("user_id", data.user.id)
-          .in("role", ["super_admin", "admin", "manager"]);
+          .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
         if (!roles || roles.length === 0) {
           await supabase.auth.signOut();
