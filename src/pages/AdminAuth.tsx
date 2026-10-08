@@ -82,7 +82,7 @@ const AdminAuth = () => {
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .in("role", ["super_admin", "admin", "manager"]);
+        .in("role", ["super_admin", "admin", "manager", "social_media_manager"]);
 
       if (roles && roles.length > 0) {
         navigate("/admin/dashboard");
