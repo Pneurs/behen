@@ -65,6 +65,8 @@ export default function AdminDashboard() {
   // Dialog states
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [userProducts, setUserProducts] = useState<any[]>([]);
   const [securityDepositDialog, setSecurityDepositDialog] = useState<{
     open: boolean;
@@ -304,6 +306,50 @@ export default function AdminDashboard() {
 
     refetchPendingProducts();
     refetchAllProducts();
+  };
+
+  const toggleProductSelected = (id: string) => {
+    setSelectedProductIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const runBulkActive = async (ids: string[], makeActive: boolean) => {
+    if (ids.length === 0) {
+      toast({ title: "Nothing to update" });
+      return;
+    }
+    setBulkBusy(true);
+    const results = await Promise.all(
+      ids.map((id) => supabase.rpc("set_listing_active", { _product_id: id, _active: makeActive }))
+    );
+    setBulkBusy(false);
+    const failed = results.filter((r) => r.error || !(r.data as any)?.success).length;
+    toast({
+      title: `${ids.length - failed} listing(s) ${makeActive ? "activated" : "deactivated"}`,
+      description: failed ? `${failed} failed` : undefined,
+      variant: failed ? "destructive" : undefined,
+    });
+    setSelectedProductIds(new Set());
+    refetchAllProducts();
+  };
+
+  const runBulkDelete = async () => {
+    const ids = [...selectedProductIds];
+    if (!ids.length || !confirm(`Permanently delete ${ids.length} product(s)?`)) return;
+    setBulkBusy(true);
+    const { error } = await supabase.from("products").delete().in("id", ids);
+    setBulkBusy(false);
+    if (error) {
+      toast({ title: "Error", description: "Failed to delete products", variant: "destructive" });
+      return;
+    }
+    toast({ title: `${ids.length} product(s) deleted` });
+    setSelectedProductIds(new Set());
+    refetchAllProducts();
+    refetchPendingProducts();
   };
 
   const handleToggleListingActive = async (productId: string, makeActive: boolean) => {
@@ -1118,6 +1164,27 @@ export default function AdminDashboard() {
                         />
                       </div>
                     </div>
+                    <div className="flex flex-wrap items-center gap-2 pt-3">
+                      <Button size="sm" variant="outline" className="border-slate-600 text-slate-300" disabled={bulkBusy}
+                        onClick={() => {
+                          const ids = allProducts.map((p) => p.id);
+                          setSelectedProductIds(selectedProductIds.size === ids.length ? new Set() : new Set(ids));
+                        }}>
+                        {selectedProductIds.size === allProducts.length && allProducts.length > 0 ? "Clear selection" : "Select all"}
+                      </Button>
+                      <Button size="sm" disabled={bulkBusy}
+                        onClick={() => runBulkActive(allProducts.filter((p) => !isListingActive(p)).map((p) => p.id), true)}>
+                        Activate all inactive
+                      </Button>
+                      {selectedProductIds.size > 0 && (
+                        <>
+                          <span className="text-sm text-slate-400 ml-2">{selectedProductIds.size} selected</span>
+                          <Button size="sm" disabled={bulkBusy} onClick={() => runBulkActive([...selectedProductIds], true)}>Activate</Button>
+                          <Button size="sm" variant="outline" className="border-slate-600 text-slate-300" disabled={bulkBusy} onClick={() => runBulkActive([...selectedProductIds], false)}>Deactivate</Button>
+                          <Button size="sm" variant="destructive" disabled={bulkBusy} onClick={runBulkDelete}>Delete</Button>
+                        </>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <ScrollArea className="h-[500px]">
@@ -1136,6 +1203,13 @@ export default function AdminDashboard() {
                           <Card key={product.id} className="bg-slate-700/50 border-slate-600">
                             <CardContent className="py-4">
                               <div className="flex items-center gap-4">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${product.title}`}
+                                  className="h-5 w-5 accent-pink-500 flex-shrink-0"
+                                  checked={selectedProductIds.has(product.id)}
+                                  onChange={() => toggleProductSelected(product.id)}
+                                />
                                 {product.ai_cover_image && (
                                   <img src={product.ai_cover_image} alt={product.title} className="w-20 h-20 object-cover rounded" />
                                 )}
