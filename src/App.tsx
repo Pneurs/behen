@@ -30,6 +30,7 @@ const EarnMoney = lazy(() => import("./pages/EarnMoney"));
 const Profile = lazy(() => import("./pages/Profile"));
 const VerifyWhatsApp = lazy(() => import("./pages/VerifyWhatsApp"));
 const Credits = lazy(() => import("./pages/Credits"));
+const HowToSell = lazy(() => import("./pages/HowToSell"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="/buy/:city/:category" element={<Browse />} />
               <Route path="/verify-whatsapp" element={<VerifyWhatsApp />} />
               <Route path="/credits" element={<Credits />} />
+              <Route path="/how-to-sell" element={<HowToSell />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
