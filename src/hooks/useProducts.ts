@@ -39,11 +39,14 @@ interface UseProductsOptions {
 }
 
 // Only select fields needed for product cards (performance optimization)
+// size, alteration_possible and availability_data are small and required by
+// the Browse page's client-side size / alteration / date filters.
 const PRODUCT_CARD_FIELDS = `
   id, product_code, title, category, condition, 
   rental_price_per_day, rental_price_4days, sale_price, 
   listing_type, ai_cover_image, public_images, 
-  city, area, original_price, status, owner_id
+  city, area, original_price, status, owner_id,
+  size, alteration_possible, availability_data
 `;
 
 // Fetch home page products (latest 8 published)
