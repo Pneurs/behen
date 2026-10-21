@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Upload, Loader2, X, Check, AlertCircle, MapPin, ChevronRight, ChevronLeft, Info, Video, ExternalLink, Sparkles, ShieldCheck, Share2, Copy } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { z } from "zod";
 import AvailabilityCalendarManagerFlatpickr from "@/components/AvailabilityCalendarManagerFlatpickr";
@@ -2190,6 +2191,9 @@ const ListDress = () => {
       <Seo title="Behen.pk" path="/list-dress" noindex />
       <Header />
       <div className="container py-8">
+        <div className="mx-auto mb-4 max-w-4xl text-right">
+          <Link to="/how-to-sell" className="text-sm font-medium text-primary underline-offset-4 hover:underline">First time? See how to list your dress →</Link>
+        </div>
         {/* Progress Indicator */}
         <div className="mx-auto mb-8 max-w-4xl overflow-x-auto pb-2">
           <div className="flex min-w-[650px] items-start justify-between">
