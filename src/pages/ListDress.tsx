@@ -53,6 +53,7 @@ const ListDress = () => {
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
   const { aiImageEnabled } = useAiImageEnabled();
+  const { data: uploadAnnouncement } = useUploadAnnouncement();
   
   // Multi-step wizard state
   type WizardStep = "upload" | "details" | "pricing" | "instructions" | "location" | "video";
