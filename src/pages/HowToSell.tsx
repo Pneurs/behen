@@ -9,7 +9,7 @@ const steps = [
   { icon: Camera, title: "Main photos", urdu: "مین تصاویر", points: ["Front photo of the full dress in daylight", "Plain background, no faces needed", "These photos are visible to everyone"] },
   { icon: Lock, title: "Extra private photos", urdu: "اضافی تصاویر", points: ["Up to 5 close-ups: embroidery, back, dupatta", "Only signed-in buyers can see them", "Show any flaws honestly — builds trust"] },
   { icon: FileText, title: "Dress details", urdu: "تفصیلات", points: ["Category, size, colour and designer", "Mention if alterations are possible", "Don't write phone numbers — they get blocked"] },
-  { icon: Tag, title: "Pricing", urdu: "قیمت", points: ["Choose Rent, Sell or both", "Add the original price so buyers see the discount", "Set rental price per day and security deposit"] },
+  { icon: Tag, title: "Pricing", urdu: "قیمت", points: ["Choose Rent, Sell or both", "Add the original price so buyers see the discount", "Set rental price per day and security deposit", "For rentals you may take security up to the full dress value"] },
   { icon: ClipboardList, title: "Instructions", urdu: "ہدایات", points: ["Care and washing notes", "Return condition rules for renters", "Block dates when the dress isn't available"] },
   { icon: MapPin, title: "Location & delivery", urdu: "مقام اور ڈلیوری", points: ["Choose your city and area only", "Your exact address stays private", "Pick pickup, delivery or both"] },
   { icon: Video, title: "Dress video (required)", urdu: "ویڈیو لازمی", points: ["Record a 15–30 second 360° video", "Slowly show front, back and details", "Without a video the listing won't go live"] },
@@ -52,6 +52,18 @@ export default function HowToSell() {
           <CardContent className="flex gap-3 p-5">
             <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
             <p className="text-sm text-foreground">Your contact details are only shown to serious buyers who unlock them. Your listing stays live for 15 days and can be reactivated for free.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6 border-primary/40">
+          <CardContent className="flex gap-3 p-5">
+            <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
+            <div className="space-y-2 text-sm text-foreground">
+              <p className="font-semibold">Rental security &amp; platform role</p>
+              <p>For rentals, you may collect a security deposit of up to the full value of the dress, and/or hold the renter's original CNIC, directly from the renter.</p>
+              <p className="text-muted-foreground">Behen.pk operates solely as a platform connecting Bari Behen and Choti Behen. Behen.pk does not collect or hold any security deposit and is not responsible for the condition, damage, loss or return of any dress. All handovers, condition checks and security refunds are settled directly between both parties.</p>
+              <p className="text-muted-foreground" dir="rtl">کرایہ پر دیتے وقت آپ جوڑے کی مکمل قیمت کے برابر سیکیورٹی یا اصل شناختی کارڈ براہِ راست لے سکتی ہیں۔ Behen.pk صرف رابطے کا ذریعہ ہے، کوئی سیکیورٹی وصول نہیں کرتا اور جوڑے کے نقصان، گمشدگی یا واپسی کا ذمہ دار نہیں ہے۔</p>
+            </div>
           </CardContent>
         </Card>
 
