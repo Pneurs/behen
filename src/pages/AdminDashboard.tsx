@@ -31,6 +31,7 @@ import AdminPhoneVerifications from "@/components/admin/AdminPhoneVerifications"
 import WhatsAppSettings from "@/components/admin/WhatsAppSettings";
 import CreditSettings from "@/components/admin/CreditSettings";
 import AiImageSettings from "@/components/admin/AiImageSettings";
+import UploadAnnouncementSettings from "@/components/admin/UploadAnnouncementSettings";
 import AdminCreditPurchases from "@/components/admin/AdminCreditPurchases";
 import AdminCreateUser from "@/components/admin/AdminCreateUser";
 import ListingSpotSettings from "@/components/admin/ListingSpotSettings";
@@ -1707,6 +1708,7 @@ export default function AdminDashboard() {
                 {/* AI Cover Images */}
                 <div className="mt-6">
                   <AiImageSettings />
+                  <UploadAnnouncementSettings />
                 </div>
 
                 {/* Buy & Rent Settings */}

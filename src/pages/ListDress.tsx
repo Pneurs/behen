@@ -27,6 +27,7 @@ import { PAKISTAN_LOCATIONS, CITIES } from "@/data/locations";
 import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
+import { useUploadAnnouncement } from "@/hooks/useUploadAnnouncement";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -879,11 +880,11 @@ const ListDress = () => {
   // Render Step 1: Image Upload
   const renderUploadStep = () => (
     <div className="max-w-2xl mx-auto space-y-4">
-    <Alert className="border-primary/30 bg-primary/5">
-      <AlertDescription>
-        🎉 <strong>Launch offer:</strong> listing your dress is 100% FREE right now <span className="line-through text-muted-foreground">(normally PKR 500 per listing)</span>.
-      </AlertDescription>
-    </Alert>
+    {uploadAnnouncement?.enabled && uploadAnnouncement.text.trim() && (
+      <Alert className="border-primary/30 bg-primary/5">
+        <AlertDescription className="whitespace-pre-line">{uploadAnnouncement.text}</AlertDescription>
+      </Alert>
+    )}
     {!isSuperAdmin && !phoneVerified && (
       <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-950/30">
         <AlertCircle className="h-4 w-4 text-amber-600" />
@@ -1416,7 +1417,7 @@ const ListDress = () => {
                       placeholder="2000"
                     />
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      You can take Choti Behen's ID card only, or ID card with security deposit. Behen.pk is only responsible to contact you both it's not our responsibility to check returned clothes and security returns
+                      You may collect a security deposit of up to the full value of the dress, and/or hold the renter's original CNIC, directly from the renter. Behen.pk only connects Bari Behen and Choti Behen — we do not collect or hold any security deposit and are not responsible for the dress's condition, damage, loss, return, or refund of security. These are settled directly between both parties.
                     </p>
                   </div>
                 </div>
