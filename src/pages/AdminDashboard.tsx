@@ -369,7 +369,7 @@ export default function AdminDashboard() {
     toast({
       title: makeActive ? "Listing activated" : "Listing deactivated",
       description: makeActive
-        ? "The listing is live again for the next 15 days."
+        ? "The listing is live again."
         : "The listing is hidden from buyers.",
     });
 
@@ -1246,7 +1246,7 @@ export default function AdminDashboard() {
                                     </span>
                                     <span>
                                       {isListingActive(product)
-                                        ? `${listingDaysLeft(product)} of 15 days left`
+                                        ? "Live (permanent)"
                                         : "Waiting for seller to confirm sold or reactivate"}
                                     </span>
                                   </div>

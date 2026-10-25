@@ -51,7 +51,7 @@ export default function HowToSell() {
         <Card className="mt-6 border-primary/40 bg-primary/5">
           <CardContent className="flex gap-3 p-5">
             <ShieldCheck className="h-6 w-6 shrink-0 text-primary" />
-            <p className="text-sm text-foreground">Your contact details are only shown to serious buyers who unlock them. Your listing stays live for 15 days and can be reactivated for free.</p>
+            <p className="text-sm text-foreground">Your contact details are only shown to serious buyers who unlock them. Your listing stays live until you delete it or mark it sold.</p>
           </CardContent>
         </Card>
 

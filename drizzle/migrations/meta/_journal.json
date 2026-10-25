@@ -155,6 +155,13 @@
       "when": 1791361632136,
       "tag": "0021_smm_access_and_listing_spots",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792938031962,
+      "tag": "0022_permanent_listings",
+      "breakpoints": true
     }
   ]
 }
