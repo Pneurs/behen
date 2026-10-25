@@ -87,7 +87,10 @@ export async function brandVideo(
       "-stream_loop", "-1", "-i", "audio.m4a",
       "-i", "badge.png",
       "-filter_complex",
-      `[0:v]scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=decrease,pad=${OUT_W}:${OUT_H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1,fps=30[bg];[bg][2:v]overlay=(W-w)/2:H*0.78-h/2[out]`,
+      // Sideways videos get a soft blurred copy behind them instead of black bars (blur done small = fast).
+      `[0:v]split[a][b];[a]scale=72:128:force_original_aspect_ratio=increase,crop=72:128,boxblur=4,scale=${OUT_W}:${OUT_H},setsar=1[bg];` +
+        `[b]scale=${OUT_W}:${OUT_H}:force_original_aspect_ratio=decrease,setsar=1[fg];` +
+        `[bg][fg]overlay=(W-w)/2:(H-h)/2,fps=30[v];[v][2:v]overlay=(W-w)/2:H*0.78-h/2[out]`,
       "-map", "[out]", "-map", "1:a",
       "-t", String(MAX_SECONDS), "-shortest",
       "-c:v", "libx264", "-preset", "ultrafast", "-crf", "26", "-pix_fmt", "yuv420p",
