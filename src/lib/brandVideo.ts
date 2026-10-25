@@ -73,10 +73,10 @@ export async function brandVideo(
   const ff = await getFFmpeg();
   const progressHandler = ({ progress }: { progress: number }) =>
     onProgress?.(Math.max(0, Math.min(100, Math.round(progress * 100))), "Adding audio and code");
+  const ext = (videoUrl.split("?")[0].split(".").pop() || "mp4").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 4) || "mp4";
   ff.on("progress", progressHandler);
   try {
     onProgress?.(0, "Downloading video");
-    const ext = (videoUrl.split("?")[0].split(".").pop() || "mp4").toLowerCase().slice(0, 4);
     await ff.writeFile(`in.${ext}`, await fetchFile(videoUrl));
     await ff.writeFile("audio.m4a", await fetchFile(SIGNATURE_AUDIO_URL));
     await ff.writeFile("badge.png", await renderBadge(badgeText));
@@ -97,12 +97,12 @@ export async function brandVideo(
     ]);
     if (code !== 0) throw new Error("Video processing failed");
     const data = await ff.readFile("out.mp4");
-    const bytes = data instanceof Uint8Array ? data : new TextEncoder().encode(data);
+    const bytes = new Uint8Array(data instanceof Uint8Array ? data : new TextEncoder().encode(data));
     if (bytes.byteLength < 1000) throw new Error("Video processing produced an empty file");
     return new Blob([bytes], { type: "video/mp4" });
   } finally {
     ff.off("progress", progressHandler);
-    for (const f of [`in.${videoUrl.split("?")[0].split(".").pop()?.toLowerCase().slice(0, 4) || "mp4"}`, "audio.m4a", "badge.png", "out.mp4"]) {
+    for (const f of [`in.${ext}`, "audio.m4a", "badge.png", "out.mp4"]) {
       await ff.deleteFile(f).catch(() => undefined);
     }
   }
