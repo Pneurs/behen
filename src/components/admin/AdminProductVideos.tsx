@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Download, ExternalLink, Loader2, Video } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, Send, Video } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -33,6 +33,7 @@ export default function AdminProductVideos() {
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [statusId, setStatusId] = useState<string | null>(null);
+  const [postingId, setPostingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const setSold = async (p: VideoProduct, sold: boolean) => {
@@ -117,6 +118,42 @@ export default function AdminProductVideos() {
     const cta = hasRent && hasSale ? "Rent or buy here" : hasRent ? "Rent here" : "Buy here";
 
     return `${lines.join("\n")}\n\nAvailable now on Behen.pk 💗\n${cta}: ${productLink(p.id)}\n\n${HASHTAGS}`;
+  };
+
+  const { data: socialRows = [] } = useQuery({
+    queryKey: ["admin-social-posts"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("social_posts")
+        .select("product_id, channel_service, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      return data || [];
+    },
+  });
+  const posted: Record<string, { channel_service: string; status: string }[]> = {};
+  socialRows.forEach((r) => {
+    const list = (posted[r.product_id] ||= []);
+    if (!list.some((x) => x.channel_service === r.channel_service)) list.push(r);
+  });
+
+  const approveAndPost = async (p: VideoProduct) => {
+    if (!confirm(`Send "${p.title}" to your Buffer queue for Instagram and TikTok?`)) return;
+    setPostingId(p.id);
+    const { data, error } = await supabase.functions.invoke("buffer-publish", {
+      body: { action: "post", product_id: p.id, caption: buildCaption(p) },
+    });
+    setPostingId(null);
+    queryClient.invalidateQueries({ queryKey: ["admin-social-posts"] });
+    if (error) {
+      let msg = error.message;
+      try { msg = JSON.parse(await (error as { context: Response }).context.text()).error || msg; } catch { /* ignore */ }
+      toast.error(`Could not post: ${msg}`);
+      return;
+    }
+    const results = (data?.results || []) as { channel: string; ok: boolean; error?: string }[];
+    if (!results.length) return toast.error("No channels found in your Buffer account.");
+    results.forEach((r) => (r.ok ? toast.success(`Queued on ${r.channel}`) : toast.error(`${r.channel}: ${r.error}`)));
   };
 
   const copyCaption = async (p: VideoProduct) => {
@@ -293,6 +330,31 @@ export default function AdminProductVideos() {
                     <Copy className="h-4 w-4 mr-2" />
                     Copy caption
                   </Button>
+                </div>
+
+                <div className="space-y-2 border-t pt-3">
+                  {(posted[p.id] || []).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(posted[p.id] || []).map((s, i) => (
+                        <Badge key={i} variant={s.status === "queued" ? "default" : "destructive"} className="capitalize">
+                          {s.channel_service}: {s.status === "queued" ? "in Buffer queue" : "failed"}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full"
+                    disabled={postingId === p.id || !p.uploaded_video_path}
+                    onClick={() => approveAndPost(p)}
+                  >
+                    {postingId === p.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                    {(posted[p.id] || []).some((s) => s.status === "queued") ? "Post again to Buffer" : "Approve & post to Instagram / TikTok"}
+                  </Button>
+                  {!p.uploaded_video_path && (
+                    <p className="text-xs text-muted-foreground">Only uploaded video files can be auto-posted.</p>
+                  )}
                 </div>
               </div>
             ))}
