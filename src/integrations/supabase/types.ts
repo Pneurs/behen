@@ -1110,6 +1110,57 @@ export type Database = {
         }
         Relationships: []
       }
+      social_posts: {
+        Row: {
+          approved_by: string | null
+          buffer_post_id: string | null
+          channel_name: string | null
+          channel_service: string
+          created_at: string
+          error: string | null
+          id: string
+          product_id: string
+          status: string
+        }
+        Insert: {
+          approved_by?: string | null
+          buffer_post_id?: string | null
+          channel_name?: string | null
+          channel_service: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          product_id: string
+          status?: string
+        }
+        Update: {
+          approved_by?: string | null
+          buffer_post_id?: string | null
+          channel_name?: string | null
+          channel_service?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          product_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "admin_products_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_credits: {
         Row: {
           balance: number
