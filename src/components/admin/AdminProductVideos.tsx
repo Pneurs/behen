@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Download, ExternalLink, Loader2, Send, Video } from "lucide-react";
+import { Copy, Download, ExternalLink, Loader2, Send, Sparkles, Video } from "lucide-react";
+import { brandVideo, buildBadgeText } from "@/lib/brandVideo";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -34,6 +35,9 @@ export default function AdminProductVideos() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [statusId, setStatusId] = useState<string | null>(null);
   const [postingId, setPostingId] = useState<string | null>(null);
+  const [branded, setBranded] = useState<Record<string, { url: string; path: string }>>({});
+  const [brandingId, setBrandingId] = useState<string | null>(null);
+  const [brandStatus, setBrandStatus] = useState("");
   const queryClient = useQueryClient();
 
   const setSold = async (p: VideoProduct, sold: boolean) => {
@@ -137,11 +141,49 @@ export default function AdminProductVideos() {
     if (!list.some((x) => x.channel_service === r.channel_service)) list.push(r);
   });
 
+  // Adds the Behen.pk signature audio and the "code • city • behen.pk" badge, then saves the copy.
+  const makeBranded = async (p: VideoProduct) => {
+    if (branded[p.id]) return branded[p.id];
+    const source = signedUrls[p.id];
+    if (!source) {
+      toast.error("Video is still loading, please try again in a moment.");
+      return null;
+    }
+    setBrandingId(p.id);
+    setBrandStatus("Starting");
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) throw new Error("Please sign in again");
+      const blob = await brandVideo(source, buildBadgeText(p.product_code, p.city), (pct, stage) =>
+        setBrandStatus(pct > 0 ? `${stage} ${pct}%` : stage),
+      );
+      setBrandStatus("Saving");
+      const path = `${uid}/social/${p.id}.mp4`;
+      const { error } = await supabase.storage
+        .from("product-private-media")
+        .upload(path, blob, { upsert: true, contentType: "video/mp4" });
+      if (error) throw error;
+      const entry = { url: URL.createObjectURL(blob), path };
+      setBranded((prev) => ({ ...prev, [p.id]: entry }));
+      toast.success("Branded video ready — check it before posting.");
+      return entry;
+    } catch (e) {
+      toast.error(`Could not make the branded video: ${(e as Error).message}`);
+      return null;
+    } finally {
+      setBrandingId(null);
+      setBrandStatus("");
+    }
+  };
+
   const approveAndPost = async (p: VideoProduct) => {
     if (!confirm(`Send "${p.title}" to your Buffer queue for Instagram and TikTok?`)) return;
+    const b = await makeBranded(p);
+    if (!b) return;
     setPostingId(p.id);
     const { data, error } = await supabase.functions.invoke("buffer-publish", {
-      body: { action: "post", product_id: p.id, caption: buildCaption(p) },
+      body: { action: "post", product_id: p.id, caption: buildCaption(p), branded_path: b.path },
     });
     setPostingId(null);
     queryClient.invalidateQueries({ queryKey: ["admin-social-posts"] });
@@ -342,11 +384,32 @@ export default function AdminProductVideos() {
                       ))}
                     </div>
                   )}
+                  {branded[p.id] ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Branded video (your audio + code) — this is what gets posted</p>
+                      <video src={branded[p.id].url} controls className="w-full rounded-md bg-muted max-h-72" />
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={brandingId !== null || !p.uploaded_video_path || !signedUrls[p.id]}
+                      onClick={() => makeBranded(p)}
+                    >
+                      {brandingId === p.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                      {brandingId === p.id ? brandStatus || "Working..." : "Preview branded video"}
+                    </Button>
+                  )}
+                  {brandingId === p.id && (
+                    <p className="text-xs text-muted-foreground">Keep this tab open — this can take 1–3 minutes.</p>
+                  )}
                   <Button
                     type="button"
                     size="sm"
                     className="w-full"
-                    disabled={postingId === p.id || !p.uploaded_video_path}
+                    disabled={postingId === p.id || brandingId !== null || !p.uploaded_video_path}
                     onClick={() => approveAndPost(p)}
                   >
                     {postingId === p.id ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
