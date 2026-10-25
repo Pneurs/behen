@@ -41,7 +41,16 @@ const Body = z.object({
   product_id: z.string().uuid().optional(),
   caption: z.string().min(1).max(2200).optional(),
   channel_ids: z.array(z.string().min(1)).max(10).optional(),
+  branded_path: z.string().max(200).optional(),
 });
+
+// Instagram and Facebook need the post format; everything goes out as a Reel.
+function metadataFor(service: string) {
+  const s = service.toLowerCase();
+  if (s === "instagram") return { instagram: { type: "reel", shouldShareToFeed: true } };
+  if (s === "facebook") return { facebook: { type: "reel" } };
+  return undefined;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -57,7 +66,7 @@ Deno.serve(async (req) => {
 
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) return json({ error: parsed.error.flatten().fieldErrors }, 400);
-    const { action, product_id, caption, channel_ids } = parsed.data;
+    const { action, product_id, caption, channel_ids, branded_path } = parsed.data;
 
     const channels = await getChannels();
     if (action === "channels") return json({ channels });
@@ -67,7 +76,13 @@ Deno.serve(async (req) => {
     if (!p) return json({ error: "Product not found" }, 404);
 
     let videoUrl: string | null = null;
-    if (p.uploaded_video_path) {
+    if (branded_path) {
+      // Branded copy (signature audio + code badge) made in the admin's browser, stored in their own folder.
+      if (branded_path !== `${uid}/social/${product_id}.mp4`) return json({ error: "Invalid branded video" }, 400);
+      const { data: s } = await admin.storage.from("product-private-media").createSignedUrl(branded_path, 60 * 60 * 24 * 7);
+      videoUrl = s?.signedUrl || null;
+      if (!videoUrl) return json({ error: "Branded video not found, please make it again." }, 400);
+    } else if (p.uploaded_video_path) {
       const { data: s } = await admin.storage.from("product-private-media").createSignedUrl(p.uploaded_video_path, 60 * 60 * 24 * 7);
       videoUrl = s?.signedUrl || null;
     } else if (p.video_url && /\.(mp4|mov|webm)(\?|$)/i.test(p.video_url)) {
@@ -83,6 +98,7 @@ Deno.serve(async (req) => {
           `mutation P($input: CreatePostInput!) { createPost(input: $input) {
             ... on PostActionSuccess { post { id } } ... on MutationError { message } } }`,
           { input: { text: caption, channelId: c.id, schedulingType: "automatic", mode: "addToQueue",
+                     ...(metadataFor(c.service) ? { metadata: metadataFor(c.service) } : {}),
                      assets: [{ video: { url: videoUrl, metadata: { thumbnailOffset: 1000 } } }] } },
         );
         const r = d?.createPost;
