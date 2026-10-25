@@ -285,7 +285,7 @@ export default function BariBehenDashboard() {
 
     toast({
       title: "Listing is live again",
-      description: "It will stay active for another 15 days — free of cost.",
+      description: "It will stay live until you delete it or mark it sold.",
     });
 
     if (user) fetchProducts(user.id);
@@ -662,12 +662,12 @@ export default function BariBehenDashboard() {
                     {isListingActive(product) ? (
                       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-4 w-4" />
-                        Active — {listingDaysLeft(product)} of 15 days left
+                        Active — stays live until you delete it
                       </div>
                     ) : (
                       <div className="mb-4 rounded-lg border border-orange-300 bg-orange-50 p-4">
                         <p className="font-semibold text-orange-900">
-                          This listing is paused after 15 days
+                          This listing is paused
                         </p>
                         <p className="text-sm text-orange-800 mt-1">
                           Has this dress been sold or rented out?

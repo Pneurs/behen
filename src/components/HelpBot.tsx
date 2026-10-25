@@ -14,7 +14,7 @@ const FAQ: QA[] = [
   { q: "What are credits?", keys: ["credit", "credits", "contact", "number"], a: "Credits unlock a seller's phone and email. 3 credits = PKR 300, 5 credits = PKR 450. Pay by bank transfer and upload the screenshot with the transaction ID." },
   { q: "How do I pay?", keys: ["pay", "payment", "bank", "transfer", "ubl"], a: "Bank transfer only: UBL, title Behen.Pk, account 0611359113165. Upload the screenshot and transaction ID — credits are added after verification." },
   { q: "Who holds the security deposit?", keys: ["security", "deposit", "cnic", "damage", "responsible"], a: "The seller takes the security directly from the renter (up to the dress's full price). Behen.pk is only a connector and does not hold deposits or take responsibility for dresses." },
-  { q: "How long does my listing stay live?", keys: ["expire", "15 days", "inactive", "reactivate", "hidden"], a: "Listings stay live for 15 days. After that you can reactivate for free from My Dresses." },
+  { q: "How long does my listing stay live?", keys: ["expire", "15 days", "inactive", "reactivate", "hidden"], a: "Your listing stays live permanently until you delete it or mark it sold from My Dresses." },
   { q: "How do I verify WhatsApp?", keys: ["verify", "whatsapp", "verification"], a: "Go to your profile and tap Verify WhatsApp — it sends a message automatically, no code needed." },
 ];
 
