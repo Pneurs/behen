@@ -33,6 +33,7 @@ import CreditSettings from "@/components/admin/CreditSettings";
 import AiImageSettings from "@/components/admin/AiImageSettings";
 import UploadAnnouncementSettings from "@/components/admin/UploadAnnouncementSettings";
 import AdminCreditPurchases from "@/components/admin/AdminCreditPurchases";
+import AdminBookingFees from "@/components/admin/AdminBookingFees";
 import AdminCreateUser from "@/components/admin/AdminCreateUser";
 import ListingSpotSettings from "@/components/admin/ListingSpotSettings";
 import { format } from "date-fns";
@@ -888,6 +889,7 @@ export default function AdminDashboard() {
             {currentRole === "social_media_manager" && (
               <TabsContent value="smm-payments">
                 <AdminCreditPurchases canGrant={false} />
+                <div className="mt-6"><AdminBookingFees /></div>
               </TabsContent>
             )}
 
@@ -1738,6 +1740,9 @@ export default function AdminDashboard() {
                 {/* Credit Orders */}
                 <div className="mt-6">
                   <AdminCreditPurchases canGrant />
+                </div>
+                <div className="mt-6">
+                  <AdminBookingFees />
                 </div>
 
 
