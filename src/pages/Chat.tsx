@@ -17,6 +17,7 @@ import { useChatEnabled } from "@/hooks/useChatEnabled";
 export default function Chat() {
   const [searchParams] = useSearchParams();
   const productId = searchParams.get("product");
+  const conversationIdParam = searchParams.get("id");
   const navigate = useNavigate();
   const { toast } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
@@ -31,18 +32,31 @@ export default function Chat() {
 
   useEffect(() => {
     initChat();
-  }, [productId]);
+  }, [productId, conversationIdParam]);
 
   useEffect(() => {
     if (conversation?.id) {
       fetchMessages();
       fetchOffers();
       const unsubscribe = subscribeToMessages();
+      // Backup refresh in case the live connection drops on mobile data
+      const poll = setInterval(() => {
+        fetchMessages();
+        fetchOffers();
+        refreshConversation();
+      }, 4000);
       return () => {
+        clearInterval(poll);
         if (unsubscribe) unsubscribe();
       };
     }
   }, [conversation?.id]);
+
+  const refreshConversation = async () => {
+    if (!conversation?.id) return;
+    const { data } = await supabase.from("chat_conversations").select("*").eq("id", conversation.id).maybeSingle();
+    if (data) setConversation((c: any) => (c && c.is_booking_confirmed === data.is_booking_confirmed && c.booking_id === data.booking_id ? c : data));
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -55,18 +69,42 @@ export default function Chat() {
   const initChat = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      localStorage.setItem("auth_redirect", "/chat");
+      localStorage.setItem("auth_redirect", conversationIdParam ? `/chat?id=${conversationIdParam}` : "/chat");
       localStorage.setItem("auth_redirect_product", productId || "");
       navigate("/auth");
       return;
     }
     setUser(user);
 
+    // Open an exact conversation by its id (inbox, notifications)
+    if (conversationIdParam) {
+      const { data: conv } = await supabase
+        .from("chat_conversations")
+        .select("*")
+        .eq("id", conversationIdParam)
+        .maybeSingle();
+      if (!conv) {
+        toast({ title: "Chat not found", variant: "destructive" });
+        navigate("/all-chats");
+        return;
+      }
+      const { data: p } = await supabase.from("products").select("*").eq("id", conv.product_id).maybeSingle();
+      setProduct(p);
+      setConversation(conv);
+      return;
+    }
+
     const { data: productData } = await supabase
       .from("products")
       .select("*")
       .eq("id", productId)
       .single();
+
+    // The seller has one chat per buyer, so send her to her inbox instead of guessing
+    if (productData && productData.owner_id === user.id) {
+      navigate("/all-chats");
+      return;
+    }
     
     // Check if negotiation is allowed for this product
     if (productData && productData.negotiation_allowed === false) {
@@ -81,12 +119,15 @@ export default function Chat() {
     
     setProduct(productData);
 
+    // A buyer has exactly one chat per dress
     let { data: existingConv } = await supabase
       .from("chat_conversations")
       .select("*")
       .eq("product_id", productId)
-      .or(`renter_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .single();
+      .eq("renter_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
     if (!existingConv) {
       const { data: newConv, error } = await supabase
