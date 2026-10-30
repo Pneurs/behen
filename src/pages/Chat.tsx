@@ -351,7 +351,7 @@ export default function Chat() {
     await supabase.from("chat_messages").insert({
       conversation_id: conversation.id,
       sender_id: user.id,
-      message: `✅ Offer accepted! Your order has been created.\n\n📦 Order Details:\n💰 Price: PKR ${offer.offered_price.toLocaleString()}\n🔒 Security: PKR ${offer.offered_security_deposit.toLocaleString()}\n📅 Dates: ${format(new Date(offer.start_date), "MMM dd")} - ${format(new Date(offer.end_date), "MMM dd, yyyy")}\n\n👉 Please visit My Bookings for next steps.`,
+      message: `✅ Offer accepted!\n\n📦 Order Details:\n💰 Price: PKR ${offer.offered_price.toLocaleString()}\n🔒 Security: PKR ${offer.offered_security_deposit.toLocaleString()}\n📅 Dates: ${format(new Date(offer.start_date), "MMM dd")} - ${format(new Date(offer.end_date), "MMM dd, yyyy")}\n\n💳 Next step: the buyer pays the small Behen.pk platform fee (see the card on the right) to confirm the booking and unlock contact details.`,
     });
 
     fetchOffers();

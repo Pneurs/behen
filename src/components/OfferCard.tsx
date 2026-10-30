@@ -112,7 +112,7 @@ export default function OfferCard({
             daily_rate: offer.offered_price / offer.total_days,
             total_price: offer.offered_price,
             security_deposit: offer.offered_security_deposit,
-            booking_status: "confirmed",
+            booking_status: "pending_payment",
             payment_status: "pending",
             order_stage: "pending_packing_video",
           })
@@ -134,11 +134,10 @@ export default function OfferCard({
           .from("chat_conversations")
           .update({ 
             booking_id: booking.id,
-            is_booking_confirmed: true 
           })
           .eq("id", conversationId);
 
-        toast.success("Offer accepted! Order created.");
+        toast.success("Offer accepted! Buyer can now pay the platform fee to confirm.");
         onOfferAccepted(offer);
       } else {
         // Reject offer
@@ -158,7 +157,7 @@ export default function OfferCard({
             .eq("user_id", buyerId)
             .single();
 
-          const chatLink = `/chat?product=${productId}`;
+          const chatLink = `/chat?id=${conversationId}`;
           
           // Create in-app notification
           await supabase.from("notifications").insert({
