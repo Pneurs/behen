@@ -159,7 +159,7 @@ export default function AllChats() {
                     className={`cursor-pointer hover:shadow-md transition-all ${
                       hasUnread ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20" : ""
                     }`}
-                    onClick={() => navigate(`/chat?product=${conv.product_id}`)}
+                    onClick={() => navigate(`/chat?id=${conv.id}`)}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">

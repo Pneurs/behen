@@ -11,6 +11,7 @@ import { Send, AlertCircle, ExternalLink, CheckCircle, MessageCircleOff } from "
 import { format } from "date-fns";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import OfferCard from "@/components/OfferCard";
+import BookingFeeCard from "@/components/BookingFeeCard";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 
@@ -170,7 +171,7 @@ export default function Chat() {
 
   const subscribeToMessages = () => {
     const channel = supabase
-      .channel(`chat:${conversation.id}`)
+      .channel(`chat:${conversation.id}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -209,7 +210,10 @@ export default function Chat() {
       return;
     }
     
-    setMessages(data || []);
+    const next = data || [];
+    setMessages((cur) =>
+      cur.length === next.length && cur[cur.length - 1]?.id === next[next.length - 1]?.id ? cur : next
+    );
   };
 
   const fetchOffers = async () => {
@@ -219,7 +223,8 @@ export default function Chat() {
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: false });
 
-    setOffers(data || []);
+    const next = data || [];
+    setOffers((cur) => (JSON.stringify(cur) === JSON.stringify(next) ? cur : next));
   };
 
   const moderateMessage = (message: string): { isBlocked: boolean; reason: string } => {
@@ -308,7 +313,7 @@ export default function Chat() {
           .eq("user_id", user.id)
           .single();
 
-        const chatLink = `/chat?product=${productId}`;
+        const chatLink = `/chat?id=${conversation.id}`;
         const truncatedMessage = newMessage.length > 50 ? newMessage.substring(0, 50) + "..." : newMessage;
         
         // Create in-app notification
@@ -407,7 +412,7 @@ export default function Chat() {
     );
   }
 
-  const isOwner = user?.id === product?.owner_id;
+  const isOwner = user?.id === conversation?.owner_id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -481,7 +486,7 @@ export default function Chat() {
                     disabled={loading}
                   />
                   <p className="text-xs text-muted-foreground px-1">
-                    ⚠️ Our AI monitors messages. Sharing contact info may expose you publicly.
+                    ⚠️ Contact details unlock after the booking fee is verified. Messages are monitored for safety.
                   </p>
                 </div>
                 <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
@@ -530,11 +535,19 @@ export default function Chat() {
                 </CardContent>
               </Card>
 
+              <BookingFeeCard
+                conversation={conversation}
+                product={product}
+                userId={user.id}
+                acceptedOffer={offers.find((o) => o.status === "accepted") || null}
+                onConfirmed={() => { refreshConversation(); fetchMessages(); }}
+              />
+
               {conversation.is_booking_confirmed && (
                 <Card className="bg-green-500/10 border-green-500/30">
                   <CardContent className="pt-4 text-center">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                    <p className="font-semibold text-green-600">Order Created!</p>
+                    <p className="font-semibold text-green-600">Booking Confirmed!</p>
                     <Button
                       className="mt-3 w-full"
                       onClick={() => navigate("/my-bookings")}
