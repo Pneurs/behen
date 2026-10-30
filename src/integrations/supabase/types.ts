@@ -38,6 +38,82 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_fee_payments: {
+        Row: {
+          admin_notes: string | null
+          amount_pkr: number
+          booking_id: string | null
+          conversation_id: string
+          created_at: string
+          email_sent_at: string | null
+          id: string
+          offer_id: string | null
+          owner_id: string
+          payer_id: string
+          product_id: string
+          proof_path: string
+          status: string
+          transaction_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          amount_pkr: number
+          booking_id?: string | null
+          conversation_id: string
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          offer_id?: string | null
+          owner_id: string
+          payer_id: string
+          product_id: string
+          proof_path: string
+          status?: string
+          transaction_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          amount_pkr?: number
+          booking_id?: string | null
+          conversation_id?: string
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          offer_id?: string | null
+          owner_id?: string
+          payer_id?: string
+          product_id?: string
+          proof_path?: string
+          status?: string
+          transaction_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_fee_payments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "admin_conversations_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_fee_payments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_fee_payments_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           acceptance_video_uploaded_at: string | null
@@ -1508,6 +1584,11 @@ export type Database = {
         Args: { _purchase_id: string }
         Returns: Json
       }
+      admin_review_booking_fee: {
+        Args: { _approve: boolean; _id: string; _notes?: string }
+        Returns: Json
+      }
+      auto_approve_due_booking_fees: { Args: never; Returns: number }
       auto_approve_due_credit_purchases: { Args: never; Returns: number }
       claim_free_listing_spots: { Args: { _spots: number }; Returns: Json }
       claim_social_follow_reward: { Args: never; Returns: Json }
@@ -1532,6 +1613,7 @@ export type Database = {
       get_public_product: { Args: { _product_id: string }; Returns: Json }
       get_seller_contact: { Args: { _product_id: string }; Returns: Json }
       get_user_role_by_email: { Args: { user_email: string }; Returns: string }
+      grant_booking_fee: { Args: { _id: string }; Returns: undefined }
       grant_purchase: {
         Args: { _note: string; _purchase_id: string }
         Returns: undefined
