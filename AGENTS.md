@@ -3,3 +3,5 @@
 - Photos are compressed client-side (src/lib/compressImage.ts, 1600px JPEG) before upload to keep storage and page weight small.
 - Social videos are branded (signature audio + code badge) in the admin's browser with ffmpeg.wasm (src/lib/brandVideo.ts) and saved to `<uid>/social/<product_id>.mp4` before buffer-publish; edge functions can't run ffmpeg and this keeps processing free.
 - buffer-publish must send `metadata.instagram.type = "reel"` (and facebook reel) — Buffer rejects Instagram videos without a post type.
+- Chat booking fees: the fee amount is computed by a DB trigger from the accepted offer and only `grant_booking_fee` (via auto-approve or admin review) may set `chat_conversations.is_booking_confirmed`; clients can't self-confirm a booking.
+- Chats are opened by conversation id (`/chat?id=`); `/chat?product=` is only for a buyer starting her own chat — sellers have one chat per buyer.
