@@ -1598,6 +1598,14 @@ const ListDress = () => {
             <h3 className="text-lg font-semibold">Care Instructions *</h3>
             
             <div>
+              {formData.category?.startsWith("kids_") && (
+                <Alert className="mb-3 border-primary/30 bg-primary/5">
+                  <AlertDescription className="text-sm space-y-1">
+                    <p><strong>Children's clothes (under 12): chemical dry cleaning is not recommended.</strong> Dry-cleaning solvents can irritate a child's sensitive skin. Please advise a gentle hand wash in cold water with a mild baby detergent, or light steam cleaning.</p>
+                    <p dir="rtl">بچوں کے کپڑوں کے لیے ڈرائی کلین تجویز نہیں کیا جاتا کیونکہ اس میں کیمیکل ہوتے ہیں۔ ٹھنڈے پانی اور ہلکے بےبی ڈیٹرجنٹ سے ہاتھ سے دھوئیں یا ہلکی اسٹیم کریں۔</p>
+                  </AlertDescription>
+                </Alert>
+              )}
               <Label>Requires Dry Cleaning After Use? *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Let renters know if this item must be professionally dry cleaned after use
@@ -1609,11 +1617,11 @@ const ListDress = () => {
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="yes" id="dry-clean-yes" />
-                  <Label htmlFor="dry-clean-yes" className="cursor-pointer">Yes - Must be dry cleaned</Label>
+                  <Label htmlFor="dry-clean-yes" className="cursor-pointer">{formData.category?.startsWith("kids_") ? "Yes - Dry clean (not recommended for kids)" : "Yes - Must be dry cleaned"}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="no" id="dry-clean-no" />
-                  <Label htmlFor="dry-clean-no" className="cursor-pointer">No - Regular wash is fine</Label>
+                  <Label htmlFor="dry-clean-no" className="cursor-pointer">{formData.category?.startsWith("kids_") ? "No - Gentle hand wash / steam" : "No - Regular wash is fine"}</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -1966,6 +1974,12 @@ const ListDress = () => {
               <Video className="h-5 w-5 text-primary" />
               <Label htmlFor="video_url">Product Video *</Label>
             </div>
+            <Alert className="border-primary/30 bg-primary/5">
+              <AlertDescription className="text-sm space-y-1">
+                <p><strong>Privacy & social sharing:</strong> your dress video may be featured on Behen.pk's official Instagram, TikTok and Facebook pages to help you find buyers faster. If you or anyone in the video prefers privacy, please cover faces and personal details with stickers or emojis before uploading.</p>
+                <p dir="rtl">آپ کی ویڈیو Behen.pk کے انسٹاگرام، ٹک ٹاک اور فیس بک پر شیئر ہو سکتی ہے۔ اگر ویڈیو میں کوئی چہرہ یا ذاتی معلومات نظر آ رہی ہیں اور آپ پرائیویسی چاہتی ہیں تو اپ لوڈ سے پہلے ایموجی یا اسٹیکر لگا کر چھپا لیں۔</p>
+              </AlertDescription>
+            </Alert>
             <Alert className="bg-primary/5 border-primary/20">
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertDescription className="text-sm">

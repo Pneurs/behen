@@ -10,9 +10,9 @@ const steps = [
   { icon: Lock, title: "Extra private photos", urdu: "اضافی تصاویر", points: ["Up to 5 close-ups: embroidery, back, dupatta", "Only signed-in buyers can see them", "Show any flaws honestly — builds trust"] },
   { icon: FileText, title: "Dress details", urdu: "تفصیلات", points: ["Category, size, colour and designer", "Mention if alterations are possible", "Don't write phone numbers — they get blocked"] },
   { icon: Tag, title: "Pricing", urdu: "قیمت", points: ["Choose Rent, Sell or both", "Add the original price so buyers see the discount", "Set rental price per day and security deposit", "For rentals you may take security up to the full dress value"] },
-  { icon: ClipboardList, title: "Instructions", urdu: "ہدایات", points: ["Care and washing notes", "Return condition rules for renters", "Block dates when the dress isn't available"] },
+  { icon: ClipboardList, title: "Instructions", urdu: "ہدایات", points: ["Care and washing notes — for kids (under 12) advise gentle hand wash or steam, not chemical dry cleaning", "Return condition rules for renters", "Block dates when the dress isn't available"] },
   { icon: MapPin, title: "Location & delivery", urdu: "مقام اور ڈلیوری", points: ["Choose your city and area only", "Your exact address stays private", "Pick pickup, delivery or both"] },
-  { icon: Video, title: "Dress video (required)", urdu: "ویڈیو لازمی", points: ["Record a 15–30 second 360° video", "Slowly show front, back and details", "Without a video the listing won't go live"] },
+  { icon: Video, title: "Dress video (required)", urdu: "ویڈیو لازمی", points: ["Record a 15–30 second 360° video", "Slowly show front, back and details", "Without a video the listing won't go live", "Your video may be shared on Behen.pk's Instagram, TikTok & Facebook — cover faces or personal details with emojis/stickers if you want privacy (چہرہ چھپانے کے لیے ایموجی لگائیں)"] },
 ];
 
 export default function HowToSell() {

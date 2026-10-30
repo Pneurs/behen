@@ -11,12 +11,14 @@ import { Send, AlertCircle, ExternalLink, CheckCircle, MessageCircleOff } from "
 import { format } from "date-fns";
 import { EnhancedHeader as Header } from "@/components/EnhancedHeader";
 import OfferCard from "@/components/OfferCard";
+import BookingFeeCard from "@/components/BookingFeeCard";
 import { sendEmailNotification } from "@/lib/emailNotifications";
 import { useChatEnabled } from "@/hooks/useChatEnabled";
 
 export default function Chat() {
   const [searchParams] = useSearchParams();
   const productId = searchParams.get("product");
+  const conversationIdParam = searchParams.get("id");
   const navigate = useNavigate();
   const { toast } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
@@ -31,18 +33,31 @@ export default function Chat() {
 
   useEffect(() => {
     initChat();
-  }, [productId]);
+  }, [productId, conversationIdParam]);
 
   useEffect(() => {
     if (conversation?.id) {
       fetchMessages();
       fetchOffers();
       const unsubscribe = subscribeToMessages();
+      // Backup refresh in case the live connection drops on mobile data
+      const poll = setInterval(() => {
+        fetchMessages();
+        fetchOffers();
+        refreshConversation();
+      }, 4000);
       return () => {
+        clearInterval(poll);
         if (unsubscribe) unsubscribe();
       };
     }
   }, [conversation?.id]);
+
+  const refreshConversation = async () => {
+    if (!conversation?.id) return;
+    const { data } = await supabase.from("chat_conversations").select("*").eq("id", conversation.id).maybeSingle();
+    if (data) setConversation((c: any) => (c && c.is_booking_confirmed === data.is_booking_confirmed && c.booking_id === data.booking_id ? c : data));
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -55,18 +70,42 @@ export default function Chat() {
   const initChat = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      localStorage.setItem("auth_redirect", "/chat");
+      localStorage.setItem("auth_redirect", conversationIdParam ? `/chat?id=${conversationIdParam}` : "/chat");
       localStorage.setItem("auth_redirect_product", productId || "");
       navigate("/auth");
       return;
     }
     setUser(user);
 
+    // Open an exact conversation by its id (inbox, notifications)
+    if (conversationIdParam) {
+      const { data: conv } = await supabase
+        .from("chat_conversations")
+        .select("*")
+        .eq("id", conversationIdParam)
+        .maybeSingle();
+      if (!conv) {
+        toast({ title: "Chat not found", variant: "destructive" });
+        navigate("/all-chats");
+        return;
+      }
+      const { data: p } = await supabase.from("products").select("*").eq("id", conv.product_id).maybeSingle();
+      setProduct(p);
+      setConversation(conv);
+      return;
+    }
+
     const { data: productData } = await supabase
       .from("products")
       .select("*")
       .eq("id", productId)
       .single();
+
+    // The seller has one chat per buyer, so send her to her inbox instead of guessing
+    if (productData && productData.owner_id === user.id) {
+      navigate("/all-chats");
+      return;
+    }
     
     // Check if negotiation is allowed for this product
     if (productData && productData.negotiation_allowed === false) {
@@ -81,12 +120,15 @@ export default function Chat() {
     
     setProduct(productData);
 
+    // A buyer has exactly one chat per dress
     let { data: existingConv } = await supabase
       .from("chat_conversations")
       .select("*")
       .eq("product_id", productId)
-      .or(`renter_id.eq.${user.id},owner_id.eq.${user.id}`)
-      .single();
+      .eq("renter_id", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
     if (!existingConv) {
       const { data: newConv, error } = await supabase
@@ -129,7 +171,7 @@ export default function Chat() {
 
   const subscribeToMessages = () => {
     const channel = supabase
-      .channel(`chat:${conversation.id}`)
+      .channel(`chat:${conversation.id}:${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -168,7 +210,10 @@ export default function Chat() {
       return;
     }
     
-    setMessages(data || []);
+    const next = data || [];
+    setMessages((cur) =>
+      cur.length === next.length && cur[cur.length - 1]?.id === next[next.length - 1]?.id ? cur : next
+    );
   };
 
   const fetchOffers = async () => {
@@ -178,7 +223,8 @@ export default function Chat() {
       .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: false });
 
-    setOffers(data || []);
+    const next = data || [];
+    setOffers((cur) => (JSON.stringify(cur) === JSON.stringify(next) ? cur : next));
   };
 
   const moderateMessage = (message: string): { isBlocked: boolean; reason: string } => {
@@ -267,7 +313,7 @@ export default function Chat() {
           .eq("user_id", user.id)
           .single();
 
-        const chatLink = `/chat?product=${productId}`;
+        const chatLink = `/chat?id=${conversation.id}`;
         const truncatedMessage = newMessage.length > 50 ? newMessage.substring(0, 50) + "..." : newMessage;
         
         // Create in-app notification
@@ -305,7 +351,7 @@ export default function Chat() {
     await supabase.from("chat_messages").insert({
       conversation_id: conversation.id,
       sender_id: user.id,
-      message: `✅ Offer accepted! Your order has been created.\n\n📦 Order Details:\n💰 Price: PKR ${offer.offered_price.toLocaleString()}\n🔒 Security: PKR ${offer.offered_security_deposit.toLocaleString()}\n📅 Dates: ${format(new Date(offer.start_date), "MMM dd")} - ${format(new Date(offer.end_date), "MMM dd, yyyy")}\n\n👉 Please visit My Bookings for next steps.`,
+      message: `✅ Offer accepted!\n\n📦 Order Details:\n💰 Price: PKR ${offer.offered_price.toLocaleString()}\n🔒 Security: PKR ${offer.offered_security_deposit.toLocaleString()}\n📅 Dates: ${format(new Date(offer.start_date), "MMM dd")} - ${format(new Date(offer.end_date), "MMM dd, yyyy")}\n\n💳 Next step: the buyer pays the small Behen.pk platform fee (see the card on the right) to confirm the booking and unlock contact details.`,
     });
 
     fetchOffers();
@@ -366,7 +412,7 @@ export default function Chat() {
     );
   }
 
-  const isOwner = user?.id === product?.owner_id;
+  const isOwner = user?.id === conversation?.owner_id;
 
   return (
     <div className="min-h-screen bg-background">
@@ -440,7 +486,7 @@ export default function Chat() {
                     disabled={loading}
                   />
                   <p className="text-xs text-muted-foreground px-1">
-                    ⚠️ Our AI monitors messages. Sharing contact info may expose you publicly.
+                    ⚠️ Contact details unlock after the booking fee is verified. Messages are monitored for safety.
                   </p>
                 </div>
                 <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
@@ -489,11 +535,19 @@ export default function Chat() {
                 </CardContent>
               </Card>
 
+              <BookingFeeCard
+                conversation={conversation}
+                product={product}
+                userId={user.id}
+                acceptedOffer={offers.find((o) => o.status === "accepted") || null}
+                onConfirmed={() => { refreshConversation(); fetchMessages(); }}
+              />
+
               {conversation.is_booking_confirmed && (
                 <Card className="bg-green-500/10 border-green-500/30">
                   <CardContent className="pt-4 text-center">
                     <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-600" />
-                    <p className="font-semibold text-green-600">Order Created!</p>
+                    <p className="font-semibold text-green-600">Booking Confirmed!</p>
                     <Button
                       className="mt-3 w-full"
                       onClick={() => navigate("/my-bookings")}

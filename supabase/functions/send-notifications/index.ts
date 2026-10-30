@@ -59,6 +59,59 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Email service not configured");
     }
 
+    // Sweep: email buyer + seller when a chat booking fee is verified
+    if ((type as string) === "booking_fee_email_sweep") {
+      const admin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: due } = await admin
+        .from("booking_fee_payments")
+        .select("id, payer_id, owner_id, product_id, conversation_id, amount_pkr, transaction_id")
+        .eq("status", "approved")
+        .is("email_sent_at", null)
+        .limit(20);
+      let sent = 0;
+      const esc = (v: unknown) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+      for (const p of due || []) {
+        const { data: claimed } = await admin
+          .from("booking_fee_payments")
+          .update({ email_sent_at: new Date().toISOString() })
+          .eq("id", p.id)
+          .is("email_sent_at", null)
+          .select("id");
+        if (!claimed?.length) continue;
+        const { data: prod } = await admin.from("products").select("title, product_code").eq("id", p.product_id).maybeSingle();
+        const link = `https://behen.pk/chat?id=${p.conversation_id}`;
+        for (const [uid, isBuyer] of [[p.payer_id, true], [p.owner_id, false]] as const) {
+          const { data: u } = await admin.auth.admin.getUserById(uid);
+          const email = u?.user?.email;
+          if (!email) continue;
+          const { data: prof } = await admin.from("profiles").select("name").eq("user_id", uid).maybeSingle();
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background:#ffffff;">
+              <h1 style="color: #FF69B4;">Booking Confirmed!</h1>
+              <p>Hi ${esc(prof?.name || "Behen")},</p>
+              <p>${isBuyer ? "We've verified your platform fee" : "The buyer's platform fee has been verified"} for <strong>${esc(prod?.title || "your dress")}</strong>${prod?.product_code ? ` (${esc(prod.product_code)})` : ""}.</p>
+              <div style="background: #fdf2f8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FF69B4;">
+                <p style="margin: 5px 0;"><strong>Platform fee:</strong> PKR ${Number(p.amount_pkr).toLocaleString()}</p>
+                ${isBuyer ? `<p style="margin: 5px 0;"><strong>Transaction ID:</strong> ${esc(p.transaction_id)}</p>` : ""}
+              </div>
+              <p>Contact details are now unlocked in your chat. Arrange pickup or delivery directly.</p>
+              <p><a href="${link}" style="background: #FF69B4; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Open chat</a></p>
+              <p>Best regards,<br>Behen.pk Team</p>
+            </div>`;
+          try {
+            await sendEmail(email, "Booking confirmed - Behen.pk", html);
+            sent++;
+          } catch (e) {
+            console.error("booking fee email failed", p.id, e);
+          }
+        }
+      }
+      return new Response(JSON.stringify({ success: true, sent }), {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     // Sweep: email every buyer whose credit purchase was approved but not yet emailed
     if ((type as string) === "credit_email_sweep") {
       const admin = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
