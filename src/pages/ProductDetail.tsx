@@ -653,16 +653,20 @@ const ProductDetail = () => {
                       />
                     )}
 
-                    {chatEnabled && product.negotiation_allowed && (
-                      <Button 
-                        size="lg" 
-                        variant="outline"
-                        onClick={handleContactSeller}
-                        className="w-full"
-                      >
-                        <MessageCircle className="mr-2 h-5 w-5" />
-                        Chat to Negotiate
-                      </Button>
+                    {chatEnabled && (
+                      <div className="space-y-1">
+                        <Button 
+                          size="lg" 
+                          onClick={handleContactSeller}
+                          className="w-full"
+                        >
+                          <MessageCircle className="mr-2 h-5 w-5" />
+                          Chat with Seller
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          Free to chat · Agree on price & delivery · Contact details shared after booking
+                        </p>
+                      </div>
                     )}
                     
                     {/* Fixed Price Badge */}
