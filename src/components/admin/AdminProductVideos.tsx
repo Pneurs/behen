@@ -115,7 +115,8 @@ export default function AdminProductVideos() {
     if (hasRent) priceParts.push(`Rent: ${money(p.rental_price_4days as number)} (4 days)`);
     if (hasSale) priceParts.push(hasRent ? `Sale: ${money(p.sale_price as number)}` : `Price: ${money(p.sale_price as number)}`);
 
-    const lines = [p.title];
+    const availability = hasRent && hasSale ? "Available for Rent & Sale" : hasRent ? "Available for Rent" : "Available for Sale";
+    const lines = [p.title, `✨ ${availability}`];
     if (priceParts.length) lines.push(`💰 ${priceParts.join(" | ")}`);
     if (p.city) lines.push(`📍 ${p.city}`);
 
