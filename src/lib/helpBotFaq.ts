@@ -1,13 +1,11 @@
 export type QA = { q: string; keys: string[]; a: string };
 
 export const FAQ: QA[] = [
-  { q: "How do I list my dress?", keys: ["list", "upload", "post", "sell", "add dress", "list my dress"], a: "Tap \"List your dress\" and follow the 6 easy steps: photos, details, price, instructions, location and a short video. Full guide: behen.pk/how-to-sell" },
-  { q: "Is listing free?", keys: ["free", "listing fee", "cost to list", "charges"], a: "Listing is currently free for sellers." },
-  { q: "How do I buy or rent a dress?", keys: ["buy", "rent", "order", "purchase", "book"], a: "Open Browse, pick a dress, then use credits to see the seller's contact and talk to her directly." },
-  { q: "What are credits?", keys: ["credit", "credits", "contact", "number"], a: "Credits unlock a seller's phone and email. 3 credits = PKR 300, 5 credits = PKR 450. Pay by bank transfer and upload the screenshot with the transaction ID." },
-  { q: "How do I pay?", keys: ["pay", "payment", "bank", "transfer", "ubl"], a: "Bank transfer only: UBL, title Behen.Pk, account 0611359113165. Upload the screenshot and transaction ID — credits are added after verification." },
+  { q: "How do I list my dress?", keys: ["list", "upload", "post", "sell", "add dress", "list my dress", "expire", "expiry", "how long", "permanent"], a: "Tap \"List your dress\" and follow the 6 easy steps: photos, details, price, instructions, location and a short video. Your listing stays live until you delete it or mark it sold. Full guide: behen.pk/how-to-sell" },
+  { q: "Is listing free?", keys: ["free", "listing fee", "cost to list", "charges"], a: "Yes — listing your dress on Behen.pk is free." },
+  { q: "How do I buy or rent a dress?", keys: ["buy", "rent", "order", "purchase", "book", "seller", "contact", "number"], a: "1) Open Browse and pick the dresses you like.\n2) Chat with the sellers for free — you can talk to more than one seller.\n3) Choose the right seller and agree on the price, dates and delivery option (pickup or courier) in chat.\n4) Accept the seller's offer and pay the Behen.pk fee by bank transfer.\n5) Once your payment is verified, you get the seller's contact details to complete your deal." },
+  { q: "How do I pay?", keys: ["pay", "payment", "bank", "transfer", "ubl", "fee"], a: "Bank transfer only: UBL, title Behen.Pk, account 0611359113165. After accepting an offer in chat, upload the payment screenshot and transaction ID there. We verify it and then share the seller's contact details." },
   { q: "Who holds the security deposit?", keys: ["security", "deposit", "cnic", "damage", "responsible"], a: "The seller takes the security directly from the renter (up to the dress's full price). Behen.pk is only a connector and does not hold deposits or take responsibility for dresses." },
-  { q: "How long does my listing stay live?", keys: ["expire", "expires", "expired", "expiry", "how long", "stay live", "live", "15 days", "inactive", "reactivate", "hidden", "permanent", "removed"], a: "Your listing stays live permanently until you delete it or mark it sold from My Dresses." },
   { q: "How do I verify WhatsApp?", keys: ["verify", "whatsapp", "verification"], a: "Go to your profile and tap Verify WhatsApp — it sends a message automatically, no code needed." },
 ];
 
