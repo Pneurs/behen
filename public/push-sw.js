@@ -13,7 +13,7 @@ self.addEventListener("push", (event) => {
       badge: "/favicon.png",
       tag: data.tag,
       renotify: true,
-      data: { url: data.url || "/all-chats" },
+      data: { url: data.url || "/chats" },
     })
   );
 });
