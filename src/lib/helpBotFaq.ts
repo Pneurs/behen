@@ -1,7 +1,7 @@
 export type QA = { q: string; keys: string[]; a: string };
 
 export const FAQ: QA[] = [
-  { q: "How do I list my dress?", keys: ["list", "upload", "post", "sell", "add dress", "list my dress"], a: "Tap \"List your dress\" and follow the 6 easy steps: photos, details, price, instructions, location and a short video. Your listing stays live until you delete it or mark it sold. Full guide: behen.pk/how-to-sell" },
+  { q: "How do I list my dress?", keys: ["list", "upload", "post", "sell", "add dress", "list my dress", "expire", "expiry", "how long", "permanent"], a: "Tap \"List your dress\" and follow the 6 easy steps: photos, details, price, instructions, location and a short video. Your listing stays live until you delete it or mark it sold. Full guide: behen.pk/how-to-sell" },
   { q: "Is listing free?", keys: ["free", "listing fee", "cost to list", "charges"], a: "Yes — listing your dress on Behen.pk is free." },
   { q: "How do I buy or rent a dress?", keys: ["buy", "rent", "order", "purchase", "book", "seller", "contact", "number"], a: "1) Open Browse and pick the dresses you like.\n2) Chat with the sellers for free — you can talk to more than one seller.\n3) Choose the right seller and agree on the price, dates and delivery option (pickup or courier) in chat.\n4) Accept the seller's offer and pay the Behen.pk fee by bank transfer.\n5) Once your payment is verified, you get the seller's contact details to complete your deal." },
   { q: "How do I pay?", keys: ["pay", "payment", "bank", "transfer", "ubl", "fee"], a: "Bank transfer only: UBL, title Behen.Pk, account 0611359113165. After accepting an offer in chat, upload the payment screenshot and transaction ID there. We verify it and then share the seller's contact details." },
