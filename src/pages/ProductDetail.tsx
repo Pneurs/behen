@@ -835,6 +835,11 @@ const ProductDetail = () => {
                         <><X className="h-4 w-4 text-muted-foreground" /> No - Regular wash is fine</>
                       )}
                     </p>
+                    {product.category?.startsWith("kids_") && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Kids' clothes (under 12): chemical dry cleaning is not recommended — gentle hand wash in cold water with mild baby detergent, or light steam.
+                      </p>
+                    )}
                   </div>
 
                   {/* Alteration Possible */}
