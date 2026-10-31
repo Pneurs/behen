@@ -12,8 +12,10 @@ import { compressImage } from "@/lib/compressImage";
 
 const ACCOUNT = "0611359113165";
 
+// Each side (buyer AND seller) pays this fee. Must match the DB trigger set_booking_fee_amount.
+export const feeRateFor = (listingType?: string | null) => (listingType === "sale" ? 0.05 : 0.085);
 export function bookingFeeFor(price: number, listingType?: string | null) {
-  return Math.ceil(price * (listingType === "sale" ? 0.05 : 0.1));
+  return Math.ceil(price * feeRateFor(listingType));
 }
 
 interface Props {
@@ -36,14 +38,9 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
     enabled: !!acceptedOffer,
     refetchInterval: 15000,
     queryFn: async () => {
-      const { data: n } = await supabase.rpc("auto_approve_due_booking_fees");
-      if (n && Number(n) > 0) {
-        supabase.functions.invoke("send-notifications", { body: { type: "booking_fee_email_sweep" } }).catch(() => {});
-        onConfirmed();
-      }
       const { data } = await supabase
         .from("booking_fee_payments")
-        .select("id, status, amount_pkr, transaction_id, created_at")
+        .select("id, status, amount_pkr, transaction_id, created_at, payer_id")
         .eq("conversation_id", conversation.id)
         .order("created_at", { ascending: false });
       return data || [];
@@ -53,17 +50,31 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
   if (!acceptedOffer || conversation.is_booking_confirmed) return null;
 
   const fee = bookingFeeFor(Number(acceptedOffer.offered_price), product?.listing_type);
-  const latest = payments[0];
+  const pct = product?.listing_type === "sale" ? "5%" : "8.5%";
+  const otherId = isBuyer ? conversation.owner_id : conversation.renter_id;
+  const mine = payments.filter((p: any) => p.payer_id === userId);
+  const theirs = payments.filter((p: any) => p.payer_id === otherId);
+  const latest = mine[0];
+  const otherStatus = theirs.find((p: any) => p.status === "approved") ? "approved" : theirs[0]?.status;
+  const otherLabel = isBuyer ? "Seller" : "Buyer";
 
-  if (!isBuyer) {
+  const OtherBadge = () => (
+    <p className="text-xs text-muted-foreground">
+      {otherLabel}'s fee:{" "}
+      <Badge variant={otherStatus === "approved" ? "default" : "secondary"}>
+        {otherStatus === "approved" ? "Verified" : otherStatus === "pending" ? "Submitted — verifying" : "Not paid yet"}
+      </Badge>
+    </p>
+  );
+
+  if (latest?.status === "approved") {
     return (
       <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="space-y-2 pt-4 text-sm">
-          <p className="font-semibold">Waiting for the buyer's platform fee</p>
-          <p className="text-muted-foreground">
-            Once Behen.pk verifies the buyer's PKR {fee.toLocaleString()} fee, both of you will see each other's contact details here.
-          </p>
-          {latest?.status === "pending" && <Badge variant="secondary">Payment submitted — verifying</Badge>}
+        <CardContent className="space-y-2 pt-4 text-center text-sm">
+          <ShieldCheck className="mx-auto h-8 w-8 text-primary" />
+          <p className="font-semibold">Your fee is verified</p>
+          <p className="text-muted-foreground">Contact details unlock as soon as the {otherLabel.toLowerCase()}'s fee is verified too.</p>
+          <OtherBadge />
         </CardContent>
       </Card>
     );
@@ -75,8 +86,9 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
         <CardContent className="space-y-2 pt-4 text-center text-sm">
           <Clock className="mx-auto h-8 w-8 text-primary" />
           <p className="font-semibold">Verifying your payment…</p>
-          <p className="text-muted-foreground">Usually done within a few minutes. You'll get an email and a notification once it's confirmed.</p>
+          <p className="text-muted-foreground">Our team checks it against the bank, usually within 2 hours. You'll get a notification once it's confirmed.</p>
           <p className="text-xs text-muted-foreground">Transaction ID: {latest.transaction_id}</p>
+          <OtherBadge />
         </CardContent>
       </Card>
     );
@@ -104,6 +116,7 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
       });
       if (error) {
         if (error.code === "23505") throw new Error("This transaction ID has already been used.");
+        if (error.message?.includes("fee_already_submitted")) throw new Error("You have already submitted your fee.");
         throw error;
       }
       toast.success("Payment submitted — verifying now");
@@ -128,8 +141,9 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
           <p className="rounded bg-destructive/10 p-2 text-destructive">Your last payment couldn't be verified. Please check and submit again.</p>
         )}
         <p>
-          Pay the Behen.pk platform fee of <strong>PKR {fee.toLocaleString()}</strong> ({product?.listing_type === "sale" ? "5%" : "10%"} of PKR {Number(acceptedOffer.offered_price).toLocaleString()}). The dress price is paid directly to the seller.
+          Pay your Behen.pk platform fee of <strong>PKR {fee.toLocaleString()}</strong> ({pct} of PKR {Number(acceptedOffer.offered_price).toLocaleString()}). Buyer and seller each pay {pct}. {isBuyer ? "The dress price is paid directly to the seller." : "You receive the dress price directly from the buyer."}
         </p>
+        <OtherBadge />
         <div className="space-y-1 rounded-md bg-muted p-3">
           <p>Bank: <strong>UBL</strong></p>
           <p>Account title: <strong>Behen.Pk</strong></p>
