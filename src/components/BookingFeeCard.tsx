@@ -15,7 +15,8 @@ const ACCOUNT = "0611359113165";
 // Each side (buyer AND seller) pays this fee. Must match the DB trigger set_booking_fee_amount.
 export const feeRateFor = (listingType?: string | null) => (listingType === "sale" ? 0.05 : 0.085);
 export function bookingFeeFor(price: number, listingType?: string | null) {
-  return Math.ceil(price * feeRateFor(listingType));
+  // Round to paisa first so float noise (10000*0.085=850.0000001) does not add a rupee.
+  return Math.ceil(Math.round(price * feeRateFor(listingType) * 100) / 100);
 }
 
 interface Props {

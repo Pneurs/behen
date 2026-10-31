@@ -1,3 +1,4 @@
+// @ts-expect-error bun:test types are only available in the bun runtime
 import { describe, expect, test } from "bun:test";
 import { bookingFeeFor } from "./BookingFeeCard";
 
