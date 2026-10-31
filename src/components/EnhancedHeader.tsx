@@ -214,7 +214,7 @@ export const EnhancedHeader = () => {
                   View Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/chats")} className="cursor-pointer">
-                  <Coins className="mr-2 h-4 w-4" />
+                  <MessageCircle className="mr-2 h-4 w-4" />
                   My Chats
                 </DropdownMenuItem>
                 {userRole === "bari" && referralSettings?.yourBalanceEnabled && (
