@@ -213,10 +213,9 @@ export const EnhancedHeader = () => {
                   <User className="mr-2 h-4 w-4" />
                   View Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/credits")} className="cursor-pointer">
-                  <Coins className="mr-2 h-4 w-4" />
-                  Credits
-                  <span className="ml-auto font-semibold text-primary">{creditBalance ?? 0}</span>
+                <DropdownMenuItem onClick={() => navigate("/chats")} className="cursor-pointer">
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  My Chats
                 </DropdownMenuItem>
                 {userRole === "bari" && referralSettings?.yourBalanceEnabled && (
                   <DropdownMenuItem 

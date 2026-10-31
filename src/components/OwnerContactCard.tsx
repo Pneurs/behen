@@ -118,6 +118,10 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
     }
   };
 
+  // Credits are retired: contact details only appear once both platform fees are verified in chat
+  // (which unlocks this dress for the buyer), or for admins.
+  if (!currentUser || (!unlocked && !isPrivileged)) return null;
+
   return (
     <>
       <Button
