@@ -295,6 +295,9 @@ export default function Chat() {
     } else {
       setNewMessage("");
       
+      // WhatsApp alert to the other person (throttled server-side)
+      supabase.functions.invoke("whatsapp-notify", { body: { conversation_id: conversation.id } }).catch(() => {});
+
       // Send notification to recipient
       try {
         const recipientId = user.id === conversation.owner_id 

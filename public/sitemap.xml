@@ -1131,12 +1131,6 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://behen.pk/product/be4df2fb-ae06-4d9c-bc9c-2ebbb7ab91ad</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://behen.pk/product/fa8e9994-5d6b-4cb6-aa39-06ae02d9388c</loc>
     <lastmod>2026-10-15</lastmod>
     <changefreq>weekly</changefreq>
@@ -1149,6 +1143,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://behen.pk/product/be4df2fb-ae06-4d9c-bc9c-2ebbb7ab91ad</loc>
+    <lastmod>2026-10-28</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://behen.pk/product/05e0fa09-500d-484c-a064-fd35a8033559</loc>
     <lastmod>2026-10-15</lastmod>
     <changefreq>weekly</changefreq>
@@ -1156,7 +1156,7 @@
   </url>
   <url>
     <loc>https://behen.pk/product/6d944d25-1fbf-452f-b42a-070339a65010</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1203,14 +1203,20 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://behen.pk/product/06a5b253-0277-4edd-9269-e7860d2859d1</loc>
-    <lastmod>2026-10-15</lastmod>
+    <loc>https://behen.pk/product/f10497a7-22b0-4659-bb66-1eb7439fbf85</loc>
+    <lastmod>2026-10-25</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
     <loc>https://behen.pk/product/483891d2-64cb-41f7-a285-928c17685111</loc>
     <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://behen.pk/product/06a5b253-0277-4edd-9269-e7860d2859d1</loc>
+    <lastmod>2026-10-30</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1252,7 +1258,7 @@
   </url>
   <url>
     <loc>https://behen.pk/product/9767e07c-efcb-43ca-874c-e141dca88e65</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1270,7 +1276,7 @@
   </url>
   <url>
     <loc>https://behen.pk/product/97010228-aaf3-42b3-8a8e-6e9217a96860</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -1305,12 +1311,6 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://behen.pk/product/f10497a7-22b0-4659-bb66-1eb7439fbf85</loc>
-    <lastmod>2026-10-15</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
     <loc>https://behen.pk/product/a8e9f9d7-d62f-4436-82f4-ed9a88681d48</loc>
     <lastmod>2026-10-15</lastmod>
     <changefreq>weekly</changefreq>
@@ -1329,8 +1329,20 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://behen.pk/product/5a4808d0-4d9d-44a0-b36b-3208b8760ff6</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://behen.pk/product/0a0178fe-b52b-495d-9253-7bbdd9b61540</loc>
     <lastmod>2026-10-15</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://behen.pk/product/07227f04-60dc-484d-9287-abfa805fd7cc</loc>
+    <lastmod>2026-10-31</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
