@@ -1,4 +1,5 @@
 import HelpBot from "@/components/HelpBot";
+import WebPushPrompt from "@/components/WebPushPrompt";
 import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -83,6 +84,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <HelpBot />
+          <WebPushPrompt />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />

@@ -1,3 +1,4 @@
+import { notifyChatPush } from "@/lib/webPush";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -297,6 +298,8 @@ export default function Chat() {
       
       // WhatsApp alert to the other person (throttled server-side)
       supabase.functions.invoke("whatsapp-notify", { body: { conversation_id: conversation.id } }).catch(() => {});
+      // Browser push alert to the other person
+      notifyChatPush(conversation.id);
 
       // Send notification to recipient
       try {
