@@ -176,6 +176,13 @@
       "when": 1793404423903,
       "tag": "0024_booking_fee_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793628647307,
+      "tag": "0025_sync_two_sided_booking_fees",
+      "breakpoints": true
     }
   ]
 }

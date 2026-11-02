@@ -107,17 +107,10 @@ export default function Chat() {
       navigate("/all-chats");
       return;
     }
-    
-    // Check if negotiation is allowed for this product
-    if (productData && productData.negotiation_allowed === false) {
-      toast({
-        title: "Negotiation Not Available",
-        description: "This product has a fixed price and doesn't allow chat negotiation.",
-        variant: "destructive",
-      });
-      navigate(`/product/${productId}`);
-      return;
-    }
+
+    // Chat is the only way to reach a seller now (contacts unlock after booking),
+    // so fixed-price dresses are chat-enabled too — buyers just agree at the listed price.
+
     
     setProduct(productData);
 
