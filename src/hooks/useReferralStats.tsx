@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 
 interface ReferralStats {
   referredCount: number;
@@ -49,10 +50,7 @@ export const useReferralStats = () => {
 
       // Fetch profile names for referred users
       const referredIds = signups.map((s) => s.referred_user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("user_id, name")
-        .in("user_id", referredIds);
+      const profiles = await fetchPublicProfiles(referredIds);
 
       const profileMap: Record<string, string> = {};
       (profiles || []).forEach((p) => {

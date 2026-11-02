@@ -142,13 +142,13 @@ export default function Booking() {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(`payment-proofs/${fileName}`, paymentProof);
+        .upload(`${user.id}/payment-proofs/${fileName}`, paymentProof);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
-        .getPublicUrl(`payment-proofs/${fileName}`);
+        .getPublicUrl(`${user.id}/payment-proofs/${fileName}`);
 
       // Create booking
       const { days, total, deposit } = calculateTotals();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,14 +60,14 @@ export default function MyBookings() {
       // Fetch profiles for owner and renter names
       const bookingsWithNames = await Promise.all((data || []).map(async (booking) => {
         const [ownerProfile, renterProfile] = await Promise.all([
-          supabase.from("profiles").select("name").eq("user_id", booking.owner_id).single(),
-          supabase.from("profiles").select("name").eq("user_id", booking.renter_id).single(),
+          fetchPublicProfile(booking.owner_id),
+          fetchPublicProfile(booking.renter_id),
         ]);
         
         return {
           ...booking,
-          owner_name: ownerProfile.data?.name || "Bari Behen",
-          renter_name: renterProfile.data?.name || "Choti Behen",
+          owner_name: ownerProfile?.name || "Bari Behen",
+          renter_name: renterProfile?.name || "Choti Behen",
         };
       }));
       

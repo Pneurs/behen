@@ -2,6 +2,7 @@ import { notifyChatPush } from "@/lib/webPush";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -300,11 +301,7 @@ export default function Chat() {
           ? conversation.renter_id 
           : conversation.owner_id;
         
-        const { data: recipientProfile } = await supabase
-          .from("profiles")
-          .select("name")
-          .eq("user_id", recipientId)
-          .single();
+        const recipientProfile = await fetchPublicProfile(recipientId);
 
         const { data: senderProfile } = await supabase
           .from("profiles")

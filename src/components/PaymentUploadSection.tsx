@@ -86,14 +86,16 @@ export default function PaymentUploadSection({ booking, isRenter, onUploadComple
       const compressedBlob = await compressImage(selectedFile);
       
       // Generate unique filename
-      const filename = `${booking.id}/${Date.now()}_payment_proof.jpg`;
+      const { data: { user: uploader } } = await supabase.auth.getUser();
+      if (!uploader) throw new Error("Please sign in again");
+      const filename = `${uploader.id}/${booking.id}/${Date.now()}_payment_proof.jpg`;
 
       // Upload to Supabase storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("booking-videos")
         .upload(filename, compressedBlob, {
           contentType: "image/jpeg",
-          upsert: true,
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;

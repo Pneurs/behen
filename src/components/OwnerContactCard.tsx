@@ -29,12 +29,14 @@ interface OwnerContactCardProps {
   onLoginClick: () => void;
 }
 
-export default function OwnerContactCard({ owner, currentUser, productId, onLoginClick }: OwnerContactCardProps) {
+export default function OwnerContactCard({ owner: ownerProp, currentUser, productId, onLoginClick }: OwnerContactCardProps) {
   const navigate = useNavigate();
   const [showDialog, setShowDialog] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
   const [sellerEmail, setSellerEmail] = useState<string | null>(null);
+  const [sellerPhone, setSellerPhone] = useState<string | null>(null);
 
+  const owner = { ...ownerProp, phone: sellerPhone || ownerProp.phone };
   const { data: settings } = useCreditSettings();
   const { data: balance = 0 } = useCreditBalance();
   const { data: unlocked = false, refetch: refetchUnlocked } = useContactUnlocked(productId);
@@ -65,7 +67,10 @@ export default function OwnerContactCard({ owner, currentUser, productId, onLogi
     const { data, error } = await supabase.rpc("get_seller_contact", { _product_id: productId });
     if (error) return;
     const result = data as any;
-    if (result?.allowed) setSellerEmail(result.email || null);
+    if (result?.allowed) {
+      setSellerEmail(result.email || null);
+      setSellerPhone(result.phone || null);
+    }
   };
 
   useEffect(() => {
