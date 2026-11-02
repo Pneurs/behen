@@ -41,41 +41,23 @@ const Auth = () => {
   const [verifyEmailRequired, setVerifyEmailRequired] = useState(false);
   const { data: referralSettings } = useReferralSystemEnabled();
 
-  // Generate random token for email verification
-  const generateToken = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  };
-
-  // Simple hash function for password storage in verification table
-  const simpleHash = (str: string) => {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash.toString(36);
-  };
-
-  // Send custom verification email via our edge function (uses no-reply@behen.pk)
-  const sendVerificationEmail = async (emailAddress: string, token: string, type: "signup" | "recovery" = "signup") => {
-    const response = await supabase.functions.invoke("send-otp-email", {
-      body: {
-        email: emailAddress,
-        token,
-        redirectUrl: `${window.location.origin}/auth`,
-        type,
-      },
+  // Email verification runs on the server: no passwords are stored in our tables
+  const callVerification = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("email-verification", {
+      body: { ...body, redirectUrl: `${window.location.origin}/auth` },
     });
-
-    if (response.error) {
-      console.error("Error sending verification email:", response.error);
-      throw new Error("Failed to send verification email");
+    if (error) {
+      let message = "Something went wrong. Please try again.";
+      try {
+        const ctx = await (error as any).context?.json?.();
+        if (ctx?.error) message = ctx.error;
+      } catch { /* ignore */ }
+      throw new Error(message);
     }
-    return response.data;
+    return data as any;
   };
 
-  // Handle verification link from email - creates account and signs in user
+  // Handle verification link from email - confirms the account and signs the user in
   const handleVerifyFromLink = async () => {
     const urlToken = searchParams.get("token");
     const urlEmail = searchParams.get("email");
@@ -86,175 +68,34 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Look up token in database
-      const { data: tokenData, error: tokenError } = await supabase
-        .from("email_verification_tokens")
-        .select("*")
-        .eq("email", urlEmail)
-        .eq("token", urlToken)
-        .gt("expires_at", new Date().toISOString())
-        .single();
-
-      if (tokenError || !tokenData) {
-        toast.error("Invalid or expired verification link. Please sign up again.");
-        setMode("signup");
-        setLoading(false);
-        setVerifying(false);
-        return;
-      }
-
-      // Token is valid - NOW create the user account
-      const userData = tokenData.user_data as { password: string; name: string; phone: string; role: string; referred_by: string | null } | null;
-      
-      if (!userData?.password) {
-        toast.error("Verification data is incomplete. Please sign up again.");
-        setMode("signup");
-        setLoading(false);
-        setVerifying(false);
-        return;
-      }
-
-      // Create the user account now that email is verified
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: urlEmail,
-        password: userData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: userData.name,
-            phone: userData.phone,
-            role: userData.role,
-            referred_by: userData.referred_by,
-          },
-        },
-      });
-
-      if (signUpError) {
-        console.error("Signup error during verification:", signUpError);
-        toast.error("Failed to create account. Please try signing up again.");
-        setMode("signup");
-        setLoading(false);
-        setVerifying(false);
-        return;
-      }
-
-      // Sign in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: urlEmail,
-        password: userData.password,
-      });
-
-      if (signInError) {
-        console.error("Sign in error after verification:", signInError);
-        toast.error("Account created! Please login with your credentials.");
+      let result: any;
+      try {
+        result = await callVerification({ action: "verify", email: urlEmail, token: urlToken });
+      } catch {
+        toast.error("Invalid or expired verification link. Please sign up again or log in to resend it.");
         setMode("login");
-        setLoading(false);
-        setVerifying(false);
         return;
       }
 
-      // Mark email as verified in profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from("profiles")
-          .update({ email_verified: true })
-          .eq("user_id", user.id);
-
-        // Process referral bonus if user was referred
-        if (userData.referred_by) {
-          try {
-            // Get referrer's referral code for the signup record
-            const { data: referrerEarnings } = await supabase
-              .from("user_earnings")
-              .select("referral_code, pending_balance")
-              .eq("user_id", userData.referred_by)
-              .single();
-
-            if (referrerEarnings) {
-              // Add 150 PKR to referrer's pending balance
-              await supabase
-                .from("user_earnings")
-                .update({
-                  pending_balance: (referrerEarnings.pending_balance || 0) + 150
-                })
-                .eq("user_id", userData.referred_by);
-
-              // Create transaction for referrer
-              await supabase
-                .from("earning_transactions")
-                .insert({
-                  user_id: userData.referred_by,
-                  amount: 150,
-                  type: "referral_bonus",
-                  status: "pending",
-                  reference_id: user.id,
-                  notes: "Referral bonus - new user signup"
-                });
-            }
-
-            // Create or update new user's earnings with 150 PKR bonus
-            const { data: newUserEarnings } = await supabase
-              .from("user_earnings")
-              .select("*")
-              .eq("user_id", user.id)
-              .single();
-
-            if (newUserEarnings) {
-              await supabase
-                .from("user_earnings")
-                .update({
-                  pending_balance: (newUserEarnings.pending_balance || 0) + 150,
-                  referred_by: userData.referred_by
-                })
-                .eq("user_id", user.id);
-            } else {
-              await supabase
-                .from("user_earnings")
-                .insert({
-                  user_id: user.id,
-                  pending_balance: 150,
-                  referred_by: userData.referred_by,
-                  balance: 0
-                });
-            }
-
-            // Create transaction for new user
-            await supabase
-              .from("earning_transactions")
-              .insert({
-                user_id: user.id,
-                amount: 150,
-                type: "referral_bonus",
-                status: "pending",
-                notes: "Referral signup bonus"
-              });
-
-            // Create referral signup record for tracking
-            await supabase
-              .from("referral_signups")
-              .insert({
-                referrer_user_id: userData.referred_by,
-                referred_user_id: user.id,
-                referral_code: referrerEarnings?.referral_code || "",
-                bonus_amount: 150,
-                bonus_credited: true
-              });
-
-            toast.success("🎉 PKR 150 bonus credited to your account!");
-          } catch (refError) {
-            console.error("Error processing referral bonus:", refError);
-            // Don't fail the signup if referral processing fails
-          }
+      if (result?.token_hash) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          token_hash: result.token_hash,
+          type: "magiclink",
+        });
+        if (otpError) {
+          toast.success("Email verified! Please log in with your password.");
+          setEmail(urlEmail);
+          setMode("login");
+          return;
         }
+      } else {
+        toast.success("Email verified! Please log in with your password.");
+        setEmail(urlEmail);
+        setMode("login");
+        return;
       }
 
-      // Delete the used token
-      await supabase
-        .from("email_verification_tokens")
-        .delete()
-        .eq("email", urlEmail);
-
+      if (result?.referral_bonus) toast.success("🎉 PKR 150 bonus credited to your account!");
       toast.success("Email verified! Welcome to Behen.pk!");
       handlePostLoginRedirect();
     } catch (error: any) {
