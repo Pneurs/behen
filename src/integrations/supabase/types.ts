@@ -559,6 +559,7 @@ export type Database = {
           password_hash: string
           token: string
           user_data: Json | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -568,6 +569,7 @@ export type Database = {
           password_hash: string
           token: string
           user_data?: Json | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -577,6 +579,7 @@ export type Database = {
           password_hash?: string
           token?: string
           user_data?: Json | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1628,6 +1631,7 @@ export type Database = {
         Returns: Json
       }
       expire_stale_listings: { Args: never; Returns: number }
+      get_booking_contacts: { Args: { _booking_id: string }; Returns: Json }
       get_my_verification_code: { Args: { _token: string }; Returns: string }
       get_owner_average_rating: {
         Args: { owner_uuid: string }
@@ -1638,6 +1642,18 @@ export type Database = {
         Returns: number
       }
       get_public_product: { Args: { _product_id: string }; Returns: Json }
+      get_public_profiles: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          area: string
+          city: string
+          created_at: string
+          name: string
+          phone_verified: boolean
+          role: string
+          user_id: string
+        }[]
+      }
       get_seller_contact: { Args: { _product_id: string }; Returns: Json }
       get_user_role_by_email: { Args: { user_email: string }; Returns: string }
       grant_booking_fee: { Args: { _id: string }; Returns: undefined }
