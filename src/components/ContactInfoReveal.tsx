@@ -37,22 +37,11 @@ export default function ContactInfoReveal({ booking, userId, product }: ContactI
   const fetchContactInfo = async () => {
     setLoading(true);
     try {
-      // Fetch profiles
-      const [ownerRes, renterRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("name, phone, city, area")
-          .eq("user_id", booking.owner_id)
-          .single(),
-        supabase
-          .from("profiles")
-          .select("name, phone, city, area")
-          .eq("user_id", booking.renter_id)
-          .single(),
-      ]);
-
-      if (ownerRes.data) setOwnerProfile(ownerRes.data);
-      if (renterRes.data) setRenterProfile(renterRes.data);
+      // Contact details are only returned for the two people in a paid booking
+      const { data } = await supabase.rpc("get_booking_contacts", { _booking_id: booking.id });
+      const contacts = data as { owner?: UserProfile | null; renter?: UserProfile | null } | null;
+      if (contacts?.owner) setOwnerProfile(contacts.owner);
+      if (contacts?.renter) setRenterProfile(contacts.renter);
     } catch (error) {
       console.error("Failed to fetch contact info:", error);
     } finally {
