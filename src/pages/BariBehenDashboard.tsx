@@ -2,6 +2,7 @@ import ListingSpotsCard from "@/components/ListingSpotsCard";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,11 +111,7 @@ export default function BariBehenDashboard() {
       
       // Fetch renter names from profiles separately
       const ordersWithNames = await Promise.all((data || []).map(async (order) => {
-        const { data: renterProfile } = await supabase
-          .from("profiles")
-          .select("name")
-          .eq("user_id", order.renter_id)
-          .maybeSingle();
+        const renterProfile = await fetchPublicProfile(order.renter_id);
         
         return {
           ...order,

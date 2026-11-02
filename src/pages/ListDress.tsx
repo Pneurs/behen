@@ -453,7 +453,7 @@ const ListDress = () => {
       const firstImage = imageFiles[0];
       const fileExt = firstImage.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `temp/${fileName}`;
+      const filePath = `${user.id}/temp/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("product-images")
@@ -621,7 +621,7 @@ const ListDress = () => {
       const file = await compressImage(original);
       const fileExt = file.name.split(".").pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `real/${fileName}`;
+      const filePath = `${user.id}/real/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("product-images")

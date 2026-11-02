@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -197,13 +198,13 @@ export default function Cart() {
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(`payment-proofs/${fileName}`, paymentProof);
+        .upload(`${user.id}/payment-proofs/${fileName}`, paymentProof);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
         .from('product-images')
-        .getPublicUrl(`payment-proofs/${fileName}`);
+        .getPublicUrl(`${user.id}/payment-proofs/${fileName}`);
 
       const { basePrice, platformFee, total, deposit, days } = calculateTotals();
 
@@ -262,11 +263,7 @@ export default function Cart() {
       }
 
       // Get owner profile and send notification
-      const { data: ownerProfile } = await supabase
-        .from("profiles")
-        .select("name")
-        .eq("user_id", product.owner_id)
-        .single();
+      const ownerProfile = await fetchPublicProfile(product.owner_id);
 
       const { data: renterProfile } = await supabase
         .from("profiles")

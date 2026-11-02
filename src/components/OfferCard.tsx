@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile, fetchPublicProfiles } from "@/lib/publicProfiles";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, X, Loader2, Calendar, DollarSign, Shield } from "lucide-react";
@@ -151,11 +152,7 @@ export default function OfferCard({
         // Send rejection notification to the buyer
         try {
           const buyerId = offer.sender_id;
-          const { data: buyerProfile } = await supabase
-            .from("profiles")
-            .select("name")
-            .eq("user_id", buyerId)
-            .single();
+          const buyerProfile = await fetchPublicProfile(buyerId);
 
           const chatLink = `/chat?id=${conversationId}`;
           
