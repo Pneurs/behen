@@ -5,3 +5,7 @@
 - buffer-publish must send `metadata.instagram.type = "reel"` (and facebook reel) — Buffer rejects Instagram videos without a post type.
 - Chat booking fees: the fee amount is computed by a DB trigger from the accepted offer and only `grant_booking_fee` (via auto-approve or admin review) may set `chat_conversations.is_booking_confirmed`; clients can't self-confirm a booking.
 - Chats are opened by conversation id (`/chat?id=`); `/chat?product=` is only for a buyer starting her own chat — sellers have one chat per buyer.
+- Other users' profiles are read only via `get_public_profiles` (src/lib/publicProfiles.ts) and paid-booking contacts via `get_booking_contacts`; the profiles table is own-row/staff only so phones, push tokens and codes never leak.
+- Sign-up email verification runs in the `email-verification` edge function (unconfirmed account + server token); never store passwords or tokens in client-reachable tables.
+- Buyers get a seller's private extra photos only through the `product-private-images` edge function; storage reads in product-private-media are owner/admin only.
+- Client uploads to product-images and booking-videos must start with `<uid>/` — storage insert policies require it.
