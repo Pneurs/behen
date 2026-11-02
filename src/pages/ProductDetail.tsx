@@ -2,6 +2,7 @@ import Seo from "@/components/Seo";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchPublicProfile } from "@/lib/publicProfiles";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,10 +115,10 @@ const ProductDetail = () => {
       }
 
       if (session && productData.private_image_paths?.length) {
-        const { data: signedImages } = await supabase.storage
-          .from("product-private-media")
-          .createSignedUrls(productData.private_image_paths, 600);
-        setProtectedImages((signedImages || []).flatMap((item) => item.signedUrl ? [item.signedUrl] : []));
+        const { data: signedImages } = await supabase.functions.invoke("product-private-images", {
+          body: { product_id: productData.id },
+        });
+        setProtectedImages(Array.isArray(signedImages?.urls) ? signedImages.urls : []);
       }
       if (session && productData.uploaded_video_path) {
         const { data: signedVideo } = await supabase.storage
@@ -127,14 +128,8 @@ const ProductDetail = () => {
       }
 
       // Load owner profile
-      const { data: ownerData, error: ownerError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", productData.owner_id)
-        .single();
-
-      if (ownerError) throw ownerError;
-      setOwner(ownerData);
+      const ownerData = await fetchPublicProfile(productData.owner_id);
+      setOwner(ownerData || { name: "Bari Behen", role: "bari", phone_verified: false });
 
       // Load bookings for this product
       const { data: bookingsData, error: bookingsError } = await supabase
