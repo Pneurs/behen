@@ -36,7 +36,7 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
-  const [pendingPassword, setPendingPassword] = useState("");
+  const [pendingAccessToken, setPendingAccessToken] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyEmailRequired, setVerifyEmailRequired] = useState(false);
   const { data: referralSettings } = useReferralSystemEnabled();
@@ -184,49 +184,42 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Validate referral code if provided (for Bari Behen only)
-      let referrerId: string | null = null;
-      if (role === "bari" && referralCode.trim()) {
-        // Validate referral code format (should start with "bari-behen-")
-        const trimmedCode = referralCode.trim().toLowerCase();
-        if (!trimmedCode.startsWith("bari-behen-")) {
-          setReferralError("Invalid referral code format. Code should start with 'bari-behen-'");
-          setLoading(false);
-          return;
-        }
-        
-        const { data: referralData } = await supabase
-          .from("user_earnings")
-          .select("user_id")
-          .eq("referral_code", trimmedCode)
-          .single();
-        
-        if (!referralData) {
+      // Referral code format check (the server checks the code itself)
+      const trimmedCode = role === "bari" ? referralCode.trim().toLowerCase() : "";
+      if (trimmedCode && !trimmedCode.startsWith("bari-behen-")) {
+        setReferralError("Invalid referral code format. Code should start with 'bari-behen-'");
+        setLoading(false);
+        return;
+      }
+
+      let result: any;
+      try {
+        result = await callVerification({
+          action: "signup",
+          email,
+          password,
+          name,
+          phone,
+          role,
+          referralCode: trimmedCode || undefined,
+        });
+      } catch (err: any) {
+        if (err?.message === "invalid_referral") {
           setReferralError("Invalid referral code");
           setLoading(false);
           return;
         }
-        referrerId = referralData.user_id;
+        throw err;
       }
 
-      // Check if email already exists in profiles (user already has an account)
-      const { data: existingProfile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", (await supabase.auth.getUser()).data.user?.id || "")
-        .single();
-
-      // Check if user already registered via auth
-      const { data: existingUsers } = await supabase.rpc('get_user_role_by_email', { user_email: email });
-      
-      if (existingUsers) {
+      if (result?.status === "exists") {
         let accountType = "";
-        if (existingUsers === "bari") {
+        if (result.role === "bari") {
           accountType = " as a Bari Behen";
-        } else if (existingUsers === "choti") {
+        } else if (result.role === "choti") {
           accountType = " as a Choti Behen";
         }
-        
+
         const errorMessage = `You already have an account${accountType}! Please login instead.`;
         setEmailError(errorMessage);
         toast.error(errorMessage, {
@@ -239,49 +232,6 @@ const Auth = () => {
         return;
       }
 
-      // Check if there's a pending verification for this email
-      const { data: existingToken } = await supabase
-        .from("email_verification_tokens")
-        .select("email")
-        .eq("email", email)
-        .single();
-
-      if (existingToken) {
-        // Token exists - resend verification email
-        const token = generateToken();
-        
-        await supabase
-          .from("email_verification_tokens")
-          .update({ 
-            token, 
-            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            password_hash: simpleHash(password),
-            user_data: { password, name, phone, role, referred_by: referrerId },
-          })
-          .eq("email", email);
-        
-        await sendVerificationEmail(email, token, "signup");
-        setPendingEmail(email);
-        setMode("check-email");
-        toast.success("Verification email resent! Please check your email.");
-        setLoading(false);
-        return;
-      }
-
-      // New user - store credentials in database (NO account created yet)
-      const token = generateToken();
-      
-      await supabase
-        .from("email_verification_tokens")
-        .insert({
-          email,
-          token,
-          password_hash: simpleHash(password),
-          user_data: { password, name, phone, role, referred_by: referrerId },
-        });
-      
-      await sendVerificationEmail(email, token, "signup");
-      
       setPendingEmail(email);
       setMode("check-email");
       toast.success("Please check your email to verify your account.");
@@ -294,39 +244,16 @@ const Auth = () => {
 
   const handleResendEmail = async () => {
     const emailToResend = pendingEmail;
-    
+
     if (!emailToResend) {
       toast.error("Please sign up again.");
       setMode("signup");
       return;
     }
-    
+
     setLoading(true);
     try {
-      // Get existing token data from database
-      const { data: existingToken } = await supabase
-        .from("email_verification_tokens")
-        .select("user_data")
-        .eq("email", emailToResend)
-        .single();
-      
-      if (!existingToken) {
-        toast.error("Please sign up again.");
-        setMode("signup");
-        setLoading(false);
-        return;
-      }
-      
-      // Generate new token
-      const token = generateToken();
-      
-      // Update token in database
-      await supabase
-        .from("email_verification_tokens")
-        .update({ token, expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
-        .eq("email", emailToResend);
-      
-      await sendVerificationEmail(emailToResend, token, "signup");
+      await callVerification({ action: "resend", email: emailToResend });
       toast.success("Verification email resent! Check your inbox and spam folder.");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend email");
@@ -346,8 +273,19 @@ const Auth = () => {
         password,
       });
 
-      if (signInError) throw signInError;
-      
+      if (signInError) {
+        const msg = (signInError.message || "").toLowerCase();
+        if ((signInError as any).code === "email_not_confirmed" || msg.includes("not confirmed")) {
+          setPendingEmail(email);
+          setPendingAccessToken("");
+          setVerifyEmailRequired(true);
+          toast.error("Please verify your email first.");
+          setLoading(false);
+          return;
+        }
+        throw signInError;
+      }
+
       // Check if email is verified in profile
       if (data.user) {
         const { data: profile } = await supabase
@@ -355,19 +293,19 @@ const Auth = () => {
           .select("email_verified")
           .eq("user_id", data.user.id)
           .single();
-        
+
         if (profile && !profile.email_verified) {
-          // Sign out user and prompt to verify email with resend option
-          await supabase.auth.signOut();
+          // Keep a short-lived proof of sign-in so we can resend the link, then sign out on this device
+          setPendingAccessToken(data.session?.access_token || "");
+          await supabase.auth.signOut({ scope: "local" });
           setPendingEmail(email);
-          setPendingPassword(password);
           setVerifyEmailRequired(true);
           toast.error("Please verify your email first.");
           setLoading(false);
           return;
         }
       }
-      
+
       toast.success("Welcome back!");
     } catch (error: any) {
       toast.error(error.message || "Failed to sign in");
@@ -386,37 +324,11 @@ const Auth = () => {
 
     setLoading(true);
     try {
-      // Check if token already exists for this email
-      const { data: existingToken } = await supabase
-        .from("email_verification_tokens")
-        .select("*")
-        .eq("email", pendingEmail)
-        .single();
-
-      const token = generateToken();
-
-      if (existingToken) {
-        // Update existing token
-        await supabase
-          .from("email_verification_tokens")
-          .update({ 
-            token, 
-            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-          })
-          .eq("email", pendingEmail);
-      } else {
-        // Create new token entry for existing user (minimal data - account already exists)
-        await supabase
-          .from("email_verification_tokens")
-          .insert({
-            email: pendingEmail,
-            token,
-            password_hash: simpleHash(pendingPassword || "existing-user"),
-            user_data: { existing_user: true },
-          });
-      }
-
-      await sendVerificationEmail(pendingEmail, token, "signup");
+      const { error } = await supabase.functions.invoke("email-verification", {
+        body: { action: "resend", email: pendingEmail, redirectUrl: `${window.location.origin}/auth` },
+        ...(pendingAccessToken ? { headers: { Authorization: `Bearer ${pendingAccessToken}` } } : {}),
+      });
+      if (error) throw new Error("Failed to resend verification email");
       toast.success("Verification email sent! Please check your inbox.");
     } catch (error: any) {
       console.error("Error resending verification:", error);
