@@ -183,6 +183,13 @@
       "when": 1793628647307,
       "tag": "0025_sync_two_sided_booking_fees",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793629639082,
+      "tag": "0026_tighten_access_rules",
+      "breakpoints": true
     }
   ]
 }
