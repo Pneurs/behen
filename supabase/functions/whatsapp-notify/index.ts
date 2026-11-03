@@ -2,8 +2,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 
-// Sends a WhatsApp alert (Meta Cloud API, template chat_new_message) to the other person in a chat when a new message arrives.
-// Throttled: only alerts if the sender had not messaged in this chat during the last 30 minutes.
+// Sends a WhatsApp alert (Meta Cloud API, template chat_new_inquiry) to the other person (seller or buyer) when a new message arrives.
+// Throttled: first real message alerts instantly; after that only if the sender was quiet 30+ minutes. The auto "Interested in" intro is ignored.
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -42,26 +42,26 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!conv || (conv.owner_id !== sender.id && conv.renter_id !== sender.id)) return json({ error: "Forbidden" }, 403);
 
-    // Throttle: look at the sender's two latest messages here
-    const { data: recent } = await admin
+    // Throttle: look at the sender's latest messages here, ignoring the automatic "Interested in" intro
+    const { data: recentRaw } = await admin
       .from("chat_messages")
-      .select("created_at")
+      .select("created_at, message")
       .eq("conversation_id", conv.id)
       .eq("sender_id", sender.id)
       .order("created_at", { ascending: false })
-      .limit(2);
-    if (recent && recent.length === 2) {
+      .limit(5);
+    const recent = (recentRaw || []).filter((m: any) => !String(m.message || "").startsWith("👗 Interested in"));
+    if (recent.length >= 2) {
       const gap = new Date(recent[0].created_at).getTime() - new Date(recent[1].created_at).getTime();
       if (gap < QUIET_MS) return json({ sent: false, reason: "throttled" });
     }
 
+    // Alerts go to whoever is on the other side — seller or buyer.
     const recipientId = sender.id === conv.owner_id ? conv.renter_id : conv.owner_id;
     const { data: prof } = await admin.from("profiles").select("name, phone").eq("user_id", recipientId).maybeSingle();
     if (!prof?.phone) return json({ sent: false, reason: "no phone" });
 
     const { data: prod } = await admin.from("products").select("title, product_code").eq("id", conv.product_id).maybeSingle();
-    // Approved template is written for sellers ("reply to the buyer"), so only alert sellers.
-    if (recipientId !== conv.owner_id) return json({ sent: false, reason: "recipient is buyer" });
     const dress = `${prod?.title || "your dress"}${prod?.product_code ? ` (${prod.product_code})` : ""}`;
 
     const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
         to: toIntl(prof.phone),
         type: "template",
         template: {
-          name: "chat_new_message",
+          name: "chat_new_inquiry",
           language: { code: "en_US" },
           components: [
             { type: "body", parameters: [
