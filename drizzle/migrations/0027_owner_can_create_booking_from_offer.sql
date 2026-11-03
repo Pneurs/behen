@@ -1,0 +1,1 @@
+CREATE POLICY "Owners can create bookings for own products" ON public.bookings FOR INSERT TO authenticated WITH CHECK (auth.uid() = owner_id AND EXISTS (SELECT 1 FROM public.products p WHERE p.id = product_id AND p.owner_id = auth.uid()));

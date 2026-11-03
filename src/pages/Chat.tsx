@@ -246,6 +246,11 @@ export default function Chat() {
       { regex: /\b[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]/gi, reason: "hidden text" },
     ];
 
+    // Block ALL digits (incl. Urdu/Arabic numerals) — prices go through the offer card.
+    if (/[0-9\u0660-\u0669\u06F0-\u06F9]/.test(message)) {
+      return { isBlocked: true, reason: "numbers (use the offer card for prices)" };
+    }
+
     for (const pattern of patterns) {
       if (pattern.regex.test(message)) {
         return { isBlocked: true, reason: pattern.reason };
@@ -482,7 +487,7 @@ export default function Chat() {
                     disabled={loading}
                   />
                   <p className="text-xs text-muted-foreground px-1">
-                    ⚠️ Contact details unlock after the booking fee is verified. Messages are monitored for safety.
+                    ⚠️ Numbers can't be sent in chat — use the offer card to agree on a price. Contact details unlock after the booking fee is verified.
                   </p>
                 </div>
                 <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
