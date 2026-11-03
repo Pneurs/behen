@@ -36,7 +36,7 @@ export default function OfferCard({
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [offerData, setOfferData] = useState({
-    price: product?.rental_price_4days?.toString() || "",
+    price: (product?.listing_type === "sale" ? product?.sale_price : product?.rental_price_4days)?.toString() || "",
     security: product?.security_deposit?.toString() || "",
   });
   const [dateRange, setDateRange] = useState<Date[]>([]);
@@ -68,7 +68,7 @@ export default function OfferCard({
         product_id: productId,
         sender_id: userId,
         offered_price: parseFloat(offerData.price),
-        offered_security_deposit: parseFloat(offerData.security),
+        offered_security_deposit: isSale ? 0 : parseFloat(offerData.security),
         start_date: format(startDate, "yyyy-MM-dd"),
         end_date: format(endDate, "yyyy-MM-dd"),
         total_days: totalDays,
@@ -107,7 +107,7 @@ export default function OfferCard({
           .from("bookings")
           .insert({
             product_id: offer.product_id,
-            renter_id: isOwner ? buyerId : userId,
+            renter_id: isOwner ? offer.sender_id : userId,
             owner_id: isOwner ? userId : product.owner_id,
             start_date: offer.start_date,
             end_date: offer.end_date,
