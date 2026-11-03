@@ -2,8 +2,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 
-// Sends a WhatsApp alert (Meta Cloud API, template chat_new_message) to the other person in a chat when a new message arrives.
-// Throttled: only alerts if the sender had not messaged in this chat during the last 30 minutes.
+// Sends a WhatsApp alert (Meta Cloud API, template chat_new_inquiry) to the other person (seller or buyer) when a new message arrives.
+// Throttled: first real message alerts instantly; after that only if the sender was quiet 30+ minutes. The auto "Interested in" intro is ignored.
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
