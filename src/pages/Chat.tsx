@@ -246,6 +246,11 @@ export default function Chat() {
       { regex: /\b[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]\s+[a-z]/gi, reason: "hidden text" },
     ];
 
+    // Block ALL digits (incl. Urdu/Arabic numerals) — prices go through the offer card.
+    if (/[0-9\u0660-\u0669\u06F0-\u06F9]/.test(message)) {
+      return { isBlocked: true, reason: "numbers (use the offer card for prices)" };
+    }
+
     for (const pattern of patterns) {
       if (pattern.regex.test(message)) {
         return { isBlocked: true, reason: pattern.reason };

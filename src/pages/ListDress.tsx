@@ -1987,17 +1987,9 @@ const ListDress = () => {
                 <br />
                 Please record the video <strong>vertically (portrait, 9:16)</strong> — like an Instagram Reel or TikTok — holding the phone upright so the full dress is visible.
                 <br />
-                Upload your video to YouTube, Google Drive, or Vimeo and paste the link below.
+                Upload the video file from your phone below (MP4, up to 60 seconds). Links are not accepted.
               </AlertDescription>
             </Alert>
-            <Input
-              id="video_url"
-              value={formData.video_url}
-              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-              placeholder="e.g., https://www.youtube.com/watch?v=... or https://drive.google.com/..."
-              type="url"
-            />
-            <div className="relative py-1 text-center text-xs text-muted-foreground">OR</div>
             <div className="space-y-2">
               <Label htmlFor="video-file">Upload video file</Label>
               <Input
@@ -2007,13 +1999,9 @@ const ListDress = () => {
                 onChange={(event) => setVideoFile(event.target.files?.[0] || null)}
               />
               {(videoFile || existingUploadedVideoPath) && (
-                <p className="text-xs text-muted-foreground">{videoFile?.name || "A private video is already saved."}</p>
+                <p className="text-xs text-muted-foreground">{videoFile?.name || "A video is already saved."}</p>
               )}
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <ExternalLink className="h-3 w-3" />
-              Supported: YouTube, Google Drive, Vimeo, or any public video link
-            </p>
           </div>
         </CardContent>
       </Card>
