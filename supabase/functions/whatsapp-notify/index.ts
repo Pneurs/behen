@@ -24,7 +24,10 @@ Deno.serve(async (req) => {
   try {
     const token = Deno.env.get("META_WHATSAPP_TOKEN");
     const phoneId = Deno.env.get("META_WHATSAPP_PHONE_ID");
-    if (!token || !phoneId) return json({ sent: false, reason: "WhatsApp gateway not configured" });
+    if (!token || !phoneId) {
+      console.warn("[whatsapp-notify] skipped: gateway not configured");
+      return json({ sent: false, reason: "WhatsApp gateway not configured" });
+    }
 
     const parsed = Body.safeParse(await req.json());
     if (!parsed.success) return json({ error: "Invalid input" }, 400);
@@ -53,13 +56,22 @@ Deno.serve(async (req) => {
     const recent = (recentRaw || []).filter((m: any) => !String(m.message || "").startsWith("👗 Interested in"));
     if (recent.length >= 2) {
       const gap = new Date(recent[0].created_at).getTime() - new Date(recent[1].created_at).getTime();
-      if (gap < QUIET_MS) return json({ sent: false, reason: "throttled" });
+      if (gap < QUIET_MS) {
+        console.log(`[whatsapp-notify] conv ${conv.id}: throttled (gap ${Math.round(gap / 1000)}s)`);
+        return json({ sent: false, reason: "throttled" });
+      }
     }
 
     // Alerts go to whoever is on the other side — seller or buyer.
     const recipientId = sender.id === conv.owner_id ? conv.renter_id : conv.owner_id;
     const { data: prof } = await admin.from("profiles").select("name, phone").eq("user_id", recipientId).maybeSingle();
-    if (!prof?.phone) return json({ sent: false, reason: "no phone" });
+    if (!prof?.phone) {
+      console.log(`[whatsapp-notify] conv ${conv.id}: recipient ${recipientId} has no phone on profile`);
+      return json({ sent: false, reason: "no phone" });
+    }
+    const to = toIntl(prof.phone);
+    const masked = `${to.slice(0, 4)}****${to.slice(-3)}`;
+    console.log(`[whatsapp-notify] conv ${conv.id}: sending chat_new_inquiry to ${masked} (recipient ${recipientId})`);
 
     const { data: prod } = await admin.from("products").select("title, product_code").eq("id", conv.product_id).maybeSingle();
     const dress = `${prod?.title || "your dress"}${prod?.product_code ? ` (${prod.product_code})` : ""}`;
@@ -69,7 +81,7 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         messaging_product: "whatsapp",
-        to: toIntl(prof.phone),
+        to,
         type: "template",
         template: {
           name: "chat_new_inquiry",
@@ -86,10 +98,18 @@ Deno.serve(async (req) => {
     });
     const text = await res.text();
     if (!res.ok) {
-      console.error(`Meta WhatsApp failed [${res.status}]: ${text}`);
+      console.error(`[whatsapp-notify] Meta rejected message to ${masked} [${res.status}]: ${text}`);
       return json({ sent: false, status: res.status, details: text });
     }
-    return json({ sent: true });
+    let wamid: string | undefined;
+    let waStatus: string | undefined;
+    try {
+      const body = JSON.parse(text);
+      wamid = body?.messages?.[0]?.id;
+      waStatus = body?.messages?.[0]?.message_status;
+    } catch { /* non-JSON */ }
+    console.log(`[whatsapp-notify] Meta accepted message to ${masked}: wamid=${wamid ?? "?"} status=${waStatus ?? "accepted"} wa_id=${text.match(/"wa_id":"(\d+)"/)?.[1] ?? "?"}`);
+    return json({ sent: true, wamid });
   } catch (e) {
     console.error("whatsapp-notify error", e);
     return json({ error: String(e) }, 500);
