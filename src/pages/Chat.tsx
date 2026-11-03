@@ -487,7 +487,7 @@ export default function Chat() {
                     disabled={loading}
                   />
                   <p className="text-xs text-muted-foreground px-1">
-                    ⚠️ Contact details unlock after the booking fee is verified. Messages are monitored for safety.
+                    ⚠️ Numbers can't be sent in chat — use the offer card to agree on a price. Contact details unlock after the booking fee is verified.
                   </p>
                 </div>
                 <Button onClick={handleSendMessage} disabled={loading || !newMessage.trim()}>
