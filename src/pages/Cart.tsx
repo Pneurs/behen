@@ -437,7 +437,7 @@ export default function Cart() {
                               <Info className="h-4 w-4 text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              <p>We charge {orderType === "buy" ? "5%" : "8.5%"} platform fee on {orderType === "buy" ? "sales" : "rentals"} to maintain our online platform. This fee applies to both buyers and sellers.</p>
+                              <p>Launch discount: buyers pay {orderType === "buy" ? "2.5% (normally 5%)" : "4.25% (normally 8.5%)"} and sellers pay {orderType === "buy" ? "5% (normally 7.5%)" : "8.5% (normally 10%)"} platform fee on {orderType === "buy" ? "sales" : "rentals"}.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

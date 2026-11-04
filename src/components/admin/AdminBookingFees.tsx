@@ -18,7 +18,7 @@ export default function AdminBookingFees() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("booking_fee_payments")
-        .select("id, payer_id, owner_id, product_id, amount_pkr, transaction_id, proof_path, status, created_at")
+        .select("id, conversation_id, payer_id, owner_id, product_id, amount_pkr, transaction_id, proof_path, status, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -30,7 +30,14 @@ export default function AdminBookingFees() {
       ]);
       const pm = Object.fromEntries((profs || []).map((p: any) => [p.user_id, p.name]));
       const prm = Object.fromEntries((prods || []).map((p: any) => [p.id, p]));
-      return (data || []).map((r) => ({ ...r, buyer: pm[r.payer_id], seller: pm[r.owner_id], product: prm[r.product_id] }));
+      const all = data || [];
+      const DAY = 24 * 60 * 60 * 1000;
+      // Refund due: buyer paid, seller never paid within 24 hours.
+      const refundDue = (r: any) =>
+        r.payer_id !== r.owner_id && r.status !== "rejected" &&
+        Date.now() - new Date(r.created_at).getTime() > DAY &&
+        !all.some((o: any) => o.conversation_id === r.conversation_id && o.payer_id === o.owner_id && o.status !== "rejected");
+      return all.map((r) => ({ ...r, refundDue: refundDue(r), buyer: pm[r.payer_id === r.owner_id ? "" : r.payer_id], seller: pm[r.owner_id], payerRole: r.payer_id === r.owner_id ? "Seller" : "Buyer", product: prm[r.product_id] }));
     },
   });
 
@@ -55,7 +62,7 @@ export default function AdminBookingFees() {
     <Card>
       <CardHeader>
         <CardTitle>Chat booking fees</CardTitle>
-        <CardDescription>Platform fees buyers pay in chat. Pending ones auto-confirm after a few minutes — reject fakes before then.</CardDescription>
+        <CardDescription>Buyer pays first, then the seller has 24 hours. "Refund due" means the seller missed the deadline — refund the buyer via UBL.</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -69,7 +76,7 @@ export default function AdminBookingFees() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Dress</TableHead>
-                  <TableHead>Buyer → Seller</TableHead>
+                  <TableHead>Paid by</TableHead>
                   <TableHead>Fee</TableHead>
                   <TableHead>Transaction ID</TableHead>
                   <TableHead>Status</TableHead>
@@ -81,10 +88,10 @@ export default function AdminBookingFees() {
                   <TableRow key={r.id}>
                     <TableCell className="whitespace-nowrap text-xs">{format(new Date(r.created_at), "MMM dd, hh:mm a")}</TableCell>
                     <TableCell className="text-xs">{r.product?.product_code} {r.product?.title}</TableCell>
-                    <TableCell className="text-xs">{r.buyer || "—"} → {r.seller || "—"}</TableCell>
+                    <TableCell className="text-xs"><Badge variant="outline">{r.payerRole}</Badge> {r.payerRole === "Buyer" ? r.buyer : r.seller}</TableCell>
                     <TableCell>PKR {Number(r.amount_pkr).toLocaleString()}</TableCell>
                     <TableCell className="font-mono text-xs">{r.transaction_id}</TableCell>
-                    <TableCell><Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "secondary"}>{r.status}</Badge></TableCell>
+                    <TableCell><Badge variant={r.status === "approved" ? "default" : r.status === "rejected" ? "destructive" : "secondary"}>{r.status}</Badge>{r.refundDue && <Badge variant="destructive" className="ml-1">Refund due</Badge>}</TableCell>
                     <TableCell className="flex gap-1">
                       <Button size="sm" variant="outline" onClick={() => viewProof(r.proof_path)}><ImageIcon className="h-4 w-4" /></Button>
                       {r.status === "pending" && (
