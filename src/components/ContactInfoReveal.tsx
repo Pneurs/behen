@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Phone, User, CheckCircle, Loader2, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Phone, User, CheckCircle, Loader2, MapPin, MessageCircle } from "lucide-react";
+
+const toWa = (phone: string) => {
+  const d = phone.replace(/\D/g, "");
+  return d.startsWith("0") ? "92" + d.slice(1) : d;
+};
 
 interface ContactInfoRevealProps {
   booking: any;
@@ -128,6 +134,25 @@ export default function ContactInfoReveal({ booking, userId, product }: ContactI
                 >
                   {otherProfile.phone}
                 </a>
+              </div>
+            )}
+
+            {otherProfile?.phone && (
+              <div className="flex gap-2 pt-1">
+                <Button asChild size="sm" className="flex-1">
+                  <a
+                    href={`https://wa.me/${toWa(otherProfile.phone)}?text=${encodeURIComponent(`Assalam o Alaikum! I'm contacting you from Behen.pk about "${product?.title || "the dress"}".`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-1" /> Open WhatsApp
+                  </a>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="flex-1">
+                  <a href={`tel:${otherProfile.phone}`}>
+                    <Phone className="h-4 w-4 mr-1" /> Call
+                  </a>
+                </Button>
               </div>
             )}
 
