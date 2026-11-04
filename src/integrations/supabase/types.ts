@@ -1673,6 +1673,7 @@ export type Database = {
         Returns: number
       }
       is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
+      listing_text_has_contact: { Args: { _text: string }; Returns: boolean }
       reactivate_listing: { Args: { _product_id: string }; Returns: Json }
       set_listing_active: {
         Args: { _active: boolean; _product_id: string }
