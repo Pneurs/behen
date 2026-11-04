@@ -895,6 +895,7 @@ export default function AdminDashboard() {
 
             {/* Pending Payments Tab */}
             <TabsContent value="bookings">
+              <div className="mb-6"><AdminBookingFees /></div>
               <Card className="bg-slate-800/50 border-slate-700">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-white">
@@ -1741,10 +1742,6 @@ export default function AdminDashboard() {
                 <div className="mt-6">
                   <AdminCreditPurchases canGrant />
                 </div>
-                <div className="mt-6">
-                  <AdminBookingFees />
-                </div>
-
 
                 {/* Chat System Toggle */}
                 <Card className="bg-slate-800/50 border-slate-700 mb-6">
