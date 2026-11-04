@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,17 +7,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Copy, Loader2, ShieldCheck, Clock } from "lucide-react";
+import { Copy, Loader2, ShieldCheck, Clock, Hourglass, XCircle } from "lucide-react";
 import { compressImage } from "@/lib/compressImage";
 
 const ACCOUNT = "0611359113165";
 
-// Each side (buyer AND seller) pays this fee. Must match the DB trigger set_booking_fee_amount.
-export const feeRateFor = (listingType?: string | null) => (listingType === "sale" ? 0.05 : 0.085);
-export function bookingFeeFor(price: number, listingType?: string | null) {
+// Must match the DB trigger set_booking_fee_amount. Launch promo rates; `list` is the normal rate shown struck through.
+export type FeeSide = "buyer" | "seller";
+const RATES = {
+  sale: { buyer: { list: 0.05, promo: 0.025 }, seller: { list: 0.075, promo: 0.05 } },
+  rent: { buyer: { list: 0.085, promo: 0.0425 }, seller: { list: 0.1, promo: 0.085 } },
+};
+export const SELLER_DEADLINE_MS = 24 * 60 * 60 * 1000;
+export const feeRatesFor = (listingType: string | null | undefined, side: FeeSide) =>
+  RATES[listingType === "sale" ? "sale" : "rent"][side];
+const pctLabel = (r: number) => `${+(r * 100).toFixed(2)}%`;
+export function bookingFeeFor(price: number, listingType: string | null | undefined, side: FeeSide, which: "promo" | "list" = "promo") {
   // Round to paisa first so float noise (10000*0.085=850.0000001) does not add a rupee.
-  return Math.ceil(Math.round(price * feeRateFor(listingType) * 100) / 100);
+  return Math.ceil(Math.round(price * feeRatesFor(listingType, side)[which] * 100) / 100);
 }
+const fmtLeft = (ms: number) => {
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return `${h} hrs ${m} mins`;
+};
 
 interface Props {
   conversation: any;
@@ -33,6 +45,8 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
   const [file, setFile] = useState<File | null>(null);
   const [trx, setTrx] = useState("");
   const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
 
   const { data: payments = [] } = useQuery({
     queryKey: ["booking-fee", conversation.id],
@@ -50,9 +64,18 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
 
   if (!acceptedOffer || conversation.is_booking_confirmed) return null;
 
-  const fee = bookingFeeFor(Number(acceptedOffer.offered_price), product?.listing_type);
-  const pct = product?.listing_type === "sale" ? "5%" : "8.5%";
+  const side: FeeSide = isBuyer ? "buyer" : "seller";
+  const price = Number(acceptedOffer.offered_price);
+  const fee = bookingFeeFor(price, product?.listing_type, side);
+  const listFee = bookingFeeFor(price, product?.listing_type, side, "list");
+  const rates = feeRatesFor(product?.listing_type, side);
   const otherId = isBuyer ? conversation.owner_id : conversation.renter_id;
+  const buyerActive = payments.filter((p: any) => p.payer_id === conversation.renter_id && p.status !== "rejected");
+  const buyerPaidAt = buyerActive.length ? Math.min(...buyerActive.map((p: any) => new Date(p.created_at).getTime())) : null;
+  const sellerActive = payments.some((p: any) => p.payer_id === conversation.owner_id && p.status !== "rejected");
+  const deadline = buyerPaidAt ? buyerPaidAt + SELLER_DEADLINE_MS : null;
+  const expired = !!deadline && !sellerActive && now > deadline;
+  const left = deadline ? Math.max(0, deadline - now) : 0;
   const mine = payments.filter((p: any) => p.payer_id === userId);
   const theirs = payments.filter((p: any) => p.payer_id === otherId);
   const latest = mine[0];
@@ -68,6 +91,34 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
     </p>
   );
 
+  if (expired) {
+    return (
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardContent className="space-y-2 pt-4 text-center text-sm">
+          <XCircle className="mx-auto h-8 w-8 text-destructive" />
+          <p className="font-semibold">This deal has expired</p>
+          <p className="text-muted-foreground">
+            {isBuyer
+              ? "The seller did not pay her fee within 24 hours. Our team will refund your fee to your bank account. You can chat with other sellers anytime."
+              : "You did not pay your fee within 24 hours of the buyer's payment, so this deal was cancelled and the buyer will be refunded."}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isBuyer && !buyerPaidAt) {
+    return (
+      <Card className="border-primary/30 bg-primary/5">
+        <CardContent className="space-y-2 pt-4 text-center text-sm">
+          <Hourglass className="mx-auto h-8 w-8 text-primary" />
+          <p className="font-semibold">Waiting for the buyer to pay first</p>
+          <p className="text-muted-foreground">The buyer pays her Behen.pk fee first. You'll get a WhatsApp alert the moment she pays, then you have 24 hours to pay yours.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (latest?.status === "approved") {
     return (
       <Card className="border-primary/30 bg-primary/5">
@@ -75,6 +126,7 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
           <ShieldCheck className="mx-auto h-8 w-8 text-primary" />
           <p className="font-semibold">Your fee is verified</p>
           <p className="text-muted-foreground">Contact details unlock as soon as the {otherLabel.toLowerCase()}'s fee is verified too.</p>
+          {isBuyer && !sellerActive && deadline && <p className="text-xs">⏳ Seller has <strong>{fmtLeft(left)}</strong> left to pay her fee.</p>}
           <OtherBadge />
         </CardContent>
       </Card>
@@ -89,6 +141,7 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
           <p className="font-semibold">Verifying your payment…</p>
           <p className="text-muted-foreground">Our team checks it against the bank, usually within 2 hours. You'll get a notification once it's confirmed.</p>
           <p className="text-xs text-muted-foreground">Transaction ID: {latest.transaction_id}</p>
+          {isBuyer && !sellerActive && deadline && <p className="text-xs">⏳ Seller has <strong>{fmtLeft(left)}</strong> left to pay her fee.</p>}
           <OtherBadge />
         </CardContent>
       </Card>
@@ -118,9 +171,20 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
       if (error) {
         if (error.code === "23505") throw new Error("This transaction ID has already been used.");
         if (error.message?.includes("fee_already_submitted")) throw new Error("You have already submitted your fee.");
+        if (error.message?.includes("buyer_pays_first")) throw new Error("The buyer pays first. Please wait for her payment.");
+        if (error.message?.includes("seller_deadline_passed")) throw new Error("The 24-hour window has passed, so this deal expired.");
         throw error;
       }
       toast.success("Payment submitted — verifying now");
+      if (isBuyer && !sellerActive) {
+        // Tell the seller in chat; this also sends her a WhatsApp alert.
+        await supabase.from("chat_messages").insert({
+          conversation_id: conversation.id,
+          sender_id: userId,
+          message: "💳 The buyer has submitted her Behen.pk fee! Seller, please pay your fee within 24 hours to confirm this deal and unlock contact details.",
+        });
+        supabase.functions.invoke("whatsapp-notify", { body: { conversation_id: conversation.id, fee_paid: true } }).catch(() => {});
+      }
       setFile(null);
       setTrx("");
       qc.invalidateQueries({ queryKey: ["booking-fee", conversation.id] });
@@ -141,8 +205,14 @@ export default function BookingFeeCard({ conversation, product, userId, accepted
         {latest?.status === "rejected" && (
           <p className="rounded bg-destructive/10 p-2 text-destructive">Your last payment couldn't be verified. Please check and submit again.</p>
         )}
+        {!isBuyer && deadline && (
+          <p className="rounded bg-primary/10 p-2 text-center font-medium">⏳ Time remaining: {fmtLeft(left)} to submit your fee</p>
+        )}
         <p>
-          Pay your Behen.pk platform fee of <strong>PKR {fee.toLocaleString()}</strong> ({pct} of PKR {Number(acceptedOffer.offered_price).toLocaleString()}). Buyer and seller each pay {pct}. {isBuyer ? "The dress price is paid directly to the seller." : "You receive the dress price directly from the buyer."}
+          Pay your Behen.pk platform fee of <span className="text-muted-foreground line-through">PKR {listFee.toLocaleString()}</span>{" "}
+          <strong>PKR {fee.toLocaleString()}</strong> (<span className="line-through">{pctLabel(rates.list)}</span> {pctLabel(rates.promo)} of PKR {price.toLocaleString()}).{" "}
+          <Badge variant="secondary">Launch discount</Badge>{" "}
+          {isBuyer ? "You pay first; the seller then has 24 hours to pay hers. The dress price is paid directly to the seller." : "You receive the dress price directly from the buyer."}
         </p>
         <OtherBadge />
         <div className="space-y-1 rounded-md bg-muted p-3">
