@@ -37,7 +37,7 @@ export default function AdminBookingFees() {
         r.payer_id !== r.owner_id && r.status !== "rejected" &&
         Date.now() - new Date(r.created_at).getTime() > DAY &&
         !all.some((o: any) => o.conversation_id === r.conversation_id && o.payer_id === o.owner_id && o.status !== "rejected");
-      return all.map((r) => ({ ...r, refundDue: refundDue(r), buyer: pm[r.payer_id === r.owner_id ? "" : r.payer_id], seller: pm[r.owner_id], payerRole: r.payer_id === r.owner_id ? "Seller" : "Buyer", product: prm[r.product_id] }));
+      return all.map((r) => ({ ...r, refundDue: refundDue(r), buyer: pm[r.payer_id], seller: pm[r.owner_id], payerRole: r.payer_id === r.owner_id ? "Seller" : "Buyer", product: prm[r.product_id] }));
     },
   });
 
