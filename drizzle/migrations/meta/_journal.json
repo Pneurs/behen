@@ -204,6 +204,13 @@
       "when": 1793773153505,
       "tag": "0028_buyer_first_fee_with_promo_rates",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793798522715,
+      "tag": "0029_block_contact_info_in_listings",
+      "breakpoints": true
     }
   ]
 }

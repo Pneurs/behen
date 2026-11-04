@@ -28,6 +28,7 @@ import { useEarnings } from "@/hooks/useEarnings";
 import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 import { useUploadAnnouncement } from "@/hooks/useUploadAnnouncement";
+import { findContactInListing, findListingContactInfo, LISTING_CONTACT_ERROR } from "@/lib/listingContactFilter";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -580,12 +581,22 @@ const ListDress = () => {
     goToStep("details");
   };
 
+  // Contact details are never allowed in public listing text — buyers reach sellers via chat.
+  const checkListingContactInfo = () => {
+    const hit = findContactInListing(formData);
+    if (!hit) return true;
+    toast.error(`${hit.label}: ${LISTING_CONTACT_ERROR}`, { duration: 8000 });
+    setCurrentStep(hit.field === "style_tips" ? "instructions" : "details");
+    return false;
+  };
+
   const continueFromDetails = () => {
     const result = listingSchema.pick({ title: true, category: true, condition: true, description: true, size: true }).safeParse(formData);
     if (!result.success) {
       toast.error(result.error.errors[0]?.message || "Please complete the required details");
       return;
     }
+    if (!checkListingContactInfo()) return;
     goToStep("pricing");
   };
 
@@ -686,6 +697,8 @@ const ListDress = () => {
       return;
     }
 
+
+    if (!checkListingContactInfo()) return;
 
     try {
       // Validate form data
@@ -1474,7 +1487,15 @@ const ListDress = () => {
               placeholder="Describe your dress in detail..."
               rows={4}
               required
+              className={findListingContactInfo(formData.description) ? "border-destructive" : ""}
             />
+            {findListingContactInfo(formData.description) ? (
+              <p className="text-sm text-destructive mt-1">{LISTING_CONTACT_ERROR}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Don't add phone numbers, WhatsApp, email or social media — buyers contact you through Behen.pk chat.
+              </p>
+            )}
           </div>
 
           {/* Fabric & Details */}
