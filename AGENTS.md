@@ -9,3 +9,4 @@
 - Sign-up email verification runs in the `email-verification` edge function (unconfirmed account + server token); never store passwords or tokens in client-reachable tables.
 - Buyers get a seller's private extra photos only through the `product-private-images` edge function; storage reads in product-private-media are owner/admin only.
 - Client uploads to product-images and booking-videos must start with `<uid>/` — storage insert policies require it.
+- Public listing text is screened for contact info by src/lib/listingContactFilter.ts and mirrored by the `listing_text_has_contact` DB trigger on products (changed fields only); update both together.
