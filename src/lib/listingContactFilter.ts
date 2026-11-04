@@ -27,7 +27,7 @@ const PATTERNS: { regex: RegExp; reason: string }[] = [
   { regex: /\b[a-z0-9._%+-]+\s*(\(at\)|\[at\]|\sat\s)\s*(gmail|yahoo|hotmail|outlook|icloud)\b/i, reason: "email address" },
   { regex: /\b(gmail|yahoo|hotmail|outlook|icloud)\s*(\.|dot)\s*com\b/i, reason: "email address" },
   // Messaging apps / social handles / links
-  { regex: /\b(whats\s?app|watsapp|wtsapp|whtsapp|wp|telegram|signal|imo|viber)\b/i, reason: "messaging app" },
+  { regex: /\b(whats\s?app|watsapp|wtsapp|whtsapp|wp|telegram|viber)\b/i, reason: "messaging app" },
   { regex: /\b(instagram|insta|facebook|fb|tiktok|snapchat|snap|twitter)\b/i, reason: "social media" },
   { regex: /(^|\s)@[a-z0-9._]{3,}/i, reason: "social media handle" },
   { regex: /\b(https?:\/\/|www\.)\S+/i, reason: "website link" },
@@ -44,7 +44,8 @@ const PATTERNS: { regex: RegExp; reason: string }[] = [
 /** Returns the reason contact info was detected, or null when the text is clean. */
 export const findListingContactInfo = (text: string | null | undefined): string | null => {
   if (!text) return null;
-  const normalized = normalizeDigits(text);
+  // Mentioning our own site is fine.
+  const normalized = normalizeDigits(text).replace(/\b(www\.)?behen\.pk\b/gi, " ");
   for (const { regex, reason } of PATTERNS) {
     if (regex.test(normalized)) return reason;
   }
