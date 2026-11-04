@@ -8,7 +8,7 @@ import { z } from "npm:zod@3";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const Body = z.object({ conversation_id: z.string().uuid() });
+const Body = z.object({ conversation_id: z.string().uuid(), fee_paid: z.boolean().optional() });
 const QUIET_MS = 30 * 60 * 1000;
 
 const toIntl = (phone: string) => {
@@ -54,7 +54,14 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(5);
     const recent = (recentRaw || []).filter((m: any) => !String(m.message || "").startsWith("👗 Interested in"));
-    if (recent.length >= 2) {
+    // A buyer fee payment always alerts the seller (she has 24 hours to pay) — but only if a real payment exists.
+    let feeAlert = false;
+    if (parsed.data.fee_paid && sender.id === conv.renter_id) {
+      const { data: pay } = await admin.from("booking_fee_payments").select("id")
+        .eq("conversation_id", conv.id).eq("payer_id", sender.id).in("status", ["pending", "approved"]).limit(1);
+      feeAlert = !!pay?.length;
+    }
+    if (!feeAlert && recent.length >= 2) {
       const gap = new Date(recent[0].created_at).getTime() - new Date(recent[1].created_at).getTime();
       if (gap < QUIET_MS) {
         console.log(`[whatsapp-notify] conv ${conv.id}: throttled (gap ${Math.round(gap / 1000)}s)`);
