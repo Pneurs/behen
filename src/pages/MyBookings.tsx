@@ -105,11 +105,13 @@ export default function MyBookings() {
 
   const getStageLabel = (stage: string) => {
     const labels: Record<string, string> = {
-      pending_packing_video: "Awaiting Packing Video",
+      pending_packing_video: "Contact unlocked – arrange pickup",
       pending_pickup: "Ready for Pickup",
+      pending_opening_video: "In progress",
+      ready_for_pickup: "Ready for Pickup",
       in_rental_period: "In Rental Period",
-      pending_return_video: "Awaiting Return Video",
-      pending_acceptance_video: "Awaiting Acceptance",
+      pending_return_video: "Awaiting Return",
+      pending_acceptance_video: "Awaiting Confirmation",
       completed: "Completed",
       closed: "Closed",
     };
@@ -344,6 +346,7 @@ function BookingsList({
         {bookings.map((booking) => {
           const isOwner = userId === booking.owner_id;
           const isRenter = userId === booking.renter_id;
+          const isSale = booking.products?.listing_type === "sale" || booking.products?.product_type === "sale";
           const hasReturnDeadline = booking.return_deadline && 
             ["in_rental_period", "pending_return_video"].includes(booking.order_stage);
           const countdown = hasReturnDeadline ? getReturnCountdown(booking.return_deadline) : null;
@@ -371,7 +374,7 @@ function BookingsList({
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                          {isOwner ? `Renter: ${booking.renter_name}` : `Seller: ${booking.owner_name}`}
+                          {isOwner ? `${isSale ? "Buyer" : "Renter"}: ${booking.renter_name}` : `Seller: ${booking.owner_name}`}
                         </p>
                         <p className="text-sm">
                           {format(new Date(booking.start_date), "MMM dd")} -{" "}
@@ -379,9 +382,11 @@ function BookingsList({
                         </p>
                         <p className="text-sm font-semibold mt-2">
                           PKR {Number(booking.total_price).toLocaleString()}
-                          <span className="font-normal text-muted-foreground ml-2">
-                            + PKR {Number(booking.security_deposit).toLocaleString()} security
-                          </span>
+                          {!isSale && Number(booking.security_deposit) > 0 && (
+                            <span className="font-normal text-muted-foreground ml-2">
+                              + PKR {Number(booking.security_deposit).toLocaleString()} security
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="text-right space-y-2">
