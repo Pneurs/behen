@@ -698,6 +698,8 @@ const ListDress = () => {
     }
 
 
+    if (!checkListingContactInfo()) return;
+
     try {
       // Validate form data
       listingSchema.parse({
@@ -1485,7 +1487,15 @@ const ListDress = () => {
               placeholder="Describe your dress in detail..."
               rows={4}
               required
+              className={findListingContactInfo(formData.description) ? "border-destructive" : ""}
             />
+            {findListingContactInfo(formData.description) ? (
+              <p className="text-sm text-destructive mt-1">{LISTING_CONTACT_ERROR}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Don't add phone numbers, WhatsApp, email or social media — buyers contact you through Behen.pk chat.
+              </p>
+            )}
           </div>
 
           {/* Fabric & Details */}
