@@ -25,6 +25,7 @@ describe("listing contact filter", () => {
   test("blocks WhatsApp and social media mentions", () => {
     expect(findListingContactInfo("WhatsApp me for more pics")).toBe("messaging app");
     expect(findListingContactInfo("Check my insta")).toBe("social media");
+    expect(findListingContactInfo("DM me on snapchat")).toBe("social media");
     expect(findListingContactInfo("follow @sara_closet")).toBe("social media handle");
     expect(findListingContactInfo("مجھے واٹس ایپ کریں")).toBe("contact request");
   });
@@ -32,6 +33,7 @@ describe("listing contact filter", () => {
   test("allows normal descriptions with sizes and measurements", () => {
     expect(findListingContactInfo("Worn 2 times, chest 36, length 52 inches, 3 piece suit")).toBeNull();
     expect(findListingContactInfo("Bought in 2024 for 45000, heavy zari work")).toBeNull();
+    expect(findListingContactInfo("Snap button closure at the back, snap buttons on sleeves")).toBeNull();
   });
 
   test("checks title and other public fields, not just description", () => {
