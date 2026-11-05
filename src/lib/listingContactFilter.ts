@@ -28,7 +28,7 @@ const PATTERNS: { regex: RegExp; reason: string }[] = [
   { regex: /\b(gmail|yahoo|hotmail|outlook|icloud)\s*(\.|dot)\s*com\b/i, reason: "email address" },
   // Messaging apps / social handles / links
   { regex: /\b(whats\s?app|watsapp|wtsapp|whtsapp|wp|telegram|viber)\b/i, reason: "messaging app" },
-  { regex: /\b(instagram|insta|facebook|fb|tiktok|snapchat|snap|twitter)\b/i, reason: "social media" },
+  { regex: /\b(instagram|insta|facebook|fb|tiktok|snapchat|twitter)\b/i, reason: "social media" },
   { regex: /(^|\s)@[a-z0-9._]{3,}/i, reason: "social media handle" },
   { regex: /\b(https?:\/\/|www\.)\S+/i, reason: "website link" },
   { regex: /\b[a-z0-9-]+\.(com|pk|net|org|me|link|ly)\b/i, reason: "website link" },
