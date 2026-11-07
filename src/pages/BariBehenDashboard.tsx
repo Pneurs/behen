@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import ListingSpotsCard from "@/components/ListingSpotsCard";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -656,7 +657,9 @@ export default function BariBehenDashboard() {
                 <Card key={product.id}>
                   <CardContent className="pt-6">
                     {/* 15-day listing timeline */}
-                    {isListingActive(product) ? (
+                    {product.correction_reason ? (
+                      <Alert variant="destructive" className="mb-4"><AlertDescription><strong>Changes requested by Admin</strong><p className="mt-2 whitespace-pre-wrap break-words">{product.correction_reason}</p><p className="mt-2 text-sm">Your listing is hidden. Make the requested changes before republishing.</p><Button className="mt-3" size="sm" onClick={() => handleEdit(product.id)}><Pencil className="mr-2 h-4 w-4" />Edit & Fix Listing</Button></AlertDescription></Alert>
+                    ) : isListingActive(product) ? (
                       <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
                         <CalendarClock className="h-4 w-4" />
                         Active — stays live until you delete it

@@ -29,6 +29,8 @@ import { useReferralSystemEnabled } from "@/hooks/useReferralSystemEnabled";
 import { useAiImageEnabled } from "@/hooks/useAiImageEnabled";
 import { useUploadAnnouncement } from "@/hooks/useUploadAnnouncement";
 import { findContactInListing, findListingContactInfo, LISTING_CONTACT_ERROR } from "@/lib/listingContactFilter";
+import OwnDressNotice from "@/components/OwnDressNotice";
+import { listingSubmissionIssue } from "@/lib/listingCorrections";
 
 const listingSchema = z.object({
   title: z.string().min(10, "Title must be at least 10 characters").max(100),
@@ -50,6 +52,8 @@ const ListDress = () => {
   const [user, setUser] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [ownMediaConfirmed, setOwnMediaConfirmed] = useState(false);
+  const [correction, setCorrection] = useState<{ reason: string; kind: string | null } | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(true);
   const { earnings, claimFirstProductBonus, processReferralBonus } = useEarnings();
   const { data: referralSettings } = useReferralSystemEnabled();
@@ -222,6 +226,7 @@ const ListDress = () => {
 
           if (product) {
             setIsEditMode(true);
+            setCorrection(product.correction_reason ? { reason: product.correction_reason, kind: product.correction_kind } : null);
             setAiCoverImage(product.ai_cover_image || "");
             const publicImages = product.public_images?.length
               ? product.public_images
@@ -677,8 +682,10 @@ const ListDress = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.video_url && !videoFile && !existingUploadedVideoPath) {
-      toast.error("Please upload a product video or paste a public video link");
+    const issue = listingSubmissionIssue(ownMediaConfirmed, correction?.kind || null, imageFiles.length > 0 || privateImageFiles.length > 0, !!videoFile);
+    if (issue) { toast.error(issue); return; }
+    if (!videoFile && !existingUploadedVideoPath) {
+      toast.error("Please upload a video of your own dress. Links are not accepted.");
       return;
     }
 
@@ -769,6 +776,7 @@ const ListDress = () => {
           : imagePreviews.filter((u) => !u.startsWith("data:")).slice(0, 3),
         private_image_paths: [...existingPrivateImagePaths, ...privateUploads.paths].slice(0, 6),
         uploaded_video_path: privateUploads.uploadedVideoPath || existingUploadedVideoPath,
+        own_media_confirmed: ownMediaConfirmed,
         updated_at: new Date().toISOString(),
       };
 
@@ -776,19 +784,18 @@ const ListDress = () => {
         // Update existing product
         const updateData = {
           ...productData,
-          ...(realImageUrls.length > 0 && { real_images: realImageUrls }),
+          ...(realImageUrls.length > 0 && { real_images: realImageUrls, ai_cover_image: realImageUrls[0] }),
         };
 
-        const { error: updateError } = await supabase
-          .from("products")
-          .update(updateData)
-          .eq("id", editProductId)
-          .eq("owner_id", user.id);
+        let updateQuery = supabase.from("products").update(updateData).eq("id", editProductId);
+        if (!isSuperAdmin) updateQuery = updateQuery.eq("owner_id", user.id);
+        const { data: saved, error: updateError } = await updateQuery.select("id, correction_reason").single();
 
         if (updateError) throw updateError;
 
-        toast.success("Product updated successfully!");
-        navigate("/browse");
+        if (correction && saved?.correction_reason) throw new Error("Please make the requested corrections before republishing.");
+        toast.success(correction ? "Corrections saved — your listing is live again!" : "Product updated successfully!");
+        navigate(correction ? "/dashboard" : "/browse");
       } else {
         // Create new product
         const { data: insertedProduct, error: insertError } = await supabase
@@ -921,6 +928,7 @@ const ListDress = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <OwnDressNotice />
         {aiGenerationError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -1991,6 +1999,7 @@ const ListDress = () => {
 
           {/* Product Video URL */}
           <div className={currentStep === "video" ? "space-y-5" : "hidden"}>
+            <OwnDressNotice video />
             <div className="flex items-center gap-2">
               <Video className="h-5 w-5 text-primary" />
               <Label htmlFor="video_url">Product Video *</Label>
@@ -2023,6 +2032,10 @@ const ListDress = () => {
                 <p className="text-xs text-muted-foreground">{videoFile?.name || "A video is already saved."}</p>
               )}
             </div>
+            <div className="flex items-start gap-3 border-t pt-4">
+              <Checkbox id="own-media-confirmation" checked={ownMediaConfirmed} onCheckedChange={(value) => setOwnMediaConfirmed(value === true)} />
+              <Label htmlFor="own-media-confirmation" className="text-sm leading-relaxed">I confirm that these photos and video were taken by me of my actual dress, not copied from a brand or another website. Any cover generated by Behen.pk uses my own dress photos.<span className="mt-2 block" dir="rtl">میں تصدیق کرتی ہوں کہ یہ میرے اصل جوڑے کی خود بنائی ہوئی تصاویر اور ویڈیو ہیں، کسی برانڈ یا دوسری ویب سائٹ سے نہیں لی گئیں۔</span></Label>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -2035,7 +2048,7 @@ const ListDress = () => {
             const index = wizardSteps.findIndex((item) => item.step === currentStep);
             if (index > 0) goToStep(wizardSteps[index - 1].step);
           }}
-          disabled={currentStep === "details"}
+          disabled={loading}
         >
           <ChevronLeft className="mr-2 h-4 w-4" /> Back
         </Button>
@@ -2047,8 +2060,8 @@ const ListDress = () => {
             else if (currentStep === "location") continueFromLocation();
           }}>Continue <ChevronRight className="ml-2 h-4 w-4" /></Button>
         ) : (
-          <Button type="submit" disabled={loading || uploadingImages || (!formData.video_url && !videoFile && !existingUploadedVideoPath)} className="flex-1" size="lg">
-            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uploadingImages ? "Uploading..." : "Publishing..."}</> : "Publish Listing"}
+          <Button type="submit" disabled={loading || uploadingImages || !ownMediaConfirmed || (!videoFile && !existingUploadedVideoPath)} className="flex-1" size="lg">
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{uploadingImages ? "Uploading..." : "Publishing..."}</> : correction ? "Save & Republish" : isEditMode ? "Save Listing" : "Publish Listing"}
           </Button>
         )}
       </div>
@@ -2060,6 +2073,7 @@ const ListDress = () => {
     // Reset all form state
     setCurrentStep("upload");
     setImageFiles([]);
+    setOwnMediaConfirmed(false);
     setImagePreviews([]);
     setPrivateImageFiles([]);
     setPrivateImagePreviews([]);
@@ -2219,6 +2233,7 @@ const ListDress = () => {
         <div className="mx-auto mb-4 max-w-4xl text-right">
           <Link to="/how-to-sell" className="text-sm font-medium text-primary underline-offset-4 hover:underline">First time? See how to list your dress →</Link>
         </div>
+        {correction && <Alert variant="destructive" className="mx-auto mb-6 max-w-4xl"><AlertCircle className="h-4 w-4" /><AlertDescription><strong>Changes requested by Admin</strong><p className="mt-2 whitespace-pre-wrap break-words">{correction.reason}</p><p className="mt-2">Correct your listing, then save and republish. It stays hidden until you make changes.</p></AlertDescription></Alert>}
         {/* Progress Indicator */}
         <div className="mx-auto mb-8 max-w-4xl overflow-x-auto pb-2">
           <div className="flex min-w-[650px] items-start justify-between">

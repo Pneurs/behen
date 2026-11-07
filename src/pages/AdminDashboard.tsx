@@ -16,6 +16,8 @@ import {
   Shield, ShieldCheck, LogOut, UserCog, MessageSquare, Star, DollarSign, ShoppingBag, 
   Send, Trash2, Pencil, ExternalLink, Mail, RefreshCw, Settings, Sparkles, FileText, Search, MapPin, FolderTree, Gift, Video, Power, PowerOff, CalendarClock
 } from "lucide-react";
+import { correctionReasons, type CorrectionKind } from "@/lib/listingCorrections";
+import { Label } from "@/components/ui/label";
 import { listingDaysLeft, isListingActive } from "@/lib/listingLifecycle";
 import AdminProductVideos from "@/components/admin/AdminProductVideos";
 import SEOContentManager from "@/components/admin/SEOContentManager";
@@ -69,6 +71,10 @@ export default function AdminDashboard() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [correctionProduct, setCorrectionProduct] = useState<AdminProduct | null>(null);
+  const [correctionKind, setCorrectionKind] = useState<CorrectionKind>("photos");
+  const [correctionNote, setCorrectionNote] = useState(correctionReasons.photos);
+  const [correctionBusy, setCorrectionBusy] = useState(false);
   const [userProducts, setUserProducts] = useState<any[]>([]);
   const [securityDepositDialog, setSecurityDepositDialog] = useState<{
     open: boolean;
@@ -352,6 +358,17 @@ export default function AdminDashboard() {
     setSelectedProductIds(new Set());
     refetchAllProducts();
     refetchPendingProducts();
+  };
+
+  const submitCorrection = async () => {
+    if (!correctionProduct || correctionNote.trim().length < 5) return;
+    setCorrectionBusy(true);
+    const { error } = await supabase.rpc("request_listing_correction", { _product_id: correctionProduct.id, _reason: correctionNote.trim(), _kind: correctionKind });
+    setCorrectionBusy(false);
+    if (error) { toast({ title: "Could not request changes", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Listing paused — seller notified", description: "The seller can read your note, edit and republish." });
+    setCorrectionProduct(null);
+    refetchAllProducts();
   };
 
   const handleToggleListingActive = async (productId: string, makeActive: boolean) => {
@@ -1235,7 +1252,7 @@ export default function AdminDashboard() {
                                         ? "border-emerald-500/50 text-emerald-400"
                                         : "border-orange-500/50 text-orange-400"
                                     }>
-                                      {isListingActive(product) ? "Active" : "Inactive"}
+                                      {product.correction_reason ? "Changes needed" : isListingActive(product) ? "Active" : "Inactive"}
                                     </Badge>
                                   </div>
                                   <p className="text-sm text-slate-400">
@@ -1250,7 +1267,7 @@ export default function AdminDashboard() {
                                     <span>
                                       {isListingActive(product)
                                         ? "Live (permanent)"
-                                        : "Waiting for seller to confirm sold or reactivate"}
+                                        : product.correction_reason ? "Waiting for seller corrections" : "Waiting for seller to confirm sold or reactivate"}
                                     </span>
                                   </div>
                                   <div className="flex gap-4 text-sm text-slate-300 mt-1">
@@ -1258,6 +1275,7 @@ export default function AdminDashboard() {
                                     <span>Size: {product.size}</span>
                                     <span>Location: {product.city}, {product.area}</span>
                                   </div>
+                                  {product.correction_reason && <p className="mt-2 whitespace-pre-wrap break-words text-sm text-destructive">{product.correction_reason}</p>}
                                   <div className="flex gap-4 text-sm text-slate-400 mt-1">
                                     {product.rental_price_4days && <span>Rent: PKR {product.rental_price_4days}/4 days</span>}
                                     {product.sale_price && <span>Sale: PKR {product.sale_price}</span>}
@@ -1283,6 +1301,7 @@ export default function AdminDashboard() {
                                     <Pencil className="h-4 w-4 mr-1" />
                                     Edit
                                   </Button>
+                                  {currentRole === "super_admin" && <Button size="sm" variant="outline" onClick={() => { setCorrectionProduct(product); setCorrectionKind("photos"); setCorrectionNote(correctionReasons.photos); }}><MessageSquare className="mr-1 h-4 w-4" />Request changes</Button>}
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1940,6 +1959,16 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      <Dialog open={!!correctionProduct} onOpenChange={(open) => { if (!open && !correctionBusy) setCorrectionProduct(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Pause listing & request changes</DialogTitle><DialogDescription>{correctionProduct?.title} — hidden from buyers until the seller edits and republishes.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2"><Label>Reason</Label><Select value={correctionKind} onValueChange={(value: CorrectionKind) => { setCorrectionKind(value); setCorrectionNote(correctionReasons[value]); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="photos">Brand / catalog photos</SelectItem><SelectItem value="video">Advertisement / downloaded video</SelectItem><SelectItem value="contact">Contact details in listing or media</SelectItem><SelectItem value="other">Other correction</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label htmlFor="correction-note">Note to seller</Label><Textarea id="correction-note" value={correctionNote} onChange={(event) => setCorrectionNote(event.target.value)} maxLength={1000} rows={4} placeholder="Explain what the seller needs to correct" /></div>
+            <Button disabled={correctionBusy || correctionNote.trim().length < 5} onClick={submitCorrection}>{correctionBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Pause & Notify Seller</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Payment Proof Modal */}
       <Dialog open={!!selectedProof} onOpenChange={() => setSelectedProof(null)}>
         <DialogContent className="max-w-2xl bg-slate-800 border-slate-700">

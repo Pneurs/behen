@@ -57,6 +57,8 @@ export interface AdminProduct {
   security_deposit: number | null;
   created_at: string;
   listing_active?: boolean | null;
+  correction_reason?: string | null;
+  correction_kind?: string | null;
   activated_at?: string | null;
   product_code?: string | null;
   views_count?: number | null;
@@ -195,7 +197,7 @@ async function fetchAllProducts(): Promise<AdminProduct[]> {
       .from("admin_products_view" as any)
       .select("*")
       .order("created_at", { ascending: false }),
-    supabase.from("products").select("id, listing_active, activated_at, product_code, views_count"),
+    supabase.from("products").select("id, listing_active, activated_at, product_code, views_count, correction_reason, correction_kind"),
   ]);
 
   if (viewRes.error) {
@@ -209,6 +211,8 @@ async function fetchAllProducts(): Promise<AdminProduct[]> {
 
   return ((viewRes.data || []) as any[]).map((product) => ({
     ...product,
+    correction_reason: lifecycle.get(product.id)?.correction_reason ?? null,
+    correction_kind: lifecycle.get(product.id)?.correction_kind ?? null,
     listing_active: lifecycle.get(product.id)?.listing_active ?? true,
     activated_at: lifecycle.get(product.id)?.activated_at ?? product.created_at,
     product_code: lifecycle.get(product.id)?.product_code ?? null,

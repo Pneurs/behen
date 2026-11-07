@@ -836,6 +836,9 @@ export type Database = {
           color: string | null
           condition: string
           contact_phone: string | null
+          correction_kind: string | null
+          correction_reason: string | null
+          correction_requested_at: string | null
           created_at: string
           deactivated_at: string | null
           description: string | null
@@ -858,6 +861,7 @@ export type Database = {
           longitude: number | null
           negotiation_allowed: boolean | null
           original_price: number | null
+          own_media_confirmed: boolean
           owner_id: string
           pickup_location: string | null
           private_image_paths: string[] | null
@@ -897,6 +901,9 @@ export type Database = {
           color?: string | null
           condition: string
           contact_phone?: string | null
+          correction_kind?: string | null
+          correction_reason?: string | null
+          correction_requested_at?: string | null
           created_at?: string
           deactivated_at?: string | null
           description?: string | null
@@ -919,6 +926,7 @@ export type Database = {
           longitude?: number | null
           negotiation_allowed?: boolean | null
           original_price?: number | null
+          own_media_confirmed?: boolean
           owner_id: string
           pickup_location?: string | null
           private_image_paths?: string[] | null
@@ -958,6 +966,9 @@ export type Database = {
           color?: string | null
           condition?: string
           contact_phone?: string | null
+          correction_kind?: string | null
+          correction_reason?: string | null
+          correction_requested_at?: string | null
           created_at?: string
           deactivated_at?: string | null
           description?: string | null
@@ -980,6 +991,7 @@ export type Database = {
           longitude?: number | null
           negotiation_allowed?: boolean | null
           original_price?: number | null
+          own_media_confirmed?: boolean
           owner_id?: string
           pickup_location?: string | null
           private_image_paths?: string[] | null
@@ -1675,6 +1687,10 @@ export type Database = {
       is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
       listing_text_has_contact: { Args: { _text: string }; Returns: boolean }
       reactivate_listing: { Args: { _product_id: string }; Returns: Json }
+      request_listing_correction: {
+        Args: { _kind: string; _product_id: string; _reason: string }
+        Returns: Json
+      }
       set_listing_active: {
         Args: { _active: boolean; _product_id: string }
         Returns: Json
