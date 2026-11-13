@@ -45,8 +45,7 @@ Deno.serve(async (req) => {
 
     const pub = Deno.env.get("VAPID_PUBLIC_KEY");
     const priv = Deno.env.get("VAPID_PRIVATE_KEY");
-    if (!pub || !priv) return json({ sent: 0, reason: "push not configured" });
-    webpush.setVapidDetails("mailto:no-reply@behen.pk", pub, priv);
+    if (pub && priv) webpush.setVapidDetails("mailto:no-reply@behen.pk", pub, priv);
 
     const { data: conv } = await admin
       .from("chat_conversations")
@@ -67,6 +66,29 @@ Deno.serve(async (req) => {
       tag: `chat-${conv.id}`,
     });
 
+    const title = isSeller ? "New buyer message 💖" : "Seller replied 💖";
+    const body = isSeller ? `A buyer messaged you about ${dress}. Tap to reply.` : `The seller replied about ${dress}. Tap to read.`;
+
+    // Android app push (Firebase)
+    let appSent = 0;
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    const fcmKey = Deno.env.get("FIREBASE_MESSAGING_API_KEY");
+    if (lovableKey && fcmKey) {
+      const { data: devices } = await admin.from("app_devices").select("id, token").eq("user_id", recipientId);
+      for (const d of devices || []) {
+        const res = await fetch("https://connector-gateway.lovable.dev/firebase_messaging/v1/projects/_/messages:send", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": fcmKey, "Content-Type": "application/json" },
+          body: JSON.stringify({ message: { token: d.token, notification: { title, body }, data: { link: `/chat?id=${conv.id}` },
+            android: { priority: "high", notification: { tag: `chat-${conv.id}`, sound: "default" } } } }),
+        });
+        if (res.status === 404 || res.status === 400) await admin.from("app_devices").delete().eq("id", d.id);
+        else if (!res.ok) console.error(`FCM [${res.status}]: ${await res.text()}`);
+        else appSent++;
+      }
+    }
+    if (!pub || !priv) return json({ sent: 0, appSent });
+
     const { data: subs } = await admin
       .from("web_push_subscriptions")
       .select("id, endpoint, p256dh, auth")
@@ -86,7 +108,7 @@ Deno.serve(async (req) => {
         }
       }
     }
-    return json({ sent });
+    return json({ sent, appSent });
   } catch (e) {
     console.error("web-push error", e);
     return json({ error: String(e) }, 500);
