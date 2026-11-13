@@ -218,6 +218,13 @@
       "when": 1794084018210,
       "tag": "0030_listing_correction_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1794571910926,
+      "tag": "0031_app_devices_nudges",
+      "breakpoints": true
     }
   ]
 }

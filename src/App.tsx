@@ -1,5 +1,7 @@
 import HelpBot from "@/components/HelpBot";
 import WebPushPrompt from "@/components/WebPushPrompt";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+const NativePush = () => { usePushNotifications(); return null; };
 import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -85,6 +87,7 @@ const App = () => (
         <BrowserRouter>
           <HelpBot />
           <WebPushPrompt />
+<NativePush />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />

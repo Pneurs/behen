@@ -318,3 +318,13 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Native app: keep content clear of the phone's status and navigation bars */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sticky.top-0, header.sticky, header.fixed { top: env(safe-area-inset-top); }
+  .fixed.bottom-4, .fixed.bottom-6 { margin-bottom: env(safe-area-inset-bottom); }
+}

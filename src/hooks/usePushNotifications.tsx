@@ -66,7 +66,7 @@ export const usePushNotifications = () => {
         // Handle notification tap - navigate based on notification data
         const data = notification.notification.data;
         if (data?.link) {
-          window.location.href = data.link;
+          window.location.href = data.link.startsWith('/') ? data.link : '/';
         }
       });
 
@@ -77,28 +77,24 @@ export const usePushNotifications = () => {
 
   const savePushToken = async (token: string) => {
     try {
+      localStorage.setItem('behen_push_token', token);
+      await supabase.rpc('register_app_device', { _token: token, _platform: Capacitor.getPlatform() });
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log('No user logged in, skipping push token save');
-        return;
-      }
-
-      // Update the user's profile with the push token
-      const { error } = await supabase
-        .from('profiles')
-        .update({ push_token: token })
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error saving push token:', error);
-      } else {
-        console.log('Push token saved successfully');
-      }
+      if (user) await supabase.from('profiles').update({ push_token: token }).eq('user_id', user.id);
     } catch (error) {
       console.error('Error saving push token:', error);
     }
   };
+
+  // Link the device to the account once she signs in
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      const t = localStorage.getItem('behen_push_token');
+      if (t && event === 'SIGNED_IN') void savePushToken(t);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
 
   return {
     pushToken,

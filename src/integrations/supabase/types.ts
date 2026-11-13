@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_devices: {
+        Row: {
+          created_at: string
+          id: string
+          last_nudge_at: string | null
+          last_seen_at: string
+          nudge_count: number
+          platform: string
+          token: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_nudge_at?: string | null
+          last_seen_at?: string
+          nudge_count?: number
+          platform?: string
+          token: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_nudge_at?: string | null
+          last_seen_at?: string
+          nudge_count?: number
+          platform?: string
+          token?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
@@ -1687,6 +1720,10 @@ export type Database = {
       is_payment_reviewer: { Args: { _uid: string }; Returns: boolean }
       listing_text_has_contact: { Args: { _text: string }; Returns: boolean }
       reactivate_listing: { Args: { _product_id: string }; Returns: Json }
+      register_app_device: {
+        Args: { _platform?: string; _token: string }
+        Returns: undefined
+      }
       request_listing_correction: {
         Args: { _kind: string; _product_id: string; _reason: string }
         Returns: Json
