@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": fcmKey, "Content-Type": "application/json" },
           body: JSON.stringify({ message: { token: d.token, notification: { title, body }, data: { link: `/chat?id=${conv.id}` },
-            android: { priority: "high", notification: { tag: `chat-${conv.id}`, sound: "default" } } } }),
+            android: { priority: "high", notification: { icon: "ic_stat_notification", tag: `chat-${conv.id}`, sound: "default" } } } }),
         });
         if (res.status === 404 || res.status === 400) await admin.from("app_devices").delete().eq("id", d.id);
         else if (!res.ok) console.error(`FCM [${res.status}]: ${await res.text()}`);

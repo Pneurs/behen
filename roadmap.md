@@ -1,4 +1,6 @@
 # Roadmap
+- [x] Add transparent Android B notification icon, pink accent and chat/reminder icon selection
+- [ ] Verify notification appearance on a physical phone — requires installing the updated Android build
 - [x] WhatsApp new-chat alerts to sellers (Meta template chat_new_message)
 - [x] Kids care note (upload + product page)
 - [x] Video social-sharing privacy notice

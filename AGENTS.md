@@ -12,3 +12,4 @@
 - Public listing text is screened for contact info by src/lib/listingContactFilter.ts and mirrored by the `listing_text_has_contact` DB trigger on products (changed fields only); update both together.
 
 - Listing correction requests are super-admin-only and enforced by a products trigger; unchanged activation (including sold-status RPCs) cannot bypass corrections, and seller saves republish only after actual changes plus own-media confirmation.
+- Android pushes use the transparent `ic_stat_notification` B drawable and manifest accent resource; chat and reminder payloads select the same drawable so launcher backgrounds never become white squares.

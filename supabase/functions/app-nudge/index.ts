@@ -38,7 +38,8 @@ Deno.serve(async () => {
     const res = await fetch(`${GATEWAY_URL}/v1/projects/_/messages:send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": fcmKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ message: { token: d.token, notification: { title: m.title, body: m.body }, data: { link: m.link } } }),
+      body: JSON.stringify({ message: { token: d.token, notification: { title: m.title, body: m.body }, data: { link: m.link },
+        android: { notification: { icon: "ic_stat_notification" } } } }),
     });
     if (res.status === 404 || res.status === 400) {
       await db.from("app_devices").delete().eq("id", d.id); // stale token
